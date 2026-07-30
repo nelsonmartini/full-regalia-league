@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Picks — Full Regalia League</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0f1424" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark"><span class="mark">FR</span> Full Regalia <span class="sub">League</span></div>
+  </div>
+</header>
+
+<main class="app">
+  <h1 class="page-title">Your Picks <span class="badge beta">Beta</span></h1>
+  <p class="page-sub">
+    Pick your games below. Right now this saves on <strong>this device only</strong> —
+    it's not synced with the group yet. Games shown are sample matchups until live
+    odds are wired in.
+  </p>
+
+  <div class="card">
+    <div class="card-title">Who's picking?</div>
+    <select id="player-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer"></select>
+  </div>
+
+  <div id="games-list"></div>
+
+  <button id="save-btn" class="btn btn-primary btn-block" style="margin-top:6px">Save my picks</button>
+  <div id="save-status" class="footer-note" style="min-height:18px"></div>
+</main>
+
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <a class="nav-item" data-page="index.html" href="index.html"><span class="icon">🏠</span>Home</a>
+    <a class="nav-item" data-page="standings.html" href="standings.html"><span class="icon">🏆</span>Standings</a>
+    <a class="nav-item" data-page="picks.html" href="picks.html"><span class="icon">📝</span>Picks</a>
+    <a class="nav-item" data-page="live.html" href="live.html"><span class="icon">📡</span>Live</a>
+    <a class="nav-item" data-page="betting-guide.html" href="betting-guide.html"><span class="icon">📘</span>Guide</a>
+  </div>
+</nav>
+
+<script src="js/app.js"></script>
+<script src="js/picks.js"></script>
+</body>
+</html>
