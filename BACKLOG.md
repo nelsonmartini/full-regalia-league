@@ -7,11 +7,16 @@
 - **Current phase:** Initial build — tonight's session (2026-07-29). Site shell, PWA
   install support, Betting Guide, Standings (sample data), Home dashboard, and Picks
   entry UI (local-only) are all built and browser-tested locally with no console errors.
-- **Next action:** Confirm with Neil before creating the GitHub repo + enabling Pages
-  (makes the code public — see ROADMAP.md security note). Then publish the Google
-  Sheet to web and wire Standings/History to the live feed.
-- **Live site:** not deployed yet — built and tested locally (`npx serve .`), not yet
-  pushed to GitHub.
+- **Next action:** Enable GitHub Pages (Settings → Pages → Source: "Deploy from a
+  branch" → Branch: main → / (root) → Save) — needs Neil's GitHub login, can't be
+  done from this environment (no gh CLI/token). Once that's flipped on, the live link
+  is https://nelsonmartini.github.io/full-regalia-league/. Then: publish the Google
+  Sheet to web and wire Standings/History to it.
+- **Live site:** code is pushed to https://github.com/nelsonmartini/full-regalia-league
+  (main branch), but Pages isn't turned on yet — not live on a public URL yet.
+- **Passphrase gate is live on every page** (see below) — needed before sharing the
+  link publicly, since GitHub Pages has no other access control. Passphrase:
+  `regalia2026`. Not real security, just stops casual stumbling — see js/gate.js.
 
 ## Next 7 days
 
@@ -103,10 +108,44 @@
 - Repo creation is blocked on Neil (no gh CLI/token available here) — waiting on him
   to create the empty repo at github.com/new before anything gets pushed/deployed.
 
+### 2026-07-31 / 2026-08-01
+- Neil tested the site live on his phone via the LAN link — loved it.
+- Quick wins added: Add-to-Home-Screen instructional card (Home page, iOS/Android
+  aware), favicon + Open Graph/Twitter share-preview tags on all pages, service worker
+  reliability fixes (cache shell files individually; network-first for page
+  navigations — this fixed a real bug a Playwright test caught where cross-page nav
+  broke once the SW activated on hosts that redirect .html to clean URLs).
+- Neil wants to show the beta to a "future owner" (context: pitching the concept, not
+  yet a full league rollout). Discussed safe-sharing options; he chose to keep real
+  friend names as-is but add a lightweight passphrase gate. Built `js/gate.js` — a
+  client-side SHA-256 passphrase check on every page, clearly documented as a
+  courtesy speed bump, not real security (no server, so determined viewers can bypass
+  it via dev tools). Current passphrase: `regalia2026`. Verified end-to-end with
+  Playwright (wrong-passphrase error, correct unlock, persists via localStorage
+  across pages).
+- **GitHub repo created:** https://github.com/nelsonmartini/full-regalia-league —
+  code committed and pushed to `main`. **GitHub Pages not yet enabled** — needs Neil
+  to flip it on in repo Settings (can't be done from this environment, no GitHub
+  token/gh CLI available). Once enabled, live URL is
+  https://nelsonmartini.github.io/full-regalia-league/.
+- Session ended here (Neil had to leave) — History page work is still not started,
+  remains the first thing to build next session (see below, unchanged from before).
+
+### Design request — not yet done
+- Neil wants the site's color palette shifted toward **Xavier University blue**
+  (their brand blue, not the current coral/amber accent) — asked 2026-08-01, not
+  implemented yet. Need to confirm exact hex/reference (Xavier's brand blue is
+  roughly #0C2340 navy + a brighter blue accent — verify against their actual brand
+  guide rather than guessing) before reworking `css/style.css`'s `--accent`/`--bg`
+  variables. Should stay in the same "friendly, fresh, couples-inclusive" direction,
+  just recolored — not a full redesign.
+
 ### Next session — resume here
+- **GitHub Pages is live** as of 2026-08-01: https://nelsonmartini.github.io/full-regalia-league/
+  (passphrase `regalia2026`). Verified working end-to-end (gate, standings, CSS, JS all 200).
 - Re-run the History sheet extraction (Excel COM, no row cap) to get all 346 rows.
 - Build `js/history-data.js`, a `history.html` season-log page, and a per-player detail
   page; add History to the bottom nav (currently 5 slots: Home/Standings/Picks/Live/
   Guide — decide whether History replaces "Live" in the nav bar or the bar grows to 6).
   Make Standings rows tappable/linked to the per-player page.
-- Then: GitHub repo + Pages deploy once Neil confirms the repo exists.
+- Then: publish Google Sheet to web, wire Standings/History to live data.

@@ -1,16 +1,21 @@
 // Minimal service worker — exists so the site is installable ("Add to Home Screen")
 // and shell pages still open if the connection drops. Not caching live data.
-const CACHE = "full-regalia-shell-v1";
+const CACHE = "full-regalia-shell-v2";
 const SHELL = [
   "./",
   "./index.html",
   "./standings.html",
   "./picks.html",
+  "./history.html",
+  "./player.html",
   "./live.html",
   "./betting-guide.html",
   "./css/style.css",
   "./js/app.js",
   "./js/gate.js",
+  "./js/standings-data.js",
+  "./js/history-data.js",
+  "./js/picks.js",
   "./manifest.json",
   "./icons/icon-192.png",
 ];

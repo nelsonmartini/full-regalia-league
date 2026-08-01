@@ -32,10 +32,10 @@ function renderStandingsRow(player, rank) {
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
   const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
   return `
-    <div class="standings-row${rankClass}">
+    <a class="standings-row${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank">${medal}</div>
       <div class="standings-name">${titleCase(player.name)}${couple ? `<span class="couple">${couple}</span>` : ""}</div>
       <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
       <div class="standings-points">${player.points}</div>
-    </div>`;
+    </a>`;
 }

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Player — Full Regalia League</title>
+<link rel="icon" href="icons/icon-192.png" type="image/png" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0f1424" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="fr-gate-overlay" id="fr-gate-overlay">
+  <div class="fr-gate-box">
+    <div class="mark">FR</div>
+    <h1>Full Regalia League</h1>
+    <p>Private beta preview — enter the passphrase to continue.</p>
+    <input type="password" id="fr-gate-input" placeholder="Passphrase" autocomplete="off" />
+    <button id="fr-gate-submit" class="btn btn-primary btn-block">Enter</button>
+    <div id="fr-gate-error" class="fr-gate-error"></div>
+  </div>
+</div>
+<script src="js/gate.js"></script>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark"><span class="mark">FR</span> Full Regalia <span class="sub">League</span></div>
+  </div>
+</header>
+
+<main class="app">
+  <p class="page-sub" style="margin-bottom:0"><a class="link" href="standings.html">← Back to Standings</a></p>
+  <h1 class="page-title" id="player-title">Player</h1>
+  <p class="page-sub" id="player-sub"></p>
+
+  <div class="card" id="no-player" style="display:none">
+    <div class="empty-state">No player selected. Go to <a class="link" href="standings.html">Standings</a> and tap a name.</div>
+  </div>
+
+  <div id="player-content" style="display:none">
+    <div class="card">
+      <div class="card-title">Season summary</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+        <div>
+          <div style="font-size:22px;font-weight:800" id="stat-total">–</div>
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em">Total Pts</div>
+        </div>
+        <div>
+          <div style="font-size:22px;font-weight:800" id="stat-avg">–</div>
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em">Avg / Week</div>
+        </div>
+        <div>
+          <div style="font-size:22px;font-weight:800" id="stat-best">–</div>
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em">Best Week</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Points by week</div>
+      <div id="trend"></div>
+    </div>
+
+    <div id="weeks-list"></div>
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner" style="grid-template-columns:repeat(6,1fr)">
+    <a class="nav-item" data-page="index.html" href="index.html"><span class="icon">🏠</span>Home</a>
+    <a class="nav-item" data-page="standings.html" href="standings.html"><span class="icon">🏆</span>Standings</a>
+    <a class="nav-item" data-page="picks.html" href="picks.html"><span class="icon">📝</span>Picks</a>
+    <a class="nav-item" data-page="history.html" href="history.html"><span class="icon">📜</span>History</a>
+    <a class="nav-item" data-page="live.html" href="live.html"><span class="icon">📡</span>Live</a>
+    <a class="nav-item" data-page="betting-guide.html" href="betting-guide.html"><span class="icon">📘</span>Guide</a>
+  </div>
+</nav>
+
+<script src="js/app.js"></script>
+<script src="js/history-data.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const name = (params.get("name") || "").toUpperCase();
+
+  if (!name) {
+    document.getElementById("no-player").style.display = "block";
+  } else {
+    const rows = historyForPlayer(name);
+    const couple = (typeof findCouple === "function" ? findCouple(name) : null);
+
+    document.getElementById("player-title").textContent = titleCase(name);
+    document.getElementById("player-sub").textContent = couple ? couple : "Season history";
+
+    if (rows.length === 0) {
+      document.getElementById("no-player").style.display = "block";
+      document.getElementById("no-player").querySelector(".empty-state").textContent =
+        `No history found for ${titleCase(name)} yet.`;
+    } else {
+      document.getElementById("player-content").style.display = "block";
+
+      const pointed = rows.filter((r) => typeof r.points === "number");
+      const total = pointed.reduce((s, r) => s + r.points, 0);
+      const avg = pointed.length ? total / pointed.length : 0;
+      const best = pointed.reduce((m, r) => (r.points > m.points ? r : m), pointed[0] || { points: 0, week: "–" });
+
+      document.getElementById("stat-total").textContent = total.toFixed(1);
+      document.getElementById("stat-avg").textContent = avg.toFixed(1);
+      document.getElementById("stat-best").textContent = best ? `${best.points} (${best.week.replace("WEEK ", "W")})` : "–";
+
+      const maxPts = Math.max(1, ...pointed.map((r) => r.points));
+      document.getElementById("trend").innerHTML = pointed
+        .map((r) => {
+          const pct = Math.max(4, Math.round((r.points / maxPts) * 100));
+          return `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="width:44px;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.week.replace("WEEK ", "Wk ")}</div>
+              <div style="flex:1;background:var(--bg-elev-2);border-radius:6px;overflow:hidden;height:14px">
+                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>
+              </div>
+              <div style="width:32px;text-align:right;font-size:11.5px;font-weight:700;flex-shrink:0">${r.points}</div>
+            </div>`;
+        })
+        .join("");
+
+      function pickRow(label, pick, hitState) {
+        if (!pick) return "";
+        const badge =
+          hitState === "hit" ? `<span style="color:var(--positive);font-weight:800">✓</span>`
+          : hitState === "miss" ? `<span style="color:var(--negative);font-weight:800">✗</span>`
+          : hitState === "push" ? `<span style="color:var(--text-faint);font-weight:800">push</span>`
+          : "";
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px">
+          <span style="color:var(--text-dim)">${label}</span>
+          <span style="text-align:right">${pick} ${badge}</span>
+        </div>`;
+      }
+
+      const weeksHtml = [...rows].reverse().map((r) => {
+        const body = [
+          pickRow("Fav Spread", r.picks.favSpread, pickHit(r.picks.favSpread, r.results.favSpread)),
+          pickRow("Underdog ML", r.picks.underdogML, pickHit(r.picks.underdogML, r.results.underdogML)),
+          pickRow("Over", r.picks.over, overUnderHit(r.picks.over, r.results.overActual)),
+          pickRow("Under", r.picks.under, overUnderHit(r.picks.under, r.results.underActual)),
+          pickRow("College 1", r.picks.college1, pickHit(r.picks.college1, r.results.college1)),
+          pickRow("College 2", r.picks.college2, pickHit(r.picks.college2, r.results.college2)),
+        ].join("");
+        return `
+          <div class="card">
+            <div class="card-title">
+              <span>${r.week}</span>
+              <span>${r.points !== null ? r.points + " pts" : ""}</span>
+            </div>
+            ${body || '<div style="color:var(--text-faint);font-size:13px">No picks recorded.</div>'}
+          </div>`;
+      }).join("");
+
+      document.getElementById("weeks-list").innerHTML = weeksHtml;
+    }
+  }
+</script>
+</body>
+</html>

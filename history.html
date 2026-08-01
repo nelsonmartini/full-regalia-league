@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>History — Full Regalia League</title>
+<link rel="icon" href="icons/icon-192.png" type="image/png" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0f1424" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="fr-gate-overlay" id="fr-gate-overlay">
+  <div class="fr-gate-box">
+    <div class="mark">FR</div>
+    <h1>Full Regalia League</h1>
+    <p>Private beta preview — enter the passphrase to continue.</p>
+    <input type="password" id="fr-gate-input" placeholder="Passphrase" autocomplete="off" />
+    <button id="fr-gate-submit" class="btn btn-primary btn-block">Enter</button>
+    <div id="fr-gate-error" class="fr-gate-error"></div>
+  </div>
+</div>
+<script src="js/gate.js"></script>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark"><span class="mark">FR</span> Full Regalia <span class="sub">League</span></div>
+  </div>
+</header>
+
+<main class="app">
+  <h1 class="page-title">Season History</h1>
+  <p class="page-sub">Every pick, every week. Tap a name on Standings for a player's own page — or filter here.</p>
+
+  <div class="card">
+    <div class="card-title">Filter</div>
+    <div class="chip-row" style="grid-template-columns:1fr 1fr">
+      <select id="player-filter" class="chip" style="appearance:none;text-align:left;cursor:pointer">
+        <option value="">All players</option>
+      </select>
+      <select id="week-filter" class="chip" style="appearance:none;text-align:left;cursor:pointer">
+        <option value="">All weeks</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="history-list"></div>
+  <div id="history-empty" class="empty-state" style="display:none">No picks match that filter.</div>
+</main>
+
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner" style="grid-template-columns:repeat(6,1fr)">
+    <a class="nav-item" data-page="index.html" href="index.html"><span class="icon">🏠</span>Home</a>
+    <a class="nav-item" data-page="standings.html" href="standings.html"><span class="icon">🏆</span>Standings</a>
+    <a class="nav-item" data-page="picks.html" href="picks.html"><span class="icon">📝</span>Picks</a>
+    <a class="nav-item" data-page="history.html" href="history.html"><span class="icon">📜</span>History</a>
+    <a class="nav-item" data-page="live.html" href="live.html"><span class="icon">📡</span>Live</a>
+    <a class="nav-item" data-page="betting-guide.html" href="betting-guide.html"><span class="icon">📘</span>Guide</a>
+  </div>
+</nav>
+
+<script src="js/app.js"></script>
+<script src="js/history-data.js"></script>
+<script>
+  const playerFilter = document.getElementById("player-filter");
+  const weekFilter = document.getElementById("week-filter");
+  const list = document.getElementById("history-list");
+  const empty = document.getElementById("history-empty");
+
+  const players = [...new Set(HISTORY.map((r) => r.name))].sort();
+  playerFilter.innerHTML += players.map((p) => `<option value="${p}">${titleCase(p)}</option>`).join("");
+  weekFilter.innerHTML += allWeeks().map((w) => `<option value="${w}">${w}</option>`).join("");
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("player")) playerFilter.value = params.get("player").toUpperCase();
+
+  function pickRow(label, pick, hitState) {
+    if (!pick) return "";
+    const badge =
+      hitState === "hit" ? `<span style="color:var(--positive);font-weight:800">✓</span>`
+      : hitState === "miss" ? `<span style="color:var(--negative);font-weight:800">✗</span>`
+      : hitState === "push" ? `<span style="color:var(--text-faint);font-weight:800">push</span>`
+      : "";
+    return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px">
+      <span style="color:var(--text-dim)">${label}</span>
+      <span style="text-align:right">${pick} ${badge}</span>
+    </div>`;
+  }
+
+  function renderEntry(r) {
+    const rows = [
+      pickRow("Fav Spread", r.picks.favSpread, pickHit(r.picks.favSpread, r.results.favSpread)),
+      pickRow("Underdog ML", r.picks.underdogML, pickHit(r.picks.underdogML, r.results.underdogML)),
+      pickRow("Over", r.picks.over, overUnderHit(r.picks.over, r.results.overActual)),
+      pickRow("Under", r.picks.under, overUnderHit(r.picks.under, r.results.underActual)),
+      pickRow("College 1", r.picks.college1, pickHit(r.picks.college1, r.results.college1)),
+      pickRow("College 2", r.picks.college2, pickHit(r.picks.college2, r.results.college2)),
+    ].join("");
+
+    return `
+      <div class="card">
+        <div class="card-title">
+          <span>${r.week} — <a class="link" href="player.html?name=${encodeURIComponent(r.name)}">${titleCase(r.name)}</a></span>
+          <span>${r.points !== null ? r.points + " pts" : ""}</span>
+        </div>
+        ${rows || '<div style="color:var(--text-faint);font-size:13px">No picks recorded.</div>'}
+      </div>`;
+  }
+
+  function render() {
+    const p = playerFilter.value;
+    const w = weekFilter.value;
+    let rows = HISTORY.filter((r) => (!p || r.name === p) && (!w || r.week === w));
+    rows = rows.sort((a, b) => b.weekNum - a.weekNum || a.name.localeCompare(b.name));
+    // Cap render to keep this snappy on a phone — most useful case is one player or one week.
+    const capped = rows.slice(0, 60);
+    list.innerHTML = capped.map(renderEntry).join("");
+    empty.style.display = rows.length === 0 ? "block" : "none";
+    if (rows.length > capped.length) {
+      list.innerHTML += `<div class="footer-note">Showing ${capped.length} of ${rows.length} — narrow the filter to see more.</div>`;
+    }
+  }
+
+  playerFilter.addEventListener("change", render);
+  weekFilter.addEventListener("change", render);
+  render();
+</script>
+</body>
+</html>
