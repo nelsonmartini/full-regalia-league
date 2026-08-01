@@ -32,12 +32,13 @@
 </header>
 
 <main class="app">
-  <h1 class="page-title">Live Scores &amp; Odds</h1>
+  <h1 class="page-title">Scores, Odds &amp; Results</h1>
   <p class="page-sub">Pulled live from ESPN — no manual score lookups. Refreshes every 30s while this page is open.</p>
 
-  <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+  <div class="chip-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
     <div class="chip selected" id="filter-all" data-filter="all">All</div>
     <div class="chip" id="filter-live" data-filter="in">Live now</div>
+    <div class="chip" id="filter-final" data-filter="post">Results</div>
   </div>
 
   <div id="games-loading" class="empty-state">Loading games…</div>
@@ -74,9 +75,14 @@
     loading.style.display = "none";
 
     const filtered = filter === "all" ? allGames : allGames.filter((g) => g.status.state === filter);
-    // Sort: live first, then upcoming soonest, then finals.
-    const rank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
-    filtered.sort((a, b) => rank(a) - rank(b) || new Date(a.date) - new Date(b.date));
+    if (filter === "post") {
+      // Results view: most recently finished first.
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      // Live first, then upcoming soonest, then finals.
+      const rank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
+      filtered.sort((a, b) => rank(a) - rank(b) || new Date(a.date) - new Date(b.date));
+    }
 
     list.innerHTML = filtered.slice(0, 40).map(renderGameCard).join("");
     empty.style.display = filtered.length === 0 ? "block" : "none";
