@@ -17,6 +17,7 @@ const SHELL = [
   "./js/history-data.js",
   "./js/picks.js",
   "./js/live-scores.js",
+  "./js/grading.js",
   "./manifest.json",
   "./icons/icon-192.png",
 ];

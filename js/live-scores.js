@@ -57,13 +57,28 @@ function normalizeEvent(e, sport) {
       name: away.team?.shortDisplayName || away.team?.displayName,
       score: away.score,
     },
-    odds: odds
-      ? {
-          spread: odds.details || null, // e.g. "TCU -6.5"
-          overUnder: odds.overUnder ?? null,
-        }
-      : null,
+    odds: odds ? normalizeOdds(odds) : null,
   };
+}
+
+function normalizeOdds(odds) {
+  const homeLineStr = odds.pointSpread?.home?.close?.line;
+  const awayLineStr = odds.pointSpread?.away?.close?.line;
+  return {
+    spread: odds.details || null, // display text, e.g. "TCU -6.5"
+    overUnder: odds.overUnder ?? null,
+    // Per-team signed spread lines, needed to build a pick a person can actually
+    // take on either side (e.g. home +1.5 / away -1.5). Falls back to deriving
+    // from the favorite flag + magnitude if the precise line string is missing.
+    homeSpread: homeLineStr != null ? Number(homeLineStr) : deriveSpread(odds, "home"),
+    awaySpread: awayLineStr != null ? Number(awayLineStr) : deriveSpread(odds, "away"),
+  };
+}
+
+function deriveSpread(odds, side) {
+  const info = side === "home" ? odds.homeTeamOdds : odds.awayTeamOdds;
+  if (!info || odds.spread == null) return null;
+  return info.favorite ? -Math.abs(odds.spread) : Math.abs(odds.spread);
 }
 
 function formatKickoff(iso) {

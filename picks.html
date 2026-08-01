@@ -34,14 +34,18 @@
 <main class="app">
   <h1 class="page-title">Your Picks <span class="badge beta">Beta</span></h1>
   <p class="page-sub">
-    Pick your games below. Right now this saves on <strong>this device only</strong> —
-    it's not synced with the group yet. Games shown are sample matchups until live
-    odds are wired in.
+    Pick your games below — these are real, live games with real odds. Right now
+    picks save on <strong>this device only</strong>, not synced with the group yet.
   </p>
 
   <div class="card">
     <div class="card-title">Who's picking?</div>
     <select id="player-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer"></select>
+  </div>
+
+  <div class="card" id="results-card" style="display:none">
+    <div class="card-title">Your results <span class="badge live"><span class="dot"></span>Auto-graded</span></div>
+    <div id="results-list"></div>
   </div>
 
   <div id="games-list"></div>
@@ -62,6 +66,8 @@
 </nav>
 
 <script src="js/app.js"></script>
+<script src="js/live-scores.js"></script>
+<script src="js/grading.js"></script>
 <script src="js/picks.js"></script>
 </body>
 </html>
