@@ -40,15 +40,20 @@
 
   <div class="card">
     <div class="card-title">Who's picking?</div>
-    <select id="player-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer"></select>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="player-avatar-preview"></span>
+      <select id="player-select" class="chip" style="flex:1;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer"></select>
+    </div>
   </div>
 
   <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
-    <div class="chip selected" id="tab-week" data-tab="week">This Week</div>
+    <div class="chip selected" id="tab-week" data-tab="week">Make Picks</div>
     <div class="chip" id="tab-mine" data-tab="mine">My Picks — Season</div>
   </div>
 
   <div id="view-week">
+    <select id="week-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer;margin-bottom:10px"></select>
+
     <button id="save-btn-top" class="btn btn-primary btn-block" style="margin-bottom:6px">Save my picks</button>
     <div id="save-status-top" class="footer-note" style="min-height:18px;margin-top:0"></div>
 

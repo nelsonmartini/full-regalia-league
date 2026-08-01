@@ -1,8 +1,7 @@
 /**
  * SAMPLE DATA — pulled from the existing workbook's Standings tab as a snapshot.
- * This is a placeholder so the page has something real to show tonight.
- * Next step (see BACKLOG.md): replace this file's contents with a fetch() against
- * the Google Sheet's published CSV, so it updates itself instead of being edited by hand.
+ * This is a placeholder until the real backend (see BACKLOG.md) replaces it with
+ * live-computed standings.
  */
 const STANDINGS = [
   { name: "CONNOR", points: 70.5, winPct: 55.51, paid: false },
@@ -34,6 +33,7 @@ function renderStandingsRow(player, rank) {
   return `
     <a class="standings-row${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank">${medal}</div>
+      ${avatarHtml(player.name, 32)}
       <div class="standings-name">${titleCase(player.name)}${couple ? `<span class="couple">${couple}</span>` : ""}</div>
       <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
       <div class="standings-points">${player.points}</div>

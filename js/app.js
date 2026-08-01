@@ -24,7 +24,7 @@ function titleCase(s) {
 /**
  * Players in the league, paired by couple where applicable.
  * This mirrors the workbook's Standings/Picks tabs. Update here once the
- * Google Sheet is wired up as the live source (see ROADMAP.md).
+ * real backend replaces this static list (see BACKLOG.md).
  */
 const LEAGUE_PLAYERS = [
   { name: "ALEX", couple: "Alex & Calli" },
@@ -43,3 +43,30 @@ const LEAGUE_PLAYERS = [
   { name: "JACK", couple: "Connor & Jack" },
   { name: "PHIL", couple: null },
 ];
+
+/**
+ * Generated avatars — initials on a deterministic color, no photo dependency.
+ * Real photos can replace these later without touching any callers, since
+ * everything renders through avatarHtml().
+ */
+const AVATAR_COLORS = [
+  "#4A90D9", "#E0736B", "#5FB88A", "#D9A544", "#9B7FD4",
+  "#4AB8C4", "#D96BA0", "#7FA847", "#C97B4A", "#6C7FD4",
+];
+
+function avatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function avatarInitials(name) {
+  return name.slice(0, 2).toUpperCase();
+}
+
+/** size in px. wrapInLink: if given a href, wraps the avatar in an <a> (for
+ * contexts where the name text isn't already a link). */
+function avatarHtml(name, size = 32) {
+  const fontSize = Math.round(size * 0.4);
+  return `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${fontSize}px;background:${avatarColor(name)}">${avatarInitials(name)}</span>`;
+}

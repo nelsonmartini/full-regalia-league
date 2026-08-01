@@ -103,7 +103,11 @@
     return `
       <div class="card">
         <div class="card-title">
-          <span>${r.week} — <a class="link" href="player.html?name=${encodeURIComponent(r.name)}">${titleCase(r.name)}</a></span>
+          <span style="display:flex;align-items:center;gap:8px">${r.week} —
+            <a class="link" href="player.html?name=${encodeURIComponent(r.name)}" style="display:inline-flex;align-items:center;gap:6px">
+              ${avatarHtml(r.name, 20)}${titleCase(r.name)}
+            </a>
+          </span>
           <span>${r.points !== null ? r.points + " pts" : ""}</span>
         </div>
         ${rows || '<div style="color:var(--text-faint);font-size:13px">No picks recorded.</div>'}

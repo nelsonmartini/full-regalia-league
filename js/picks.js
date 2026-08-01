@@ -11,7 +11,7 @@
  */
 
 const PLAYER_KEY = "fr_selected_player";
-const MAX_GAMES = 10;
+const MAX_GAMES_PER_WEEK = 40;
 
 function picksKey(player) {
   return `fr_picks_v3::${player}`;
@@ -87,6 +87,19 @@ function buildBetGroups(game) {
 
 function sportLabel(sport) {
   return sport === "nfl" ? "NFL" : "College";
+}
+
+/** Groups pickable games into "weeks" a person can jump between — NFL games get a
+ * real week number from ESPN; college (sparse odds, no reliable week grouping this
+ * far out) falls into a single bucket sorted by date instead. */
+function weekBucketKey(game) {
+  return game.sport === "nfl" && game.week ? `nfl-${game.week}` : "college";
+}
+
+function weekBucketLabel(key, games) {
+  if (key === "college") return "College — upcoming";
+  const week = games.find((g) => weekBucketKey(g) === key)?.week;
+  return `NFL — Week ${week}`;
 }
 
 function renderGames(container, games, picks) {
@@ -209,6 +222,7 @@ function renderMyPicks(container, picks, allGames) {
 
 async function initPicksPage() {
   const select = document.getElementById("player-select");
+  const weekSelect = document.getElementById("week-select");
   const container = document.getElementById("games-list");
   const statusTop = document.getElementById("save-status-top");
   const statusBottom = document.getElementById("save-status-bottom");
@@ -216,23 +230,46 @@ async function initPicksPage() {
   const saveBtnBottom = document.getElementById("save-btn-bottom");
   const myPicksList = document.getElementById("my-picks-list");
 
+  const avatarPreview = document.getElementById("player-avatar-preview");
   select.innerHTML = LEAGUE_PLAYERS.map((p) => `<option value="${p.name}">${titleCase(p.name)}</option>`).join("");
   const savedPlayer = localStorage.getItem(PLAYER_KEY) || LEAGUE_PLAYERS[0].name;
   select.value = savedPlayer;
+  avatarPreview.innerHTML = avatarHtml(select.value, 32);
 
-  container.innerHTML = '<div class="empty-state">Loading games…</div>';
-  const allGames = await loadAllGames();
-  const pickable = allGames
-    .filter((g) => g.status.state === "pre" && g.odds)
-    .sort((a, b) => new Date(a.date) - new Date(b.date))
-    .slice(0, MAX_GAMES);
+  container.innerHTML = '<div class="empty-state">Loading the season\'s games…</div>';
+  // NFL odds are posted for essentially the whole season in advance, so fetch a wide
+  // window to let people plan ahead; college odds only show up close to kickoff, so
+  // the default (shorter) window there is all that would ever have anything anyway.
+  const [nfl, cfb] = await Promise.all([fetchScoreboard("nfl", { daysForward: 200 }), fetchScoreboard("cfb")]);
+  const allGames = [...nfl, ...cfb];
 
+  const pickableAll = allGames.filter((g) => g.status.state === "pre" && g.odds).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Build the week picker from whatever weeks actually have pickable games.
+  const weekKeys = [...new Set(pickableAll.map(weekBucketKey))];
+  weekKeys.sort((a, b) => {
+    const gA = pickableAll.find((g) => weekBucketKey(g) === a);
+    const gB = pickableAll.find((g) => weekBucketKey(g) === b);
+    return new Date(gA.date) - new Date(gB.date);
+  });
+  weekSelect.innerHTML = weekKeys.map((k) => `<option value="${k}">${weekBucketLabel(k, pickableAll)}</option>`).join("");
+  if (weekKeys.length === 0) {
+    weekSelect.innerHTML = `<option value="">No upcoming games</option>`;
+  }
+  weekSelect.value = weekKeys[0] || "";
+
+  function pickableForSelectedWeek() {
+    return pickableAll.filter((g) => weekBucketKey(g) === weekSelect.value).slice(0, MAX_GAMES_PER_WEEK);
+  }
+
+  let pickable = pickableForSelectedWeek();
   let currentPicks = loadPicks(select.value);
   renderGames(container, pickable, currentPicks);
   renderMyPicks(myPicksList, currentPicks, allGames);
 
   function refresh() {
     currentPicks = loadPicks(select.value);
+    avatarPreview.innerHTML = avatarHtml(select.value, 32);
     renderGames(container, pickable, currentPicks);
     renderMyPicks(myPicksList, currentPicks, allGames);
     statusTop.textContent = "";
@@ -240,6 +277,14 @@ async function initPicksPage() {
   }
 
   select.addEventListener("change", refresh);
+
+  weekSelect.addEventListener("change", () => {
+    pickable = pickableForSelectedWeek();
+    currentPicks = loadPicks(select.value);
+    renderGames(container, pickable, currentPicks);
+    statusTop.textContent = "";
+    statusBottom.textContent = "";
+  });
 
   container.addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");

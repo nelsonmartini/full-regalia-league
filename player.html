@@ -33,8 +33,13 @@
 
 <main class="app">
   <p class="page-sub" style="margin-bottom:0"><a class="link" href="standings.html">← Back to Standings</a></p>
-  <h1 class="page-title" id="player-title">Player</h1>
-  <p class="page-sub" id="player-sub"></p>
+  <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+    <span id="player-avatar"></span>
+    <div>
+      <h1 class="page-title" id="player-title" style="margin:0">Player</h1>
+      <p class="page-sub" id="player-sub" style="margin:2px 0 0"></p>
+    </div>
+  </div>
 
   <div class="card" id="no-player" style="display:none">
     <div class="empty-state">No player selected. Go to <a class="link" href="standings.html">Standings</a> and tap a name.</div>
@@ -93,6 +98,7 @@
 
     document.getElementById("player-title").textContent = titleCase(name);
     document.getElementById("player-sub").textContent = couple ? couple : "Season history";
+    document.getElementById("player-avatar").innerHTML = avatarHtml(name, 56);
 
     if (rows.length === 0) {
       document.getElementById("no-player").style.display = "block";
