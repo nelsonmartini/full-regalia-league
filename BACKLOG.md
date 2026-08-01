@@ -17,6 +17,9 @@
   - Auto-grading ("Your results" on Picks): **fully real, functioning engine** —
     just has nothing to show yet because no picked game has finished. It'll populate
     itself automatically as games conclude, no code changes needed.
+- **Xavier University blue recolor: done** (2026-08-01). Official brand blue #0C2340
+  confirmed via web search + Xavier's own brand PDF, used for card surfaces; brighter
+  blue tint (#4a90d9) for buttons/badges/highlights. Icons regenerated to match.
 - **Next action:** Publish the Google Sheet to the web (Neil to do — see below), then
   wire Standings/History to it so those two also go fully live.
 - **Passphrase gate is live on every page** — needed before sharing the link publicly,
@@ -29,14 +32,20 @@
    web → CSV, per tab) and send the CSV links — 2 minutes, only he can do it.
 2. Wire Standings (and ideally History, replacing the frozen snapshot) to the live
    published CSV instead of static data.
-3. **Design:** recolor the site toward Xavier University blue (see design request
-   below) — confirm the exact brand hex first, don't guess.
+3. **Player avatars** — clickable avatar next to each name (Standings, Picks
+   player-select, History) so it's obviously "you" at a glance, and so a tap jumps
+   straight to that person's results/money-won view. Asked 2026-08-01. Needs a
+   decision: real photos (someone has to supply them) vs. generated avatars
+   (initials-on-color, no photo needed — faster, no dependency on anyone). Leaning
+   generated for a fast v1, real photos as an upgrade later.
 4. Championship/Bowl Picks page (Divisional/Conf Champ/Super Bowl — same pattern as
-   Picks, once that page's real-games approach is proven out, which it now is).
+   Picks, proven out now that Picks pulls real games).
 5. Results page (a straight log of finished games + scores — mostly "for free" now
    since live-scores.js already fetches this; just needs its own page/view).
 6. Real picks-submission backend (own project — needs a backend/auth decision so
-   picks sync across the group instead of living in each person's browser).
+   picks sync across the group instead of living in each person's browser). This is
+   also what "money won" tracking on a player page needs — money/winnings live in
+   the Sheet's Standings tab, not in anything wired up yet.
 
 ## Living checklist
 
@@ -70,8 +79,10 @@
       17/17. Wired into Picks page as a "Your results" card, auto-populates once a
       picked game goes final. Full pipeline (→ auto-updating Standings) still needs
       the picks backend + Sheet-wiring below to be fully end-to-end for the group.
+- [x] Xavier University blue recolor — official #0C2340 confirmed, palette + icons updated
 - [ ] Wire Standings/History to live Google Sheet CSV (still sample/frozen data)
-- [ ] Xavier University blue recolor (design request, not started)
+- [ ] Player avatars (generated initials-on-color for v1) — clickable, next to names on
+      Standings/Picks/History, tap-through to that player's results/money-won view
 - [ ] Championship/Bowl Picks page
 - [ ] Results page (dedicated view — data's already flowing via live-scores.js)
 - [ ] Real picks-submission backend (own project — needs backend/auth decision)
