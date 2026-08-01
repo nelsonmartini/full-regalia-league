@@ -33,23 +33,21 @@
 
 <main class="app">
   <h1 class="page-title">Live Scores &amp; Odds</h1>
-  <p class="page-sub">Not wired up yet — this is next on the backlog.</p>
+  <p class="page-sub">Pulled live from ESPN — no manual score lookups. Refreshes every 30s while this page is open.</p>
 
-  <div class="card">
-    <div class="card-title">What's coming here</div>
-    <div class="prose">
-      <p><strong>Live scores</strong> pulled automatically from a free public sports
-      data feed — no manual score lookups.</p>
-      <p><strong>Live odds</strong> (spread, moneyline, over/under) shown right next to
-      each game.</p>
-      <p>Once this is live, it directly feeds the <strong>auto-grading pipeline</strong> —
-      the feature that replaces retyping results into the sheet by hand every week.
-      That's the highest-priority build after tonight. See <code>BACKLOG.md</code>
-      in the project repo for the plan.</p>
-    </div>
+  <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+    <div class="chip selected" id="filter-all" data-filter="all">All</div>
+    <div class="chip" id="filter-live" data-filter="in">Live now</div>
   </div>
 
-  <div class="empty-state">📡 Check back soon — or ask about "auto-grading pipeline" progress.</div>
+  <div id="games-loading" class="empty-state">Loading games…</div>
+  <div id="games-list"></div>
+  <div id="games-empty" class="empty-state" style="display:none">No games match this filter right now.</div>
+
+  <div class="footer-note">
+    Scores &amp; lines via ESPN's public data feed (unofficial, best-effort — always
+    confirm with your actual sportsbook before betting real money).
+  </div>
 </main>
 
 <nav class="bottom-nav">
@@ -64,5 +62,42 @@
 </nav>
 
 <script src="js/app.js"></script>
+<script src="js/live-scores.js"></script>
+<script>
+  let allGames = [];
+  let filter = "all";
+
+  function render() {
+    const loading = document.getElementById("games-loading");
+    const list = document.getElementById("games-list");
+    const empty = document.getElementById("games-empty");
+    loading.style.display = "none";
+
+    const filtered = filter === "all" ? allGames : allGames.filter((g) => g.status.state === filter);
+    // Sort: live first, then upcoming soonest, then finals.
+    const rank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
+    filtered.sort((a, b) => rank(a) - rank(b) || new Date(a.date) - new Date(b.date));
+
+    list.innerHTML = filtered.slice(0, 40).map(renderGameCard).join("");
+    empty.style.display = filtered.length === 0 ? "block" : "none";
+  }
+
+  document.querySelectorAll("[data-filter]").forEach((el) => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll("[data-filter]").forEach((c) => c.classList.remove("selected"));
+      el.classList.add("selected");
+      filter = el.getAttribute("data-filter");
+      render();
+    });
+  });
+
+  async function load() {
+    allGames = await loadAllGames();
+    render();
+  }
+
+  load();
+  setInterval(load, 30000);
+</script>
 </body>
 </html>
