@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Betting Guide — Full Regalia League</title>
+<link rel="icon" href="icons/icon-192.png" type="image/png" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -11,6 +12,18 @@
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+
+<div class="fr-gate-overlay" id="fr-gate-overlay">
+  <div class="fr-gate-box">
+    <div class="mark">FR</div>
+    <h1>Full Regalia League</h1>
+    <p>Private beta preview — enter the passphrase to continue.</p>
+    <input type="password" id="fr-gate-input" placeholder="Passphrase" autocomplete="off" />
+    <button id="fr-gate-submit" class="btn btn-primary btn-block">Enter</button>
+    <div id="fr-gate-error" class="fr-gate-error"></div>
+  </div>
+</div>
+<script src="js/gate.js"></script>
 
 <header class="topbar">
   <div class="topbar-inner">

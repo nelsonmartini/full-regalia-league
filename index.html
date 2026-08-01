@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Full Regalia League</title>
 <meta name="description" content="Live picks, scores, odds, and standings for the Full Regalia pick'em league." />
+<link rel="icon" href="icons/icon-192.png" type="image/png" />
+<!-- og:url/og:image use the anticipated GitHub Pages URL (nelsonmartini/full-regalia-league) —
+     double check these once the repo is actually created, in case the name/owner changes. -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Full Regalia League" />
+<meta property="og:description" content="Live picks, scores, odds, and standings for the Full Regalia pick'em league." />
+<meta property="og:image" content="https://nelsonmartini.github.io/full-regalia-league/icons/icon-512.png" />
+<meta property="og:url" content="https://nelsonmartini.github.io/full-regalia-league/" />
+<meta name="twitter:card" content="summary" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -15,6 +24,18 @@
 </head>
 <body>
 
+<div class="fr-gate-overlay" id="fr-gate-overlay">
+  <div class="fr-gate-box">
+    <div class="mark">FR</div>
+    <h1>Full Regalia League</h1>
+    <p>Private beta preview — enter the passphrase to continue.</p>
+    <input type="password" id="fr-gate-input" placeholder="Passphrase" autocomplete="off" />
+    <button id="fr-gate-submit" class="btn btn-primary btn-block">Enter</button>
+    <div id="fr-gate-error" class="fr-gate-error"></div>
+  </div>
+</div>
+<script src="js/gate.js"></script>
+
 <header class="topbar">
   <div class="topbar-inner">
     <div class="wordmark"><span class="mark">FR</span> Full Regalia <span class="sub">League</span></div>
@@ -24,6 +45,14 @@
 <main class="app">
   <h1 class="page-title">Welcome back 👋</h1>
   <p class="page-sub">Here's where the league stands right now.</p>
+
+  <div class="card" id="add-home-card" style="display:none">
+    <div class="card-title">
+      <span>📲 Add this to your phone</span>
+      <span class="link" id="add-home-dismiss" style="cursor:pointer">Got it</span>
+    </div>
+    <p class="prose" id="add-home-copy" style="margin:0"></p>
+  </div>
 
   <div class="card">
     <div class="card-title">Top of the standings <a class="link" href="standings.html">Full board →</a></div>
@@ -69,6 +98,24 @@
 <script>
   const top3 = STANDINGS.slice(0, 3);
   document.getElementById("top-standings").innerHTML = top3.map((p, i) => renderStandingsRow(p, i + 1)).join("");
+
+  (function addToHomeScreenPrompt() {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const dismissed = localStorage.getItem("fr_hide_add_home") === "1";
+    if (isStandalone || dismissed) return;
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const copy = isIOS
+      ? 'Tap the <strong>Share</strong> icon (square with an arrow) in Safari\'s toolbar, then scroll down and tap <strong>"Add to Home Screen."</strong>'
+      : 'Open your browser menu (⋮) and tap <strong>"Add to Home screen"</strong> or <strong>"Install app."</strong>';
+
+    document.getElementById("add-home-copy").innerHTML = copy;
+    document.getElementById("add-home-card").style.display = "block";
+    document.getElementById("add-home-dismiss").addEventListener("click", () => {
+      localStorage.setItem("fr_hide_add_home", "1");
+      document.getElementById("add-home-card").style.display = "none";
+    });
+  })();
 </script>
 </body>
 </html>

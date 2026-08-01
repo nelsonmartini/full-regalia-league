@@ -15,17 +15,22 @@
 
 ## Next 7 days
 
-1. **Tonight:** site shell (nav, design system, PWA manifest/icons), Betting Guide page,
-   Standings page (sample data), Home dashboard, Picks-entry UI (saves locally, no
-   backend yet). Get it viewable on your phone via a local server or GitHub Pages.
-2. Create the GitHub repo (`full-regalia-league`, public, under `nelsonmartini`) and
-   turn on GitHub Pages — confirm with you first since this makes the code public.
-3. Publish the Google Sheet to the web (File → Share → Publish to web → CSV, per tab) —
-   this is a 2-minute action only you can do since it's your sheet.
-4. Wire Standings + History pages to the live published CSV instead of sample data.
-5. Wire up ESPN's free scoreboard API for live NFL + college football scores on Home
+0. **First thing next session:** build the **History page** — season log (workbook's
+   History tab has 346 rows: every player's picks for every week so far) plus tap-a-name
+   drill-down from Standings into a per-player page (week-by-week record, points trend).
+   Neil asked for this live on his phone (2026-07-29) after seeing the deployed pages —
+   agreed to build it, paused before starting (see session log). Needs a fresh full
+   Excel COM dump of the History sheet (the earlier dump only captured the first 60
+   rows / ~Week 4 due to a row cap in the extraction script — redo with no cap, 346 rows).
+1. Create the GitHub repo (`full-regalia-league`, public, under `nelsonmartini`) and
+   turn on GitHub Pages — Neil needs to create the empty repo at github.com/new first
+   (no gh CLI / token in this environment to do it directly), then confirm/paste the URL.
+2. Publish the Google Sheet to the web (File → Share → Publish to web → CSV, per tab) —
+   this is a 2-minute action only Neil can do since it's his sheet.
+3. Wire Standings + History pages to the live published CSV instead of sample data.
+4. Wire up ESPN's free scoreboard API for live NFL + college football scores on Home
    and a Results page.
-6. Start the **auto-grading pipeline** (the headline automation feature): live scores →
+5. Start the **auto-grading pipeline** (the headline automation feature): live scores →
    match against each person's picks → compute win/loss/points automatically → Standings
    updates itself. This is what actually kills the manual copy/paste-every-week work.
 
@@ -86,5 +91,22 @@
 - Not done tonight: GitHub repo/Pages deploy (needs a quick confirm from Neil first —
   makes the code public), Google Sheet publish-to-web, live scores/odds, auto-grading
   pipeline, Championship Picks/Results/History pages, real picks backend.
-- Next session: confirm repo name/visibility, push to GitHub, enable Pages, test
-  "Add to Home Screen" on an actual phone.
+- Neil tested the site live on his phone over the home WiFi (local server bound to
+  0.0.0.0, shared via LAN IP) — confirmed "looks amazing on a phone." Add to Home
+  Screen not yet tested (session paused before getting to it).
+- Neil asked about the History tab — realized it wasn't built yet ("I don't really see
+  much history here"). Proposed and he approved: a History page (season log) plus
+  tap-a-name drill-down from Standings into a per-player history/stats page. Started
+  re-extracting the full 346-row History sheet from the workbook (the first dump only
+  got ~60 rows / Week 4 due to a row cap) — **paused mid-extraction, nothing built yet.**
+  This is the next session's first task (see item 0 above).
+- Repo creation is blocked on Neil (no gh CLI/token available here) — waiting on him
+  to create the empty repo at github.com/new before anything gets pushed/deployed.
+
+### Next session — resume here
+- Re-run the History sheet extraction (Excel COM, no row cap) to get all 346 rows.
+- Build `js/history-data.js`, a `history.html` season-log page, and a per-player detail
+  page; add History to the bottom nav (currently 5 slots: Home/Standings/Picks/Live/
+  Guide — decide whether History replaces "Live" in the nav bar or the bar grows to 6).
+  Make Standings rows tappable/linked to the per-player page.
+- Then: GitHub repo + Pages deploy once Neil confirms the repo exists.
