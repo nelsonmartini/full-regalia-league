@@ -20,32 +20,51 @@
 - **Xavier University blue recolor: done** (2026-08-01). Official brand blue #0C2340
   confirmed via web search + Xavier's own brand PDF, used for card surfaces; brighter
   blue tint (#4a90d9) for buttons/badges/highlights. Icons regenerated to match.
-- **Next action:** Publish the Google Sheet to the web (Neil to do — see below), then
-  wire Standings/History to it so those two also go fully live.
+- **MAJOR DIRECTION CHANGE (2026-08-01):** Neil clarified the goal is not "display the
+  Google Sheet on the site" — it's to **fully eliminate the spreadsheet.** The site
+  should become the actual system of record: people pick on the site, results grade
+  automatically (already built), standings compute automatically — no Excel/Sheets
+  anywhere in the loop, ever. This supersedes the original ROADMAP.md decision to keep
+  the Sheet as the backend. **The "wire Standings to the published Sheet CSV" plan is
+  ON HOLD, not being pursued** — don't resume it without checking with Neil first,
+  since he explicitly chose the real-backend path over it.
+  - This requires a real shared backend (a hosted database the site can write picks to
+    and read standings from) — Firebase or Supabase are the two realistic low-cost
+    options for a group this size. **Neil deliberately deferred choosing between them
+    until after talking to the site's eventual owner** (cost/ownership decision for
+    whoever runs this long-term) — do not pick one and start building without that
+    conversation happening first.
+  - Nothing built tonight is wasted by this: the Picks page's UI, the grading engine,
+    and the game/odds fetching are all backend-agnostic. Once a backend is chosen, the
+    only rework is swapping `js/picks.js`'s `loadPicks`/`savePicks` (currently
+    localStorage) for real API calls, and adding a live standings calculation that
+    sums graded results per player — the hard logic (grading) already exists and is
+    tested.
 - **Passphrase gate is live on every page** — needed before sharing the link publicly,
   since GitHub Pages has no other access control. Passphrase: `regalia2026`. Not real
   security, just stops casual stumbling — see `js/gate.js`.
 
 ## Next 7 days
 
-1. **Neil to do:** Publish the Google Sheet to the web (File → Share → Publish to
-   web → CSV, per tab) and send the CSV links — 2 minutes, only he can do it.
-2. Wire Standings (and ideally History, replacing the frozen snapshot) to the live
-   published CSV instead of static data.
-3. **Player avatars** — clickable avatar next to each name (Standings, Picks
+1. **Blocked on Neil:** talk to the site's eventual owner about Firebase vs. Supabase
+   (cost, who administers it) — this unblocks the real backend build, which is now the
+   top-priority next feature.
+2. **Player avatars** — clickable avatar next to each name (Standings, Picks
    player-select, History) so it's obviously "you" at a glance, and so a tap jumps
    straight to that person's results/money-won view. Asked 2026-08-01. Needs a
    decision: real photos (someone has to supply them) vs. generated avatars
    (initials-on-color, no photo needed — faster, no dependency on anyone). Leaning
-   generated for a fast v1, real photos as an upgrade later.
-4. Championship/Bowl Picks page (Divisional/Conf Champ/Super Bowl — same pattern as
-   Picks, proven out now that Picks pulls real games).
-5. Results page (a straight log of finished games + scores — mostly "for free" now
+   generated for a fast v1, real photos as an upgrade later. Not blocked on the
+   backend decision — can build this anytime.
+3. Championship/Bowl Picks page (Divisional/Conf Champ/Super Bowl — same pattern as
+   Picks, proven out now that Picks pulls real games). Not blocked on the backend
+   decision either — this is frontend/live-data work like tonight's Picks page.
+4. Results page (a straight log of finished games + scores — mostly "for free" now
    since live-scores.js already fetches this; just needs its own page/view).
-6. Real picks-submission backend (own project — needs a backend/auth decision so
-   picks sync across the group instead of living in each person's browser). This is
-   also what "money won" tracking on a player page needs — money/winnings live in
-   the Sheet's Standings tab, not in anything wired up yet.
+5. **The real backend** (once Firebase/Supabase is chosen — see item 1): picks sync
+   across the group instead of living in each person's browser, standings compute
+   themselves from graded results, and money-won tracking becomes possible. This is
+   the actual "eliminate Excel" milestone — everything else is groundwork for it.
 
 ## Living checklist
 
@@ -77,15 +96,21 @@
 - [x] Picks page rewired to real live games + real odds (was fake sample data)
 - [x] **Auto-grading engine** (`js/grading.js`) — the core value prop. Unit-tested
       17/17. Wired into Picks page as a "Your results" card, auto-populates once a
-      picked game goes final. Full pipeline (→ auto-updating Standings) still needs
-      the picks backend + Sheet-wiring below to be fully end-to-end for the group.
+      picked game goes final. Full pipeline (→ auto-updating Standings) needs the
+      real backend below to be fully end-to-end for the group.
 - [x] Xavier University blue recolor — official #0C2340 confirmed, palette + icons updated
-- [ ] Wire Standings/History to live Google Sheet CSV (still sample/frozen data)
+- [ ] ~~Wire Standings/History to live Google Sheet CSV~~ — **ON HOLD, superseded.**
+      Neil decided (2026-08-01) to skip this and go straight to a real backend that
+      eliminates the spreadsheet entirely, instead of just displaying it live. Don't
+      resume this without checking with him first.
 - [ ] Player avatars (generated initials-on-color for v1) — clickable, next to names on
       Standings/Picks/History, tap-through to that player's results/money-won view
 - [ ] Championship/Bowl Picks page
 - [ ] Results page (dedicated view — data's already flowing via live-scores.js)
-- [ ] Real picks-submission backend (own project — needs backend/auth decision)
+- [ ] **The real backend** (Firebase or Supabase — choice deferred pending a
+      conversation with the site's eventual owner). This is now the top-priority
+      feature: picks synced across the group, standings computed automatically,
+      money-won tracking possible — the actual "eliminate Excel" milestone.
 - [ ] Real logo/wordmark (using text mark for now)
 
 ## Session log
