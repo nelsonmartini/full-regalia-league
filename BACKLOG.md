@@ -46,6 +46,12 @@
 
 ## Next 7 days
 
+0. **Done 2026-08-01:** Picks page UX overhaul, per Neil's feedback — one card per
+   game (was one card per bet type), a date + week/league label on every game, a
+   second Save button at the top (was bottom-only), and a new "My Picks — Season"
+   tab showing every pick ever saved, grouped by week, with Hit/Miss/Push/Pending
+   status. ESPN fetch widened to a rolling 10-days-back/35-days-forward window so
+   grading and week-labeling have enough data to work with. See session log.
 1. **Blocked on Neil:** talk to the site's eventual owner about Firebase vs. Supabase
    (cost, who administers it) — this unblocks the real backend build, which is now the
    top-priority next feature.
@@ -99,6 +105,8 @@
       picked game goes final. Full pipeline (→ auto-updating Standings) needs the
       real backend below to be fully end-to-end for the group.
 - [x] Xavier University blue recolor — official #0C2340 confirmed, palette + icons updated
+- [x] Picks page UX overhaul — game-level grouping, date/week labels, top+bottom
+      Save buttons, "My Picks — Season" tab (view all picks across the season)
 - [ ] ~~Wire Standings/History to live Google Sheet CSV~~ — **ON HOLD, superseded.**
       Neil decided (2026-08-01) to skip this and go straight to a real backend that
       eliminates the spreadsheet entirely, instead of just displaying it live. Don't
@@ -227,11 +235,45 @@
   waiting on Neil to publish it to web); Xavier blue recolor; Championship Picks and
   Results pages; the real multi-user picks backend.
 
+### 2026-08-01 (evening) — Xavier recolor, direction pivot, Picks UX overhaul
+- **Xavier University blue recolor shipped.** Searched for and confirmed the official
+  brand blue (#0C2340, Pantone 289 C) via web search + Xavier's own brand PDF rather
+  than guessing. Rebuilt the palette around it (navy for card surfaces, a brighter
+  blue tint for buttons/badges), regenerated app icons, updated theme-color/manifest.
+- Neil asked for a player-avatars feature (clickable, next to names, tap-through to
+  results/money-won) — logged above, not built yet.
+- **Major direction pivot.** Neil clarified — twice, it needed real correction the
+  first time — that the goal is not "read the Google Sheet live," it's to eliminate
+  the spreadsheet entirely. Reversed the ROADMAP.md decision to keep the Sheet as the
+  backend. The real path is a hosted database (Firebase or Supabase) that the site
+  both writes picks to and reads standings from. Neil deliberately deferred the
+  Firebase-vs-Supabase choice until after talking to the site's eventual owner —
+  **do not pick one and start building without that conversation happening.** Nothing
+  built so far is wasted by this — the Picks UI, grading engine, and live-data fetch
+  are all backend-agnostic; only the storage layer needs swapping later.
+- Diagnosed and fixed a real bug: Neil reported the Xavier recolor "looks the same" —
+  turned out the service worker was serving a stale cached copy of `style.css`
+  because its cache-version constant hadn't been bumped. Lesson: **bump `sw.js`'s
+  `CACHE` version on every deploy that changes a cached file**, not just when adding
+  new files to the shell list. Fixed for this and the next deploy.
+- **Picks page UX overhaul**, per detailed feedback from Neil: confirmed picks *were*
+  already being saved (just per-device, not per-group — clarified this plainly).
+  Rebuilt the page: one card per game (not one per bet type, which repeated the
+  matchup 3x) with Spread/Moneyline/Total nested inside; added date + week/league
+  label per game (needed ESPN's date-range query support, confirmed it works);
+  duplicated the Save button at the top (was bottom-only, forcing a scroll-back);
+  and added a new "My Picks — Season" tab showing every pick ever saved, grouped by
+  week, with Hit/Miss/Push/Pending status — the "view across the season" ask. Picks
+  now store a self-contained snapshot (matchup/date/week) alongside the structured
+  value so old picks stay viewable even after their game ages out of the live fetch
+  window. Playwright-tested end to end before pushing; all checks passed first try.
+
 ### Next session — resume here
-- Check whether Neil has published the Google Sheet to web yet — if so, wire
-  Standings (and ideally History) to the live CSV instead of the frozen snapshots.
-- If Neil has a Xavier University brand guide/hex codes, do the color recolor next —
-  it's a contained CSS-variable change (`css/style.css`), shouldn't need a rebuild of
-  any page structure.
-- After that: Championship/Bowl Picks page, then a dedicated Results page (the data's
-  already flowing through `live-scores.js`, mostly a display/filtering job).
+- **Top priority, blocked on Neil:** the Firebase-vs-Supabase conversation with the
+  site's eventual owner. Once decided, the real backend becomes the main build:
+  shared picks storage + live-computed standings, replacing localStorage entirely.
+- Not blocked, can build anytime: player avatars, Championship/Bowl Picks page,
+  Results page.
+- Do **not** revisit "wire Standings to the Google Sheet CSV" — that direction was
+  explicitly dropped in favor of the real backend (see above).
+- Remember to bump `sw.js`'s `CACHE` constant on any deploy touching a cached file.
