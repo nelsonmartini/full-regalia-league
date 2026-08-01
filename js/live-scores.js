@@ -15,9 +15,22 @@ const ESPN_ENDPOINTS = {
   cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
 };
 
-async function fetchScoreboard(sport) {
-  const url = ESPN_ENDPOINTS[sport];
-  if (!url) return [];
+/** "YYYYMMDD-YYYYMMDD" covering `daysBack` days ago through `daysForward` days ahead —
+ * lets recently-finished games (for grading) and next couple weeks (for picking) both
+ * stay in view, instead of only whatever ESPN considers "today". */
+function dateRangeParam(daysBack, daysForward) {
+  const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
+  const start = new Date();
+  start.setDate(start.getDate() - daysBack);
+  const end = new Date();
+  end.setDate(end.getDate() + daysForward);
+  return `${fmt(start)}-${fmt(end)}`;
+}
+
+async function fetchScoreboard(sport, { daysBack = 10, daysForward = 35 } = {}) {
+  const base = ESPN_ENDPOINTS[sport];
+  if (!base) return [];
+  const url = `${base}?dates=${dateRangeParam(daysBack, daysForward)}&limit=300`;
   try {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return [];
@@ -40,6 +53,7 @@ function normalizeEvent(e, sport) {
     sport,
     shortName: e.shortName || e.name,
     date: e.date,
+    week: e.week?.number ?? null,
     status: {
       state: e.status?.type?.state, // "pre" | "in" | "post"
       completed: !!e.status?.type?.completed,
@@ -85,6 +99,17 @@ function formatKickoff(iso) {
   try {
     const d = new Date(iso);
     return d.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+/** Fuller "Thu, Aug 6 · 8:00 PM" form — used where the date alone (not just the
+ * weekday) matters, e.g. picks made now for a game next week. */
+function formatFullDate(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   } catch {
     return "";
   }
