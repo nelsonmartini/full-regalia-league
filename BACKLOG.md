@@ -4,40 +4,39 @@
 
 ## Status
 
-- **Current phase:** Initial build — tonight's session (2026-07-29). Site shell, PWA
-  install support, Betting Guide, Standings (sample data), Home dashboard, and Picks
-  entry UI (local-only) are all built and browser-tested locally with no console errors.
-- **Next action:** Enable GitHub Pages (Settings → Pages → Source: "Deploy from a
-  branch" → Branch: main → / (root) → Save) — needs Neil's GitHub login, can't be
-  done from this environment (no gh CLI/token). Once that's flipped on, the live link
-  is https://nelsonmartini.github.io/full-regalia-league/. Then: publish the Google
-  Sheet to web and wire Standings/History to it.
-- **Live site:** code is pushed to https://github.com/nelsonmartini/full-regalia-league
-  (main branch), but Pages isn't turned on yet — not live on a public URL yet.
-- **Passphrase gate is live on every page** (see below) — needed before sharing the
-  link publicly, since GitHub Pages has no other access control. Passphrase:
-  `regalia2026`. Not real security, just stops casual stumbling — see js/gate.js.
+- **Current phase:** Core feature-complete beta as of 2026-08-01. Live at
+  **https://nelsonmartini.github.io/full-regalia-league/** (passphrase `regalia2026`).
+  7 pages: Home, Standings, Picks, History, Player detail, Live, Betting Guide.
+- **What's real vs. sample data right now:**
+  - Standings: still sample/snapshot data from the workbook (not live-wired to the Sheet).
+  - History + Player pages: real, full season data (344 picks, 23 weeks, 16 players) —
+    but it's a frozen snapshot parsed from the workbook, not live either.
+  - Picks page: **fully real** — live current games + live odds from ESPN, saves
+    locally per-device.
+  - Live page + Home's live-games card: **fully real**, refetches every 30s.
+  - Auto-grading ("Your results" on Picks): **fully real, functioning engine** —
+    just has nothing to show yet because no picked game has finished. It'll populate
+    itself automatically as games conclude, no code changes needed.
+- **Next action:** Publish the Google Sheet to the web (Neil to do — see below), then
+  wire Standings/History to it so those two also go fully live.
+- **Passphrase gate is live on every page** — needed before sharing the link publicly,
+  since GitHub Pages has no other access control. Passphrase: `regalia2026`. Not real
+  security, just stops casual stumbling — see `js/gate.js`.
 
 ## Next 7 days
 
-0. **First thing next session:** build the **History page** — season log (workbook's
-   History tab has 346 rows: every player's picks for every week so far) plus tap-a-name
-   drill-down from Standings into a per-player page (week-by-week record, points trend).
-   Neil asked for this live on his phone (2026-07-29) after seeing the deployed pages —
-   agreed to build it, paused before starting (see session log). Needs a fresh full
-   Excel COM dump of the History sheet (the earlier dump only captured the first 60
-   rows / ~Week 4 due to a row cap in the extraction script — redo with no cap, 346 rows).
-1. Create the GitHub repo (`full-regalia-league`, public, under `nelsonmartini`) and
-   turn on GitHub Pages — Neil needs to create the empty repo at github.com/new first
-   (no gh CLI / token in this environment to do it directly), then confirm/paste the URL.
-2. Publish the Google Sheet to the web (File → Share → Publish to web → CSV, per tab) —
-   this is a 2-minute action only Neil can do since it's his sheet.
-3. Wire Standings + History pages to the live published CSV instead of sample data.
-4. Wire up ESPN's free scoreboard API for live NFL + college football scores on Home
-   and a Results page.
-5. Start the **auto-grading pipeline** (the headline automation feature): live scores →
-   match against each person's picks → compute win/loss/points automatically → Standings
-   updates itself. This is what actually kills the manual copy/paste-every-week work.
+1. **Neil to do:** Publish the Google Sheet to the web (File → Share → Publish to
+   web → CSV, per tab) and send the CSV links — 2 minutes, only he can do it.
+2. Wire Standings (and ideally History, replacing the frozen snapshot) to the live
+   published CSV instead of static data.
+3. **Design:** recolor the site toward Xavier University blue (see design request
+   below) — confirm the exact brand hex first, don't guess.
+4. Championship/Bowl Picks page (Divisional/Conf Champ/Super Bowl — same pattern as
+   Picks, once that page's real-games approach is proven out, which it now is).
+5. Results page (a straight log of finished games + scores — mostly "for free" now
+   since live-scores.js already fetches this; just needs its own page/view).
+6. Real picks-submission backend (own project — needs a backend/auth decision so
+   picks sync across the group instead of living in each person's browser).
 
 ## Living checklist
 
@@ -55,17 +54,26 @@
       local storage as a placeholder (no permanent backend yet)
 - [x] Browser-tested locally (Playwright) — zero console errors across all 5 pages;
       found & fixed 2 bugs (see session log below)
-- [ ] Test on an actual phone — add to home screen, confirm it looks/feels like an app
-- [ ] Init local git repo
-- [ ] Create GitHub repo + enable Pages (confirm with Neil first — makes code public)
-- [ ] Publish Google Sheet to web as CSV (Neil to do)
-- [ ] Wire Standings/History to live CSV
-- [ ] Live scores via ESPN scoreboard API
-- [ ] **Auto-grading pipeline** — the core value prop, do right after live scores work
-- [ ] Live odds (ESPN first, fall back to The Odds API signup if needed)
+- [x] Test on an actual phone — Neil confirmed it "looks amazing on a phone" via LAN
+- [x] Init local git repo
+- [x] Create GitHub repo + enable Pages — live at
+      https://nelsonmartini.github.io/full-regalia-league/
+- [x] Passphrase gate for safe beta-sharing (`regalia2026`)
+- [x] History page (season log, filterable by player/week) — 344 picks, 23 weeks
+- [x] Player detail page (tap-a-name from Standings: summary stats, points trend,
+      full week-by-week history)
+- [x] Live scores via ESPN scoreboard API (NFL + college football, no key needed)
+- [x] Live odds via ESPN (embedded in the same free response — turned out to make
+      The Odds API unnecessary; NFL ~100% coverage, college ~50%)
+- [x] Picks page rewired to real live games + real odds (was fake sample data)
+- [x] **Auto-grading engine** (`js/grading.js`) — the core value prop. Unit-tested
+      17/17. Wired into Picks page as a "Your results" card, auto-populates once a
+      picked game goes final. Full pipeline (→ auto-updating Standings) still needs
+      the picks backend + Sheet-wiring below to be fully end-to-end for the group.
+- [ ] Wire Standings/History to live Google Sheet CSV (still sample/frozen data)
+- [ ] Xavier University blue recolor (design request, not started)
 - [ ] Championship/Bowl Picks page
-- [ ] Results page (auto-populated once grading pipeline exists)
-- [ ] History page (filterable by player/week)
+- [ ] Results page (dedicated view — data's already flowing via live-scores.js)
 - [ ] Real picks-submission backend (own project — needs backend/auth decision)
 - [ ] Real logo/wordmark (using text mark for now)
 
@@ -140,12 +148,54 @@
   variables. Should stay in the same "friendly, fresh, couples-inclusive" direction,
   just recolored — not a full redesign.
 
+### 2026-08-01 (afternoon session — "let's knock out the big stuff")
+- Set up a Claude Code permissions allowlist (`C:\Users\neilm\.claude\settings.json`)
+  so routine read-only commands stop prompting Neil for approval every time.
+- **Built the History page and per-player drill-down** (the item paused at the end of
+  the last session): re-extracted the workbook's History tab in full this time (344
+  rows, no row cap), parsed it into `js/history-data.js`, built `history.html`
+  (filterable season log) and `player.html` (tap-a-name from Standings → season
+  summary, points-by-week trend bars, full week-by-week pick history). Nav grew from
+  5 to 6 tabs. Standings rows are now links into the player page.
+- Neil asked whether GitHub Pages was live yet mid-session — it was (confirmed 200,
+  he must have flipped the Settings toggle himself). Verified end-to-end on production.
+- Neil asked for the site's color scheme to move toward Xavier University blue —
+  logged above as a design request, not implemented yet (needs exact brand hex first).
+- **Researched ESPN's public scoreboard API** and confirmed two important things:
+  (1) it's CORS-open (`Access-Control-Allow-Origin: *`), so it can be called directly
+  from the browser with no proxy/backend needed; (2) it includes betting odds
+  (spread/moneyline/over-under via DraftKings) embedded in the same free response —
+  NFL coverage is ~100%, college is ~50% (smaller games often lack a posted line).
+  This meant **The Odds API is no longer needed** — ESPN alone covers both scores
+  and odds, simplifying the plan from ROADMAP.md.
+- **Built live scores/odds** (`js/live-scores.js`): Live page now shows real games
+  with an All/Live-now filter, auto-refreshing every 30s; Home page's live-games
+  card shows the top 3. Verified against real data (confirmed real NFL preseason +
+  college games rendering, not placeholders).
+- **Built the auto-grading engine** (`js/grading.js`) — the headline feature Neil
+  called out as the actual point of "automatic backend numbers": pure functions that
+  grade a structured pick (spread/moneyline/total) against a finished game's score,
+  returning hit/miss/push and points. Unit-tested directly in Node (17/17 passing)
+  before trusting it, since this is the logic that matters most.
+- **Rewired the Picks page** to pull real current games + real live odds instead of
+  last session's fake sample matchups, and to store picks as structured objects
+  (`{type, team, line}`) instead of display strings, so they're gradable. Added a
+  "Your results" card that auto-grades a player's saved picks as soon as the
+  underlying game goes final — verified it correctly stays hidden when nothing's
+  graded yet (expected, since people can only pick pre-kickoff games) and that picks
+  persist correctly across reloads.
+- Every change this session was Playwright-tested locally before pushing; found and
+  fixed bugs pre-emptively rather than shipping broken. Three commits pushed to
+  `main`, all deployed and verified live.
+- **Not done:** Standings/History still aren't wired to the live Google Sheet (still
+  waiting on Neil to publish it to web); Xavier blue recolor; Championship Picks and
+  Results pages; the real multi-user picks backend.
+
 ### Next session — resume here
-- **GitHub Pages is live** as of 2026-08-01: https://nelsonmartini.github.io/full-regalia-league/
-  (passphrase `regalia2026`). Verified working end-to-end (gate, standings, CSS, JS all 200).
-- Re-run the History sheet extraction (Excel COM, no row cap) to get all 346 rows.
-- Build `js/history-data.js`, a `history.html` season-log page, and a per-player detail
-  page; add History to the bottom nav (currently 5 slots: Home/Standings/Picks/Live/
-  Guide — decide whether History replaces "Live" in the nav bar or the bar grows to 6).
-  Make Standings rows tappable/linked to the per-player page.
-- Then: publish Google Sheet to web, wire Standings/History to live data.
+- Check whether Neil has published the Google Sheet to web yet — if so, wire
+  Standings (and ideally History) to the live CSV instead of the frozen snapshots.
+- If Neil has a Xavier University brand guide/hex codes, do the color recolor next —
+  it's a contained CSS-variable change (`css/style.css`), shouldn't need a rebuild of
+  any page structure.
+- After that: Championship/Bowl Picks page, then a dedicated Results page (the data's
+  already flowing through `live-scores.js`, mostly a display/filtering job).
