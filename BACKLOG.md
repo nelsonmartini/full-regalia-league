@@ -4,6 +4,23 @@
 
 ## Status
 
+- **Backend decision made (2026-08-02): Supabase**, using Neil's existing account. Not
+  building on a throwaway/personal setup he can't hand off — Supabase project
+  transfers cleanly to another org later (verified via their docs): source must be
+  org owner, target must already be an org member, then Settings → transfer. Keeps
+  the DB, keys, URL, everything intact — no rebuild needed at handoff time.
+  - **Auth model: honor system, no login** — same as today's name-picker, not
+    individual accounts. Matches the current trusted-friend-group UX exactly.
+  - **Commissioner override:** no special code needed — Neil already has full access
+    to every row via the Supabase Table Editor, since he owns the project.
+  - **Picks auto-lock at kickoff — enforced at the database level, not just hidden in
+    the UI.** Row Level Security policies only allow insert/update while the game's
+    stored `kickoff_at` is still in the future. This can't be bypassed from dev tools
+    or a modified request — it's a real server-side rule, not a frontend courtesy.
+  - Currently walking Neil through Supabase dashboard setup (create project → SQL
+    Editor to create the `picks` table + RLS policies → copy Project URL + anon key
+    → hand back for the actual code wiring). Not done yet — see session log once
+    credentials come back.
 - **Current phase:** Core feature-complete beta as of 2026-08-01. Live at
   **https://nelsonmartini.github.io/full-regalia-league/** (passphrase `regalia2026`).
   7 pages: Home, Standings, Picks, History, Player detail, Live (now covers Results
