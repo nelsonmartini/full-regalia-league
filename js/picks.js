@@ -89,17 +89,22 @@ function sportLabel(sport) {
   return sport === "nfl" ? "NFL" : "College";
 }
 
-/** Groups pickable games into "weeks" a person can jump between — NFL games get a
- * real week number from ESPN; college (sparse odds, no reliable week grouping this
- * far out) falls into a single bucket sorted by date instead. */
+/** Groups pickable games into "weeks" a person can jump between, scoped to
+ * whichever sport is toggled — ESPN tags a real week number on both NFL and
+ * college games, so both get proper per-week buckets (falls back to a
+ * date-based bucket only if that field is ever missing). */
 function weekBucketKey(game) {
-  return game.sport === "nfl" && game.week ? `nfl-${game.week}` : "college";
+  return game.week != null ? `w${game.week}` : `d${game.date?.slice(0, 10)}`;
 }
 
 function weekBucketLabel(key, games) {
-  if (key === "college") return "College — upcoming";
-  const week = games.find((g) => weekBucketKey(g) === key)?.week;
-  return `NFL — Week ${week}`;
+  const game = games.find((g) => weekBucketKey(g) === key);
+  if (game?.week != null) return `Week ${game.week}`;
+  try {
+    return `Week of ${new Date(game.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  } catch {
+    return key;
+  }
 }
 
 function renderGames(container, games, picks) {
@@ -237,29 +242,45 @@ async function initPicksPage() {
   avatarPreview.innerHTML = avatarHtml(select.value, 32);
 
   container.innerHTML = '<div class="empty-state">Loading the season\'s games…</div>';
-  // NFL odds are posted for essentially the whole season in advance, so fetch a wide
-  // window to let people plan ahead; college odds only show up close to kickoff, so
-  // the default (shorter) window there is all that would ever have anything anyway.
-  const [nfl, cfb] = await Promise.all([fetchScoreboard("nfl", { daysForward: 200 }), fetchScoreboard("cfb")]);
+  // NFL odds are posted for essentially the whole season in advance; college odds lag
+  // (only appear close to kickoff), but fetch the same wide window anyway — future
+  // college weeks just won't have pickable games yet until books actually post lines,
+  // which is correct/expected, not a bug.
+  const [nfl, cfb] = await Promise.all([fetchScoreboard("nfl", { daysForward: 200 }), fetchScoreboard("cfb", { daysForward: 200 })]);
   const allGames = [...nfl, ...cfb];
 
   const pickableAll = allGames.filter((g) => g.status.state === "pre" && g.odds).sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // Build the week picker from whatever weeks actually have pickable games.
-  const weekKeys = [...new Set(pickableAll.map(weekBucketKey))];
-  weekKeys.sort((a, b) => {
-    const gA = pickableAll.find((g) => weekBucketKey(g) === a);
-    const gB = pickableAll.find((g) => weekBucketKey(g) === b);
-    return new Date(gA.date) - new Date(gB.date);
-  });
-  weekSelect.innerHTML = weekKeys.map((k) => `<option value="${k}">${weekBucketLabel(k, pickableAll)}</option>`).join("");
-  if (weekKeys.length === 0) {
-    weekSelect.innerHTML = `<option value="">No upcoming games</option>`;
+  let selectedSport = "nfl";
+
+  function gamesForSport() {
+    return pickableAll.filter((g) => g.sport === selectedSport);
   }
-  weekSelect.value = weekKeys[0] || "";
+
+  // Build the week picker from whatever weeks actually have pickable games, for the
+  // currently toggled sport.
+  function rebuildWeekOptions() {
+    const games = gamesForSport();
+    const weekKeys = [...new Set(games.map(weekBucketKey))];
+    weekKeys.sort((a, b) => {
+      const gA = games.find((g) => weekBucketKey(g) === a);
+      const gB = games.find((g) => weekBucketKey(g) === b);
+      return new Date(gA.date) - new Date(gB.date);
+    });
+    if (weekKeys.length === 0) {
+      weekSelect.innerHTML = `<option value="">No upcoming games</option>`;
+    } else {
+      weekSelect.innerHTML = weekKeys.map((k) => `<option value="${k}">${weekBucketLabel(k, games)}</option>`).join("");
+    }
+    weekSelect.value = weekKeys[0] || "";
+  }
+
+  rebuildWeekOptions();
 
   function pickableForSelectedWeek() {
-    return pickableAll.filter((g) => weekBucketKey(g) === weekSelect.value).slice(0, MAX_GAMES_PER_WEEK);
+    return gamesForSport()
+      .filter((g) => weekBucketKey(g) === weekSelect.value)
+      .slice(0, MAX_GAMES_PER_WEEK);
   }
 
   let pickable = pickableForSelectedWeek();
@@ -277,6 +298,20 @@ async function initPicksPage() {
   }
 
   select.addEventListener("change", refresh);
+
+  document.querySelectorAll("[data-sport]").forEach((el) => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll("[data-sport]").forEach((c) => c.classList.remove("selected"));
+      el.classList.add("selected");
+      selectedSport = el.getAttribute("data-sport");
+      rebuildWeekOptions();
+      pickable = pickableForSelectedWeek();
+      currentPicks = loadPicks(select.value);
+      renderGames(container, pickable, currentPicks);
+      statusTop.textContent = "";
+      statusBottom.textContent = "";
+    });
+  });
 
   weekSelect.addEventListener("change", () => {
     pickable = pickableForSelectedWeek();

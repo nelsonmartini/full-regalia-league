@@ -6,7 +6,28 @@
 
 - **Current phase:** Core feature-complete beta as of 2026-08-01. Live at
   **https://nelsonmartini.github.io/full-regalia-league/** (passphrase `regalia2026`).
-  7 pages: Home, Standings, Picks, History, Player detail, Live, Betting Guide.
+  7 pages: Home, Standings, Picks, History, Player detail, Live (now covers Results
+  too, via a filter), Betting Guide.
+- **Player avatars: done.** Generated initials-on-color, on Standings/History/
+  Player/Picks, all clickable/linked.
+- **Results: done, folded into the Live page** rather than a separate page — a third
+  "Results" filter chip shows finished games, most-recent-first. Same data, no
+  duplicate code/nav item.
+- **Picks now cover the whole NFL season, not just the next few weeks.** Discovered
+  DraftKings posts full-season lines for NFL well in advance (verified: a December
+  game already had real odds in August) — added a week selector so people can plan
+  picks ahead. Confirmed college odds genuinely aren't posted that far out yet
+  (checked directly), so college weeks show fewer/no options until closer to kickoff
+  — expected, not a bug.
+- **NFL/NCAA sport toggle on Picks: done.** 🏈 NFL / 🎓 NCAA chips scope the week
+  selector and games list to one sport at a time (fixed a real bug in the process:
+  the week-bucket key didn't include sport, so "Week 3" briefly meant either league
+  interchangeably — corrected to bucket by sport+week).
+- **Real logo: done.** Replaced the plain "FR" text mark everywhere (header, gate
+  screen, Home hero) with a designed crown icon (fits "Regalia" — royal
+  insignia/crown theme) as inline SVG, white-on-the-existing-blue-gradient-square.
+  App icons regenerated to match. Home page's "Welcome back 👋" heading replaced with
+  a proper logo hero (crown + "Full Regalia" wordmark) per Neil's request.
 - **What's real vs. sample data right now:**
   - Standings: still sample/snapshot data from the workbook (not live-wired to the Sheet).
   - History + Player pages: real, full season data (344 picks, 23 weeks, 16 players) —
@@ -268,12 +289,39 @@
   value so old picks stay viewable even after their game ages out of the live fetch
   window. Playwright-tested end to end before pushing; all checks passed first try.
 
+### 2026-08-01 (evening, continued) — avatars, Results, week-ahead Picks, NFL/NCAA toggle, real logo
+- Built **player avatars** (generated initials-on-color, no photo dependency) on
+  Standings, History, the Player page header, and a live preview next to the Picks
+  player selector.
+- Added a **Results filter** to the Live page (All / Live now / Results chips)
+  instead of a separate Results page — same data already flowing through
+  `live-scores.js`, avoided duplicating a nav slot/code path.
+- **Widened Picks to cover the whole NFL season ahead**, after verifying directly
+  against the ESPN API that DraftKings posts full-season NFL lines in advance (a
+  December game already had real odds in August) — added a week selector so people
+  aren't limited to only the next couple weeks.
+- Neil asked (correctly) whether this should also cover NCAA with its own toggle —
+  added 🏈 NFL / 🎓 NCAA chips that scope the week selector and games list per sport.
+  Caught and fixed a real bug while building this: the week-bucket key didn't
+  originally include sport, so "Week 3" could silently mean either league.
+- Neil asked to drop "Welcome back 👋" and get a real logo. Designed a crown mark
+  (fits "Regalia" — royal insignia) as inline SVG, replacing the plain "FR" text
+  everywhere (header, gate screen); regenerated the PNG app icons to match; gave
+  Home page a proper hero (crown + "Full Regalia" wordmark) instead of the old
+  greeting text.
+- All of the above was Playwright-tested locally and confirmed working — **but the
+  session ended before it got committed/pushed.** First thing next session (or
+  whenever this file is next opened) should be checking `git status` in the project
+  folder for exactly this reason before assuming local state matches what's live.
+
 ### Next session — resume here
 - **Top priority, blocked on Neil:** the Firebase-vs-Supabase conversation with the
   site's eventual owner. Once decided, the real backend becomes the main build:
   shared picks storage + live-computed standings, replacing localStorage entirely.
-- Not blocked, can build anytime: player avatars, Championship/Bowl Picks page,
-  Results page.
+- Not blocked, can build anytime: Championship/Bowl Picks page (still needs its own
+  scoping re: prop bets — see Status/design notes above), and any further polish.
 - Do **not** revisit "wire Standings to the Google Sheet CSV" — that direction was
   explicitly dropped in favor of the real backend (see above).
+- **Always check `git status` at the start of a session** before reporting on
+  progress or assuming the last session's work made it live — see note above.
 - Remember to bump `sw.js`'s `CACHE` constant on any deploy touching a cached file.
