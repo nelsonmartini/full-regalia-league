@@ -17,10 +17,51 @@
     the UI.** Row Level Security policies only allow insert/update while the game's
     stored `kickoff_at` is still in the future. This can't be bypassed from dev tools
     or a modified request — it's a real server-side rule, not a frontend courtesy.
-  - Currently walking Neil through Supabase dashboard setup (create project → SQL
-    Editor to create the `picks` table + RLS policies → copy Project URL + anon key
-    → hand back for the actual code wiring). Not done yet — see session log once
-    credentials come back.
+  - **Supabase project is live and verified working** (2026-08-02): `picks` table
+    created, RLS policies confirmed via direct API tests (read works, insert/update
+    blocked for past kickoff, allowed for future kickoff). Project ref
+    `wiubzguvdiudlijrgozo`, credentials saved in `js/supabase-client.js` (anon key —
+    safe to be public, security is enforced by RLS, not by hiding this key).
+  - **Wired, tested, and pushed (2026-08-10).** Picks page now reads/writes the real
+    Supabase `picks` table instead of localStorage — confirmed via Playwright:
+    save works, "My Picks — Season" reflects it, and (critically) picks still show
+    as selected after a full page reload, proving they're actually being read back
+    from the database, not just held in a JS variable.
+  - **Real bug found & fixed during testing:** Postgres/PostgREST returns jsonb
+    object keys alphabetically sorted, but freshly-built in-memory pick values keep
+    insertion order — the old `JSON.stringify(a) === JSON.stringify(b)` comparison
+    for "is this chip already picked" silently broke once a value round-tripped
+    through Supabase (worked fine with localStorage, which preserves key order).
+    Fixed with an order-independent `sameValue()` helper in `js/picks.js`. Worth
+    remembering as a general lesson: never compare jsonb-sourced objects with raw
+    JSON.stringify.
+  - Key design point worth remembering: `doSave()` only upserts picks for games
+    currently on screen (not the player's whole pick history) — otherwise
+    re-saving would try to touch old, already-locked picks and the database would
+    correctly reject the *entire* batch, blocking new valid picks too.
+  - **Test data sitting in the live table** — clean up before real use: player
+    `ALEX`, `game_id` 9990001 (spread) and 9990002 (moneyline), both fake IDs from
+    testing. Run in SQL Editor: `delete from picks where game_id in ('9990001',
+    '9990002');`
+- **Real bug found & fixed (2026-08-10): week ordering.** ESPN resets its week
+  number every season phase (preseason week 1, regular-season week 1, and
+  postseason week 1 all separately exist as "week 1") — the week-selector was
+  merging them into one bucket, which is why Neil saw "Week 2 before Week 1" (the
+  merged "Week 1" bucket had silently become regular-season week 1, sorting after
+  preseason week 2 once preseason week 1's single game had already been played and
+  filtered out). Fixed by including season phase in the grouping key
+  (`js/live-scores.js` now captures `seasonType`; `js/picks.js`'s week bucketing
+  uses it) — dropdown now correctly shows "Preseason Week 2/3/4" then "Week 1"
+  (regular season, no prefix) in true chronological order.
+- **OPEN QUESTION, not resolved — placeholder only, per Neil (2026-08-10):**
+  showing an entire NFL week's games (up to 16 games × 3 bet types ≈ 48-96 possible
+  picks) is a lot more than the original workbook's pattern of a small curated set
+  per week (~6 picks: 1 NFL game's spread/ML/O-U + 2 college games' spreads). Neil
+  flagged the "Saved 3 of 96" style count as off and doesn't think there should
+  really be that many weekly picks — exact number/format to be decided later this
+  week. **Don't build a fix for this without checking back** — may mean adding a
+  commissioner step to hand-pick which games are "live" for picks each week,
+  rather than auto-including every game with posted odds.
 - **Current phase:** Core feature-complete beta as of 2026-08-01. Live at
   **https://nelsonmartini.github.io/full-regalia-league/** (passphrase `regalia2026`).
   7 pages: Home, Standings, Picks, History, Player detail, Live (now covers Results
@@ -90,25 +131,20 @@
    tab showing every pick ever saved, grouped by week, with Hit/Miss/Push/Pending
    status. ESPN fetch widened to a rolling 10-days-back/35-days-forward window so
    grading and week-labeling have enough data to work with. See session log.
-1. **Blocked on Neil:** talk to the site's eventual owner about Firebase vs. Supabase
-   (cost, who administers it) — this unblocks the real backend build, which is now the
-   top-priority next feature.
-2. **Player avatars** — clickable avatar next to each name (Standings, Picks
-   player-select, History) so it's obviously "you" at a glance, and so a tap jumps
-   straight to that person's results/money-won view. Asked 2026-08-01. Needs a
-   decision: real photos (someone has to supply them) vs. generated avatars
-   (initials-on-color, no photo needed — faster, no dependency on anyone). Leaning
-   generated for a fast v1, real photos as an upgrade later. Not blocked on the
-   backend decision — can build this anytime.
-3. Championship/Bowl Picks page (Divisional/Conf Champ/Super Bowl — same pattern as
-   Picks, proven out now that Picks pulls real games). Not blocked on the backend
-   decision either — this is frontend/live-data work like tonight's Picks page.
-4. Results page (a straight log of finished games + scores — mostly "for free" now
-   since live-scores.js already fetches this; just needs its own page/view).
-5. **The real backend** (once Firebase/Supabase is chosen — see item 1): picks sync
-   across the group instead of living in each person's browser, standings compute
-   themselves from graded results, and money-won tracking becomes possible. This is
-   the actual "eliminate Excel" milestone — everything else is groundwork for it.
+1. **Done:** backend chosen (Supabase), Picks page wired to it, tested, pushed.
+   Avatars, Championship Picks scoping question, and the Results-filter approach
+   are all done too (see checklist below) — this list was stale, cleaned up
+   2026-08-10.
+2. **Build the live Standings computation** — query all picks from Supabase, cross
+   -reference with graded results (`js/grading.js`, already built and tested), sum
+   points per player. This is what finally makes Standings stop being a frozen
+   snapshot. Next up.
+3. **Open question, not blocking:** how many/which games should actually be
+   pickable per week (see "OPEN QUESTION" note above) — Neil to decide later this
+   week, don't build a fix preemptively.
+4. Championship/Bowl Picks page — still needs its own scoping for prop bets
+   (First TD scorer, etc.) that the current Spread/ML/Total structure doesn't
+   cover. Lower urgency, months out.
 
 ## Living checklist
 
@@ -149,15 +185,19 @@
       Neil decided (2026-08-01) to skip this and go straight to a real backend that
       eliminates the spreadsheet entirely, instead of just displaying it live. Don't
       resume this without checking with him first.
-- [ ] Player avatars (generated initials-on-color for v1) — clickable, next to names on
-      Standings/Picks/History, tap-through to that player's results/money-won view
-- [ ] Championship/Bowl Picks page
-- [ ] Results page (dedicated view — data's already flowing via live-scores.js)
-- [ ] **The real backend** (Firebase or Supabase — choice deferred pending a
-      conversation with the site's eventual owner). This is now the top-priority
-      feature: picks synced across the group, standings computed automatically,
-      money-won tracking possible — the actual "eliminate Excel" milestone.
-- [ ] Real logo/wordmark (using text mark for now)
+- [x] Player avatars (generated initials-on-color) — Standings/Picks/History/Player,
+      tap-through to that player's page
+- [x] Results — folded into the Live page as a filter chip, not a separate page
+- [x] Real logo/wordmark — crown mark (fits "Regalia"), replacing text "FR"
+- [x] Backend chosen: **Supabase** (Neil's existing account, transfers cleanly later)
+- [x] Picks page wired to Supabase (read + write + DB-enforced kickoff lock) —
+      tested, pushed 2026-08-10
+- [ ] **Live Standings computation** — query Supabase picks + graded results, sum
+      points per player. This is the last piece of "eliminate Excel." Next up.
+- [ ] Championship/Bowl Picks page — needs its own scoping for prop bets, lower
+      urgency (months out)
+- [ ] Open question (not blocking): how many games should actually be pickable per
+      week — Neil deciding later this week, see note above
 
 ## Session log
 
@@ -331,14 +371,31 @@
   whenever this file is next opened) should be checking `git status` in the project
   folder for exactly this reason before assuming local state matches what's live.
 
+### 2026-08-10 — Supabase wiring finished, week-ordering bug fixed
+- Neil reported a live bug ("why is week 2 before week 1") and asked to push the
+  pending Supabase code from last session. Both handled: diagnosed and fixed the
+  week-ordering bug (season-phase collision, see note above), then finished wiring
+  Picks to Supabase (added the missing script includes, tested with Playwright).
+- Testing caught a second real bug: jsonb key-ordering broke the "already selected"
+  chip comparison after a Supabase round-trip. Fixed (`sameValue()` helper).
+- Neil flagged the "Saved 3 of 96" pick count as more than he expects a real week
+  to have — logged as an open, unresolved question (see above), not acted on.
+- Test data left in the live table from Playwright testing — cleanup SQL provided,
+  not yet run (Neil to do, needs SQL Editor access which this environment doesn't have).
+- Committed and pushed. Verify live before starting the next task, per the standing
+  "always check git status / verify deploy" lesson from last session.
+
 ### Next session — resume here
-- **Top priority, blocked on Neil:** the Firebase-vs-Supabase conversation with the
-  site's eventual owner. Once decided, the real backend becomes the main build:
-  shared picks storage + live-computed standings, replacing localStorage entirely.
-- Not blocked, can build anytime: Championship/Bowl Picks page (still needs its own
-  scoping re: prop bets — see Status/design notes above), and any further polish.
-- Do **not** revisit "wire Standings to the Google Sheet CSV" — that direction was
-  explicitly dropped in favor of the real backend (see above).
+- **Top priority:** build the live Standings computation (query Supabase picks +
+  `js/grading.js` results, sum points per player) — this is the last piece needed
+  to fully retire the frozen-snapshot Standings page.
+- Confirm Neil ran the test-data cleanup SQL (see Status section above) before
+  the group starts using Picks for real.
+- Check whether Neil has decided the "how many picks per week" open question —
+  if so, that may reshape the Picks page before Standings computation is finalized,
+  so worth checking first rather than building on top of the current (possibly
+  temporary) "show the whole week" behavior.
+- Championship/Bowl Picks page still open, still low urgency.
 - **Always check `git status` at the start of a session** before reporting on
-  progress or assuming the last session's work made it live — see note above.
+  progress or assuming the last session's work made it live.
 - Remember to bump `sw.js`'s `CACHE` constant on any deploy touching a cached file.

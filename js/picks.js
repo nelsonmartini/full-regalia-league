@@ -1,8 +1,10 @@
 /**
  * Picks entry — pulls REAL current/upcoming games (with real live odds) from
- * js/live-scores.js. Selections still save to *this browser's* local storage
- * only, not a shared backend yet (see ROADMAP.md/BACKLOG.md — that's now a
- * deliberate "real backend" project, not just a Sheet-read).
+ * js/live-scores.js, and now saves to a real shared backend (Supabase) instead
+ * of localStorage — see BACKLOG.md for the schema/RLS decisions. Picks are
+ * honor-system (no login, just a name picker) but auto-lock at the database
+ * level once a game's kickoff time passes — nobody, including this code, can
+ * write to a locked pick.
  *
  * Each saved pick stores both the structured value (for grading) and a
  * self-contained snapshot (matchup/date/week/sport) so "My Picks" can still
@@ -13,21 +15,54 @@
 const PLAYER_KEY = "fr_selected_player";
 const MAX_GAMES_PER_WEEK = 40;
 
-function picksKey(player) {
-  return `fr_picks_v3::${player}`;
+/** groupId is "<gameId>_spread" | "<gameId>_ml" | "<gameId>_total" — the DB
+ * stores game_id and bet_type as separate columns, so convert both ways. */
+function groupIdToParts(groupId) {
+  const m = groupId.match(/^(.+)_(spread|ml|total)$/);
+  if (!m) return null;
+  return { gameId: m[1], betType: m[2] === "ml" ? "moneyline" : m[2] };
 }
 
-function loadPicks(player) {
-  try {
-    return JSON.parse(localStorage.getItem(picksKey(player))) || {};
-  } catch {
+function partsToGroupId(gameId, betType) {
+  return `${gameId}_${betType === "moneyline" ? "ml" : betType}`;
+}
+
+async function loadPicks(player) {
+  const { data, error } = await sb.from("picks").select("*").eq("player_name", player);
+  if (error) {
+    console.error("loadPicks failed:", error);
     return {};
   }
+  const picks = {};
+  for (const row of data) {
+    picks[partsToGroupId(row.game_id, row.bet_type)] = { value: row.pick, snapshot: row.snapshot };
+  }
+  return picks;
 }
 
-function savePicks(player, picks) {
-  localStorage.setItem(picksKey(player), JSON.stringify(picks));
-  localStorage.setItem(PLAYER_KEY, player);
+/** Only upserts the groupIds listed in `groupIds` (not the player's whole pick
+ * history) — otherwise re-saving would try to re-write old picks whose games
+ * have already kicked off, and the database would correctly reject the WHOLE
+ * batch for touching a locked row, blocking even the new valid picks. */
+async function savePicks(player, picks, groupIds) {
+  const rows = groupIds
+    .filter((id) => picks[id])
+    .map((id) => {
+      const parts = groupIdToParts(id);
+      const entry = picks[id];
+      return {
+        player_name: player,
+        game_id: parts.gameId,
+        bet_type: parts.betType,
+        pick: entry.value,
+        snapshot: entry.snapshot,
+        kickoff_at: entry.snapshot?.date,
+        updated_at: new Date().toISOString(),
+      };
+    });
+  if (rows.length === 0) return { error: null, count: 0 };
+  const { error } = await sb.from("picks").upsert(rows, { onConflict: "player_name,game_id,bet_type" });
+  return { error, count: rows.length };
 }
 
 function fmtLine(n) {
@@ -41,6 +76,7 @@ function gameSnapshot(game) {
     matchup: `${game.away?.abbr || "?"} @ ${game.home?.abbr || "?"}`,
     date: game.date,
     week: game.week,
+    seasonType: game.seasonType,
   };
 }
 
@@ -89,22 +125,44 @@ function sportLabel(sport) {
   return sport === "nfl" ? "NFL" : "College";
 }
 
+const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
+
 /** Groups pickable games into "weeks" a person can jump between, scoped to
- * whichever sport is toggled — ESPN tags a real week number on both NFL and
- * college games, so both get proper per-week buckets (falls back to a
- * date-based bucket only if that field is ever missing). */
+ * whichever sport is toggled — ESPN resets its week number every season phase
+ * (preseason week 1, regular season week 1, and postseason week 1 all exist),
+ * so the bucket key must include seasonType or those get merged together
+ * incorrectly (confirmed bug: this silently combined preseason/regular-season
+ * "Week 1" into one option, sorted by whichever game happened to survive
+ * filtering). Falls back to a date-based bucket only if week is ever missing. */
 function weekBucketKey(game) {
-  return game.week != null ? `w${game.week}` : `d${game.date?.slice(0, 10)}`;
+  return game.week != null ? `w${game.seasonType ?? "x"}-${game.week}` : `d${game.date?.slice(0, 10)}`;
 }
 
 function weekBucketLabel(key, games) {
   const game = games.find((g) => weekBucketKey(g) === key);
-  if (game?.week != null) return `Week ${game.week}`;
+  if (game?.week != null) {
+    const prefix = SEASON_PHASE_PREFIX[game.seasonType] ?? "";
+    return `${prefix}Week ${game.week}`;
+  }
   try {
     return `Week of ${new Date(game.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
   } catch {
     return key;
   }
+}
+
+/** Order-independent equality for the small plain objects used as pick values.
+ * Needed because Postgres/PostgREST returns jsonb object keys alphabetically
+ * sorted, while freshly-built in-memory values keep insertion order — plain
+ * JSON.stringify comparison silently breaks "is this already picked?" once a
+ * value has round-tripped through Supabase (confirmed bug, fixed here). */
+function sameValue(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  const keysA = Object.keys(a),
+    keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((k) => a[k] === b[k]);
 }
 
 function renderGames(container, games, picks) {
@@ -118,7 +176,8 @@ function renderGames(container, games, picks) {
   container.innerHTML = withGroups
     .map(({ game, groups }) => {
       const when = typeof formatFullDate === "function" ? formatFullDate(game.date) : game.date;
-      const weekBadge = game.week ? ` · ${sportLabel(game.sport)} Week ${game.week}` : ` · ${sportLabel(game.sport)}`;
+      const phasePrefix = SEASON_PHASE_PREFIX[game.seasonType] ?? "";
+      const weekBadge = game.week ? ` · ${sportLabel(game.sport)} ${phasePrefix}Week ${game.week}` : ` · ${sportLabel(game.sport)}`;
       const subgroups = groups
         .map((g) => {
           const saved = picks[g.id];
@@ -129,7 +188,7 @@ function renderGames(container, games, picks) {
                 ${g.choices
                   .map(
                     (c) => `
-                  <div class="chip${saved && JSON.stringify(saved.value) === JSON.stringify(c.value) ? " selected" : ""}"
+                  <div class="chip${saved && sameValue(saved.value, c.value) ? " selected" : ""}"
                        data-value='${JSON.stringify(c.value)}'>${c.display}</div>
                 `
                   )
@@ -165,7 +224,10 @@ function pickLabel(pick) {
 
 function weekGroupLabel(snapshot) {
   if (!snapshot) return "Unknown week";
-  if (snapshot.week) return `${sportLabel(snapshot.sport)} · Week ${snapshot.week}`;
+  if (snapshot.week) {
+    const prefix = SEASON_PHASE_PREFIX[snapshot.seasonType] ?? "";
+    return `${sportLabel(snapshot.sport)} · ${prefix}Week ${snapshot.week}`;
+  }
   try {
     const d = new Date(snapshot.date);
     return `Week of ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
@@ -284,12 +346,12 @@ async function initPicksPage() {
   }
 
   let pickable = pickableForSelectedWeek();
-  let currentPicks = loadPicks(select.value);
+  let currentPicks = await loadPicks(select.value);
   renderGames(container, pickable, currentPicks);
   renderMyPicks(myPicksList, currentPicks, allGames);
 
-  function refresh() {
-    currentPicks = loadPicks(select.value);
+  async function refresh() {
+    currentPicks = await loadPicks(select.value);
     avatarPreview.innerHTML = avatarHtml(select.value, 32);
     renderGames(container, pickable, currentPicks);
     renderMyPicks(myPicksList, currentPicks, allGames);
@@ -306,7 +368,6 @@ async function initPicksPage() {
       selectedSport = el.getAttribute("data-sport");
       rebuildWeekOptions();
       pickable = pickableForSelectedWeek();
-      currentPicks = loadPicks(select.value);
       renderGames(container, pickable, currentPicks);
       statusTop.textContent = "";
       statusBottom.textContent = "";
@@ -315,7 +376,6 @@ async function initPicksPage() {
 
   weekSelect.addEventListener("change", () => {
     pickable = pickableForSelectedWeek();
-    currentPicks = loadPicks(select.value);
     renderGames(container, pickable, currentPicks);
     statusTop.textContent = "";
     statusBottom.textContent = "";
@@ -340,12 +400,31 @@ async function initPicksPage() {
     statusBottom.textContent = "";
   });
 
-  function doSave() {
-    savePicks(select.value, currentPicks);
+  async function doSave() {
+    saveBtnTop.disabled = true;
+    saveBtnBottom.disabled = true;
+    statusTop.textContent = "Saving…";
+    statusBottom.textContent = "Saving…";
+
+    // Only the groups for games currently on screen — not the player's whole
+    // pick history — so re-saving never touches an already-locked old pick.
+    const visibleGroupIds = pickable.flatMap(buildBetGroups).map((g) => g.id);
+    const { error, count } = await savePicks(select.value, currentPicks, visibleGroupIds);
+
+    saveBtnTop.disabled = false;
+    saveBtnBottom.disabled = false;
+
+    if (error) {
+      const msg = "Couldn't save — one of these games may have already kicked off. Refresh and try again.";
+      statusTop.textContent = msg;
+      statusBottom.textContent = msg;
+      console.error("savePicks failed:", error);
+      return;
+    }
+
     renderMyPicks(myPicksList, currentPicks, allGames);
-    const count = Object.keys(currentPicks).length;
     const total = pickable.flatMap(buildBetGroups).length;
-    const msg = `Saved ${count} of ${total} picks for ${titleCase(select.value)} — on this device only.`;
+    const msg = `Saved ${count} of ${total} picks for ${titleCase(select.value)}.`;
     statusTop.textContent = msg;
     statusBottom.textContent = msg;
   }

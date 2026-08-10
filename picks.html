@@ -34,8 +34,9 @@
 <main class="app">
   <h1 class="page-title">Picks <span class="badge beta">Beta</span></h1>
   <p class="page-sub">
-    Real, live games with real odds. Picks save on <strong>this device only</strong>
-    for now, not synced with the group yet.
+    Real, live games with real odds. Picks save to the group's shared board — pick
+    your name honestly, and note that <strong>picks lock automatically at kickoff</strong>,
+    even for late edits.
   </p>
 
   <div class="card">
@@ -88,6 +89,8 @@
 <script src="js/app.js"></script>
 <script src="js/live-scores.js"></script>
 <script src="js/grading.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
 <script src="js/picks.js"></script>
 <script>
   document.querySelectorAll("[data-tab]").forEach((el) => {

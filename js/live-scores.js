@@ -54,6 +54,10 @@ function normalizeEvent(e, sport) {
     shortName: e.shortName || e.name,
     date: e.date,
     week: e.week?.number ?? null,
+    // ESPN resets week numbers per season phase (preseason week 1, regular season
+    // week 1, postseason week 1 are all "week 1") — seasonType disambiguates them.
+    // 1 = preseason, 2 = regular season, 3 = postseason.
+    seasonType: e.season?.type ?? null,
     status: {
       state: e.status?.type?.state, // "pre" | "in" | "post"
       completed: !!e.status?.type?.completed,
