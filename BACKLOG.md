@@ -301,12 +301,33 @@
 - [x] Backend chosen: **Supabase** (Neil's existing account, transfers cleanly later)
 - [x] Picks page wired to Supabase (read + write + DB-enforced kickoff lock) —
       tested, pushed 2026-08-10
+- [x] ~~Open question: how many games should be pickable per week~~ — **RESOLVED**,
+      see the 4-category/8-picks redesign below
+- [x] **Picks redesigned around a fixed weekly quota** (2026-08-13): 4 categories
+      (Minus Spread, Plus Spread, Over, Under; moneyline dropped), 8 picks/week
+      total (4 NFL + 4 NCAA, 1 per category each). NFL/NCAA toggle kept, with a
+      persistent progress indicator visible regardless of which sport is shown.
+- [x] Fixed: chips showing pick with no opponent context — every chip now shows
+      "vs OPP" (spread) or the full matchup (total)
+- [x] Fixed: selecting one chip highlighted every other chip sharing the same odds
+      value (e.g. two games both at "Over 44.5") — now compares by game identity
+- [ ] **Confirm the DELETE grant SQL was run**, then test an actual category-swap
+      (changing an already-saved pick to a different game) end to end — the one
+      path not yet empirically verified, see Status section for the SQL
 - [ ] **Live Standings computation** — query Supabase picks + graded results, sum
-      points per player. This is the last piece of "eliminate Excel." Next up.
+      points per player. This is the last piece of "eliminate Excel." Next up
+      once the swap path above is confirmed.
+- [ ] **Players table migration** — real DB table with a stable id, so renaming a
+      player doesn't orphan their pick history (currently just a hardcoded list
+      + plain-text name on each pick row). Blocked on Neil picking admin auth
+      strength (real Supabase login vs. passphrase gate) — see Status section.
+- [ ] **Super Admin panel** — add/rename players through the site instead of a
+      code change + redeploy. Blocked on the same decision as above.
+- [ ] **Per-week "who's submitted picks" tracker** — every player's status for a
+      given week at a glance. Blocked on visibility decision (everyone vs.
+      admin-only) — see Status section.
 - [ ] Championship/Bowl Picks page — needs its own scoping for prop bets, lower
       urgency (months out)
-- [ ] Open question (not blocking): how many games should actually be pickable per
-      week — Neil deciding later this week, see note above
 
 ## Session log
 
