@@ -4,6 +4,57 @@
 
 ## Status
 
+- **NEW REQUEST, not started — planned but blocked on 2 decisions from Neil
+  (2026-08-13):** three related features requested together:
+  1. Confirm picks stay enterable/viewable/editable pre-kickoff and locked after
+     (this part is already true today — no change needed, just confirming).
+  2. **Per-week "who's submitted picks" tracker** — a view showing every player
+     and their status for a given week (e.g. "Alex 8/8 · Calli 3/8 · Drew — not
+     started"). Needs a Supabase query across ALL players' picks for a given
+     week, not just the signed-in player's own.
+  3. **Super Admin panel**: add players to the league, and rename a player
+     WITHOUT losing their pick history.
+  - **The real architectural piece (item 3 is why this needs planning, not just
+    coding):** player names currently live as a hardcoded list in `js/app.js`
+    (`LEAGUE_PLAYERS`), and `picks.player_name` stores the name as plain text.
+    Renaming someone today would orphan their old picks (still tagged with the
+    old name). The correct fix is a real `players` table with a stable id, and
+    `picks` referencing that id instead of storing the name directly — then a
+    rename is just editing a label, every historical pick follows automatically.
+    This also makes "add a player" a real DB action instead of something only
+    Claude can do by editing code and redeploying.
+  - **Two open decisions, asked but not yet answered — do not build until
+    Neil weighs in:**
+    1. **Admin auth strength.** Option A (recommended): a real Supabase Auth
+       login for Neil (email+password) — genuine security, the database itself
+       enforces only that logged-in account can write to the players table, not
+       bypassable via browser dev tools. Small one-time setup (Neil creates one
+       login). Option B: reuse the existing passphrase-gate pattern
+       (`js/gate.js`) — quick, consistent with the beta gate, but same honest
+       caveat as before: client-side speed bump, not real security — and this
+       time it'd be protecting who's officially in the league, not just picks,
+       so leaning against it, but it's Neil's call.
+    2. **Tracker visibility** — should the "who's submitted" view be visible to
+       the whole group (transparent, works as a friendly nudge, recommended) or
+       admin-only (commissioner-only tool)?
+  - **SQL that will be needed once decisions land** (not written yet — exact
+    shape of the admin-write RLS policy depends on decision #1 above):
+    - Create a `players` table (id uuid primary key, name text unique, couple
+      text nullable, active boolean default true, created_at).
+    - Seed it from the current `LEAGUE_PLAYERS` list in `js/app.js` (15 players).
+    - Add `player_id uuid references players(id)` to `picks`; backfill existing
+      rows by matching `player_name` text to the new table; can drop
+      `player_name` later once confirmed working, or just leave it as a
+      harmless legacy column.
+    - New RLS: `players` needs public SELECT (everyone reads the roster to
+      populate the picker dropdown); INSERT/UPDATE on `players` needs to be
+      locked down per decision #1 — either `using (auth.uid() = '<neil's uid>')`
+      style (Option A) or left open like `picks` currently is (Option B, not
+      recommended here).
+    - `picks` RLS policies need updating to reference `player_id` instead of
+      `player_name` once the migration happens.
+  - Not blocking the rest of the site — Standings computation (next up
+    regardless) doesn't depend on this.
 - **Backend decision made (2026-08-02): Supabase**, using Neil's existing account. Not
   building on a throwaway/personal setup he can't hand off — Supabase project
   transfers cleanly to another org later (verified via their docs): source must be
@@ -178,6 +229,11 @@
 4. Championship/Bowl Picks page — still needs its own scoping for prop bets
    (First TD scorer, etc.) that the current category system doesn't cover.
    Lower urgency, months out.
+5. **Blocked on Neil:** players-table migration + Super Admin panel (add/rename
+   players) + per-week submission tracker — see Status section above for full
+   detail. Two decisions needed before building: admin auth strength (real
+   Supabase login vs. passphrase gate) and tracker visibility (everyone vs.
+   admin-only).
 
 ## Living checklist
 
