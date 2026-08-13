@@ -90,8 +90,8 @@
   - Standings: still sample/snapshot data from the workbook (not live-wired to the Sheet).
   - History + Player pages: real, full season data (344 picks, 23 weeks, 16 players) —
     but it's a frozen snapshot parsed from the workbook, not live either.
-  - Picks page: **fully real** — live current games + live odds from ESPN, saves
-    locally per-device.
+  - Picks page: **fully real** — live current games + live odds from ESPN, saved to
+    the shared Supabase database (as of 2026-08-10 — no longer per-device).
   - Live page + Home's live-games card: **fully real**, refetches every 30s.
   - Auto-grading ("Your results" on Picks): **fully real, functioning engine** —
     just has nothing to show yet because no picked game has finished. It'll populate
