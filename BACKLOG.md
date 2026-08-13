@@ -137,14 +137,34 @@
     prior save" path has been empirically tested so far — the swap/delete path
     was verified by code tracing, not by an actual successful delete call).
   - More test data in the live table from this round: player `MICHAELA`, games
-    `nfl-g1`/`nfl-g2` (fixture IDs, obviously fake, safe to delete) and one row
-    for player `TESTDEL` (`game_id` 9990099, also fake). Combined cleanup SQL:
-    `delete from picks where player_name in ('MICHAELA','TESTDEL') or game_id
-    like 'nfl-g%' or game_id like 'cfb-g%';` — **double check this doesn't
-    accidentally match a real ESPN game_id before running** (ESPN's real IDs are
-    long numeric strings, so `nfl-g%`/`cfb-g%` shouldn't collide, but eyeball the
-    SELECT first: `select * from picks where player_name in ('MICHAELA',
-    'TESTDEL') or game_id like 'nfl-g%' or game_id like 'cfb-g%';`).
+    `nfl-g1`/`nfl-g2` (fixture IDs, obviously fake, safe to delete), one row for
+    player `TESTDEL` (`game_id` 9990099, also fake), and one row for player
+    `EMMA` (`game_id` 401000002, also fake, from the bug-fix testing below).
+    Combined cleanup SQL: `delete from picks where player_name in
+    ('MICHAELA','TESTDEL','EMMA') or game_id like 'nfl-g%' or game_id like
+    'cfb-g%';` — **double check this doesn't accidentally match a real ESPN
+    game_id before running** (ESPN's real IDs are long numeric strings, so this
+    shouldn't collide, but eyeball the SELECT first: `select * from picks where
+    player_name in ('MICHAELA','TESTDEL','EMMA') or game_id like 'nfl-g%' or
+    game_id like 'cfb-g%';`).
+  - **Two real bugs found & fixed right after the redesign shipped (2026-08-13),
+    both reported live by Neil:**
+    1. **Missing opponent context.** Chips only showed the pick itself (e.g.
+       "CAR -1.5") with no indication of who they're playing. Fixed — every
+       chip now shows a small second line: "vs [OPPONENT]" for spread picks,
+       the full matchup ("CAR @ ARI") for total picks.
+    2. **Selecting one chip highlighted every other chip with the same value.**
+       Root cause: the "is this chip selected" check compared by odds VALUE
+       (e.g. `{direction:"over", line:44.5}`), not by which specific game — so
+       any two games sharing the same total line (very common; several NFL
+       games often land on the same O/U number) all lit up together once one
+       was picked. Fixed by comparing by `gameId` identity instead (the
+       correct/simpler fix — removed the now-unused `sameValue()` helper from
+       the previous jsonb-key-order fix, since identity comparison doesn't
+       have that problem at all). Verified with a fixture forcing two
+       different games to share an identical "Over 44.5" line — confirmed only
+       the actually-clicked game's chip lights up, swapping correctly moves
+       the highlight, and it survives a save+reload.
 - **Current phase:** Core feature-complete beta as of 2026-08-01. Live at
   **https://nelsonmartini.github.io/full-regalia-league/** (passphrase `regalia2026`).
   7 pages: Home, Standings, Picks, History, Player detail, Live (now covers Results

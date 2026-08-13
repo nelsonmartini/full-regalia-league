@@ -117,20 +117,6 @@ function weekBucketLabel(key, games) {
   }
 }
 
-/** Order-independent equality for the small plain objects used as pick values.
- * Needed because Postgres/PostgREST returns jsonb object keys alphabetically
- * sorted, while freshly-built in-memory values keep insertion order — plain
- * JSON.stringify comparison silently breaks equality once a value has
- * round-tripped through Supabase (confirmed bug, fixed here). */
-function sameValue(a, b) {
-  if (a === b) return true;
-  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
-  const keysA = Object.keys(a),
-    keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
-  return keysA.every((k) => a[k] === b[k]);
-}
-
 /** Build the 4 category pools (one option per eligible game) for a set of
  * games, excluding whichever game is already the OTHER side of the same bet
  * family (a game used for Minus Spread can't also appear in Plus Spread, etc.)
@@ -147,11 +133,12 @@ function buildCategoryPools(games, slots) {
     const away = game.away,
       home = game.home;
     if (!away || !home) continue;
+    const matchup = `${away.abbr} @ ${home.abbr}`;
 
     if (game.odds?.homeSpread != null && game.odds?.awaySpread != null) {
       const sides = [
-        { team: away, line: game.odds.awaySpread },
-        { team: home, line: game.odds.homeSpread },
+        { team: away, opp: home, line: game.odds.awaySpread },
+        { team: home, opp: away, line: game.odds.homeSpread },
       ];
       for (const side of sides) {
         const cat = side.line < 0 ? "minus" : "plus";
@@ -160,6 +147,7 @@ function buildCategoryPools(games, slots) {
         pools[cat].push({
           gameId: game.id,
           display: `${side.team.abbr} ${fmtLine(side.line)}`,
+          sub: `vs ${side.opp.abbr}`,
           value: { type: "spread", team: side.team.abbr, line: side.line },
         });
       }
@@ -167,10 +155,10 @@ function buildCategoryPools(games, slots) {
 
     if (game.odds?.overUnder != null) {
       if (game.id !== underGameId) {
-        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, value: { type: "total", direction: "over", line: game.odds.overUnder } });
+        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, value: { type: "total", direction: "over", line: game.odds.overUnder } });
       }
       if (game.id !== overGameId) {
-        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, value: { type: "total", direction: "under", line: game.odds.overUnder } });
+        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, value: { type: "total", direction: "under", line: game.odds.overUnder } });
       }
     }
   }
@@ -219,7 +207,11 @@ function renderCategoryPools(container, games, slots) {
 
   container.innerHTML = CATEGORIES.map((cat) => {
     const options = pools[cat];
-    const current = slots[cat]?.entry.value;
+    // Identify the selected chip by which GAME it's for, not by matching its
+    // odds value — two different games can easily share the same total line
+    // (e.g. two games both set at "Over 44.5"), and comparing by value alone
+    // was marking every game with that line as selected (confirmed bug).
+    const currentGameId = slots[cat]?.entry.snapshot?.gameId ?? null;
     if (options.length === 0) {
       return `
         <div class="pick-game" data-category="${cat}">
@@ -230,12 +222,12 @@ function renderCategoryPools(container, games, slots) {
     return `
       <div class="pick-game" data-category="${cat}">
         <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
-        <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(84px,1fr))">
+        <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">
           ${options
             .map(
               (o) => `
-            <div class="chip${current && sameValue(current, o.value) ? " selected" : ""}"
-                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.display}</div>
+            <div class="chip${o.gameId === currentGameId ? " selected" : ""}"
+                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}</div>
           `
             )
             .join("")}
