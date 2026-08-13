@@ -1,22 +1,37 @@
 /**
- * Picks entry — pulls REAL current/upcoming games (with real live odds) from
- * js/live-scores.js, and now saves to a real shared backend (Supabase) instead
- * of localStorage — see BACKLOG.md for the schema/RLS decisions. Picks are
- * honor-system (no login, just a name picker) but auto-lock at the database
- * level once a game's kickoff time passes — nobody, including this code, can
- * write to a locked pick.
+ * Picks entry — category-pool model (2026-08-10 redesign, per Neil):
+ *   4 categories per sport: Minus Spread, Plus Spread, Over, Under.
+ *   Exactly 1 pick per category per sport per week = 4 NFL + 4 NCAA = 8 total.
+ *   A Minus/Plus Spread pick, or an Over/Under pick, can be on ANY game that
+ *   week — they don't have to be the two sides of the same game (confirmed
+ *   with Neil). The one constraint enforced here: a single game can't be used
+ *   for BOTH sides of the same bet family (e.g. picked as your Minus Spread AND
+ *   your Plus Spread) — that's both logically contradictory (betting both sides
+ *   of one line) and a real technical conflict (the DB's uniqueness is per
+ *   player+game+bet_type, so both would collide). Handled by excluding a game
+ *   from the opposite category's pool once it's used in one.
  *
- * Each saved pick stores both the structured value (for grading) and a
- * self-contained snapshot (matchup/date/week/sport) so "My Picks" can still
- * display old picks even after that game rolls out of the live fetch window:
+ * Reads/writes a real shared Supabase database (see BACKLOG.md for schema/RLS).
+ * Picks are honor-system (no login) but the database itself enforces the
+ * kickoff auto-lock and now also requires DELETE access (for swapping a
+ * category pick to a different game) — see the SQL grant in BACKLOG.md.
+ *
+ * Each saved pick stores the structured value (for grading) plus a
+ * self-contained snapshot (matchup/date/week/sport/seasonType) so "My Picks"
+ * can still display it even after that game rolls out of the live fetch window:
  *   { value: {type:"spread", team:"CAR", line:-1.5}, snapshot: {...} }
  */
 
 const PLAYER_KEY = "fr_selected_player";
-const MAX_GAMES_PER_WEEK = 40;
+const CATEGORIES = ["minus", "plus", "over", "under"];
+const CATEGORY_LABEL = { minus: "Minus Spread", plus: "Plus Spread", over: "Over", under: "Under" };
+const SPORTS = ["nfl", "cfb"];
+const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
 
 /** groupId is "<gameId>_spread" | "<gameId>_ml" | "<gameId>_total" — the DB
- * stores game_id and bet_type as separate columns, so convert both ways. */
+ * stores game_id and bet_type as separate columns, so convert both ways.
+ * ("_ml"/"moneyline" kept only so any legacy rows from before this redesign
+ * still round-trip without erroring — moneyline is no longer offered.) */
 function groupIdToParts(groupId) {
   const m = groupId.match(/^(.+)_(spread|ml|total)$/);
   if (!m) return null;
@@ -25,6 +40,21 @@ function groupIdToParts(groupId) {
 
 function partsToGroupId(gameId, betType) {
   return `${gameId}_${betType === "moneyline" ? "ml" : betType}`;
+}
+
+function fmtLine(n) {
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+function sportLabel(sport) {
+  return sport === "nfl" ? "NFL" : "College";
+}
+
+/** Which of the 4 categories a pick belongs to. */
+function pickCategory(pick) {
+  if (pick.type === "spread") return pick.line < 0 ? "minus" : "plus";
+  if (pick.type === "total") return pick.direction === "over" ? "over" : "under";
+  return null;
 }
 
 async function loadPicks(player) {
@@ -40,33 +70,15 @@ async function loadPicks(player) {
   return picks;
 }
 
-/** Only upserts the groupIds listed in `groupIds` (not the player's whole pick
- * history) — otherwise re-saving would try to re-write old picks whose games
- * have already kicked off, and the database would correctly reject the WHOLE
- * batch for touching a locked row, blocking even the new valid picks. */
-async function savePicks(player, picks, groupIds) {
-  const rows = groupIds
-    .filter((id) => picks[id])
-    .map((id) => {
-      const parts = groupIdToParts(id);
-      const entry = picks[id];
-      return {
-        player_name: player,
-        game_id: parts.gameId,
-        bet_type: parts.betType,
-        pick: entry.value,
-        snapshot: entry.snapshot,
-        kickoff_at: entry.snapshot?.date,
-        updated_at: new Date().toISOString(),
-      };
-    });
-  if (rows.length === 0) return { error: null, count: 0 };
-  const { error } = await sb.from("picks").upsert(rows, { onConflict: "player_name,game_id,bet_type" });
-  return { error, count: rows.length };
+async function deletePick(player, gameId, betType) {
+  const { error } = await sb.from("picks").delete().eq("player_name", player).eq("game_id", gameId).eq("bet_type", betType);
+  return error;
 }
 
-function fmtLine(n) {
-  return n > 0 ? `+${n}` : `${n}`;
+async function upsertPicks(player, rows) {
+  if (rows.length === 0) return { error: null };
+  const { error } = await sb.from("picks").upsert(rows, { onConflict: "player_name,game_id,bet_type" });
+  return { error };
 }
 
 function gameSnapshot(game) {
@@ -80,62 +92,16 @@ function gameSnapshot(game) {
   };
 }
 
-/** The 3 bet-type sub-groups (spread / moneyline / total) for one game. */
-function buildBetGroups(game) {
-  const groups = [];
-  const away = game.away,
-    home = game.home;
-  if (!away || !home) return groups;
-
-  if (game.odds && game.odds.homeSpread != null && game.odds.awaySpread != null) {
-    groups.push({
-      id: `${game.id}_spread`,
-      label: "Spread",
-      choices: [
-        { display: `${away.abbr} ${fmtLine(game.odds.awaySpread)}`, value: { type: "spread", team: away.abbr, line: game.odds.awaySpread } },
-        { display: `${home.abbr} ${fmtLine(game.odds.homeSpread)}`, value: { type: "spread", team: home.abbr, line: game.odds.homeSpread } },
-      ],
-    });
-  }
-
-  groups.push({
-    id: `${game.id}_ml`,
-    label: "Moneyline",
-    choices: [
-      { display: `${away.abbr} ML`, value: { type: "moneyline", team: away.abbr } },
-      { display: `${home.abbr} ML`, value: { type: "moneyline", team: home.abbr } },
-    ],
-  });
-
-  if (game.odds && game.odds.overUnder != null) {
-    groups.push({
-      id: `${game.id}_total`,
-      label: "Total",
-      choices: [
-        { display: `Over ${game.odds.overUnder}`, value: { type: "total", direction: "over", line: game.odds.overUnder } },
-        { display: `Under ${game.odds.overUnder}`, value: { type: "total", direction: "under", line: game.odds.overUnder } },
-      ],
-    });
-  }
-
-  return groups;
-}
-
-function sportLabel(sport) {
-  return sport === "nfl" ? "NFL" : "College";
-}
-
-const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
-
-/** Groups pickable games into "weeks" a person can jump between, scoped to
- * whichever sport is toggled — ESPN resets its week number every season phase
- * (preseason week 1, regular season week 1, and postseason week 1 all exist),
- * so the bucket key must include seasonType or those get merged together
- * incorrectly (confirmed bug: this silently combined preseason/regular-season
- * "Week 1" into one option, sorted by whichever game happened to survive
- * filtering). Falls back to a date-based bucket only if week is ever missing. */
 function weekBucketKey(game) {
   return game.week != null ? `w${game.seasonType ?? "x"}-${game.week}` : `d${game.date?.slice(0, 10)}`;
+}
+
+/** Same as weekBucketKey but built from a saved pick's snapshot instead of a
+ * live game object, so slot-fill can be derived without needing the game to
+ * still be in the live fetch window. */
+function weekBucketKeyFromSnapshot(snapshot) {
+  if (!snapshot) return null;
+  return snapshot.week != null ? `w${snapshot.seasonType ?? "x"}-${snapshot.week}` : `d${snapshot.date?.slice(0, 10)}`;
 }
 
 function weekBucketLabel(key, games) {
@@ -154,8 +120,8 @@ function weekBucketLabel(key, games) {
 /** Order-independent equality for the small plain objects used as pick values.
  * Needed because Postgres/PostgREST returns jsonb object keys alphabetically
  * sorted, while freshly-built in-memory values keep insertion order — plain
- * JSON.stringify comparison silently breaks "is this already picked?" once a
- * value has round-tripped through Supabase (confirmed bug, fixed here). */
+ * JSON.stringify comparison silently breaks equality once a value has
+ * round-tripped through Supabase (confirmed bug, fixed here). */
 function sameValue(a, b) {
   if (a === b) return true;
   if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
@@ -165,49 +131,117 @@ function sameValue(a, b) {
   return keysA.every((k) => a[k] === b[k]);
 }
 
-function renderGames(container, games, picks) {
-  const withGroups = games.map((g) => ({ game: g, groups: buildBetGroups(g) })).filter((x) => x.groups.length > 0);
+/** Build the 4 category pools (one option per eligible game) for a set of
+ * games, excluding whichever game is already the OTHER side of the same bet
+ * family (a game used for Minus Spread can't also appear in Plus Spread, etc.)
+ * — both because betting both sides of one line is contradictory and because
+ * the database can only hold one spread pick and one total pick per game. */
+function buildCategoryPools(games, slots) {
+  const pools = { minus: [], plus: [], over: [], under: [] };
+  const minusGameId = slots.minus?.entry.snapshot?.gameId ?? null;
+  const plusGameId = slots.plus?.entry.snapshot?.gameId ?? null;
+  const overGameId = slots.over?.entry.snapshot?.gameId ?? null;
+  const underGameId = slots.under?.entry.snapshot?.gameId ?? null;
 
-  if (withGroups.length === 0) {
-    container.innerHTML = '<div class="empty-state">No games with odds available right now — check back closer to kickoff.</div>';
+  for (const game of games) {
+    const away = game.away,
+      home = game.home;
+    if (!away || !home) continue;
+
+    if (game.odds?.homeSpread != null && game.odds?.awaySpread != null) {
+      const sides = [
+        { team: away, line: game.odds.awaySpread },
+        { team: home, line: game.odds.homeSpread },
+      ];
+      for (const side of sides) {
+        const cat = side.line < 0 ? "minus" : "plus";
+        if (cat === "minus" && game.id === plusGameId) continue; // already used as Plus, don't offer as Minus
+        if (cat === "plus" && game.id === minusGameId) continue;
+        pools[cat].push({
+          gameId: game.id,
+          display: `${side.team.abbr} ${fmtLine(side.line)}`,
+          value: { type: "spread", team: side.team.abbr, line: side.line },
+        });
+      }
+    }
+
+    if (game.odds?.overUnder != null) {
+      if (game.id !== underGameId) {
+        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, value: { type: "total", direction: "over", line: game.odds.overUnder } });
+      }
+      if (game.id !== overGameId) {
+        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, value: { type: "total", direction: "under", line: game.odds.overUnder } });
+      }
+    }
+  }
+  return pools;
+}
+
+/** Derive the 4 category slots currently filled for one sport+week from the
+ * player's full pick set. */
+function slotsForSportWeek(picks, sport, weekKey) {
+  const slots = { minus: null, plus: null, over: null, under: null };
+  for (const [groupId, entry] of Object.entries(picks)) {
+    if (entry.snapshot?.sport !== sport) continue;
+    if (weekBucketKeyFromSnapshot(entry.snapshot) !== weekKey) continue;
+    const cat = pickCategory(entry.value);
+    if (cat) slots[cat] = { groupId, entry };
+  }
+  return slots;
+}
+
+/** Overall progress across BOTH sports' currently-selected weeks (not the
+ * whole season) — the 8-pick cap is per week, so that's the meaningful count. */
+function computeProgress(picks, sportWeeks) {
+  const perSport = {};
+  let total = 0;
+  for (const sport of SPORTS) {
+    const slots = slotsForSportWeek(picks, sport, sportWeeks[sport]);
+    const filled = CATEGORIES.filter((c) => slots[c]).length;
+    perSport[sport] = filled;
+    total += filled;
+  }
+  return { perSport, total };
+}
+
+function renderProgress(el, picks, sportWeeks) {
+  const { perSport, total } = computeProgress(picks, sportWeeks);
+  el.textContent = `${total} of 8 picks made this week · NFL ${perSport.nfl}/4 · NCAA ${perSport.cfb}/4`;
+}
+
+function renderCategoryPools(container, games, slots) {
+  const pools = buildCategoryPools(games, slots);
+
+  if (games.length === 0) {
+    container.innerHTML = '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>';
     return;
   }
 
-  container.innerHTML = withGroups
-    .map(({ game, groups }) => {
-      const when = typeof formatFullDate === "function" ? formatFullDate(game.date) : game.date;
-      const phasePrefix = SEASON_PHASE_PREFIX[game.seasonType] ?? "";
-      const weekBadge = game.week ? ` · ${sportLabel(game.sport)} ${phasePrefix}Week ${game.week}` : ` · ${sportLabel(game.sport)}`;
-      const subgroups = groups
-        .map((g) => {
-          const saved = picks[g.id];
-          return `
-            <div class="pick-game" data-group="${g.id}">
-              <div class="pick-game-label">${g.label}</div>
-              <div class="chip-row">
-                ${g.choices
-                  .map(
-                    (c) => `
-                  <div class="chip${saved && sameValue(saved.value, c.value) ? " selected" : ""}"
-                       data-value='${JSON.stringify(c.value)}'>${c.display}</div>
-                `
-                  )
-                  .join("")}
-              </div>
-            </div>`;
-        })
-        .join("");
-
+  container.innerHTML = CATEGORIES.map((cat) => {
+    const options = pools[cat];
+    const current = slots[cat]?.entry.value;
+    if (options.length === 0) {
       return `
-        <div class="card" data-game-card="${game.id}">
-          <div class="card-title" style="text-transform:none;letter-spacing:0">
-            <span style="color:var(--text);font-weight:800;font-size:15px">${game.away?.abbr} @ ${game.home?.abbr}</span>
-            <span style="font-weight:600;color:var(--text-faint);font-size:11.5px">${when}${weekBadge}</span>
-          </div>
-          ${subgroups}
+        <div class="pick-game" data-category="${cat}">
+          <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
+          <div class="empty-state" style="padding:10px 0">No eligible games left for this category.</div>
         </div>`;
-    })
-    .join("");
+    }
+    return `
+      <div class="pick-game" data-category="${cat}">
+        <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
+        <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(84px,1fr))">
+          ${options
+            .map(
+              (o) => `
+            <div class="chip${current && sameValue(current, o.value) ? " selected" : ""}"
+                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.display}</div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>`;
+  }).join("");
 }
 
 function statusBadge(result) {
@@ -291,6 +325,7 @@ async function initPicksPage() {
   const select = document.getElementById("player-select");
   const weekSelect = document.getElementById("week-select");
   const container = document.getElementById("games-list");
+  const progressEl = document.getElementById("picks-progress");
   const statusTop = document.getElementById("save-status-top");
   const statusBottom = document.getElementById("save-status-bottom");
   const saveBtnTop = document.getElementById("save-btn-top");
@@ -310,106 +345,164 @@ async function initPicksPage() {
   // which is correct/expected, not a bug.
   const [nfl, cfb] = await Promise.all([fetchScoreboard("nfl", { daysForward: 200 }), fetchScoreboard("cfb", { daysForward: 200 })]);
   const allGames = [...nfl, ...cfb];
-
   const pickableAll = allGames.filter((g) => g.status.state === "pre" && g.odds).sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  let selectedSport = "nfl";
+  const gamesBySport = { nfl: pickableAll.filter((g) => g.sport === "nfl"), cfb: pickableAll.filter((g) => g.sport === "cfb") };
 
-  function gamesForSport() {
-    return pickableAll.filter((g) => g.sport === selectedSport);
-  }
-
-  // Build the week picker from whatever weeks actually have pickable games, for the
-  // currently toggled sport.
-  function rebuildWeekOptions() {
-    const games = gamesForSport();
-    const weekKeys = [...new Set(games.map(weekBucketKey))];
-    weekKeys.sort((a, b) => {
+  function weeksFor(sport) {
+    const games = gamesBySport[sport];
+    const keys = [...new Set(games.map(weekBucketKey))];
+    keys.sort((a, b) => {
       const gA = games.find((g) => weekBucketKey(g) === a);
       const gB = games.find((g) => weekBucketKey(g) === b);
       return new Date(gA.date) - new Date(gB.date);
     });
-    if (weekKeys.length === 0) {
-      weekSelect.innerHTML = `<option value="">No upcoming games</option>`;
-    } else {
-      weekSelect.innerHTML = weekKeys.map((k) => `<option value="${k}">${weekBucketLabel(k, games)}</option>`).join("");
-    }
-    weekSelect.value = weekKeys[0] || "";
+    return keys;
   }
 
-  rebuildWeekOptions();
+  const weeksBySport = { nfl: weeksFor("nfl"), cfb: weeksFor("cfb") };
+  // Each sport remembers its own selected week independently, since NFL/NCAA
+  // weeks don't line up on the calendar and both need picks every week.
+  const sportWeeks = { nfl: weeksBySport.nfl[0] || null, cfb: weeksBySport.cfb[0] || null };
 
-  function pickableForSelectedWeek() {
-    return gamesForSport()
-      .filter((g) => weekBucketKey(g) === weekSelect.value)
-      .slice(0, MAX_GAMES_PER_WEEK);
-  }
-
-  let pickable = pickableForSelectedWeek();
+  let selectedSport = "nfl";
   let currentPicks = await loadPicks(select.value);
-  renderGames(container, pickable, currentPicks);
-  renderMyPicks(myPicksList, currentPicks, allGames);
 
-  async function refresh() {
+  // originalPicks = what's actually saved server-side right now (a snapshot at
+  // load time). Used to tell whether a category-swap needs an actual DELETE
+  // (the old value was really in the DB) or just a local no-op (it was only a
+  // pending, never-saved change within this session).
+  let originalPicks = { ...currentPicks };
+  const pendingUpserts = new Set();
+  const pendingDeletes = new Set();
+
+  function currentWeekKey() {
+    return sportWeeks[selectedSport];
+  }
+
+  function renderAll() {
+    weekSelect.innerHTML =
+      weeksBySport[selectedSport].length === 0
+        ? `<option value="">No upcoming games</option>`
+        : weeksBySport[selectedSport].map((k) => `<option value="${k}">${weekBucketLabel(k, gamesBySport[selectedSport])}</option>`).join("");
+    weekSelect.value = currentWeekKey() || "";
+
+    const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
+    const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
+    renderCategoryPools(container, games, slots);
+    renderProgress(progressEl, currentPicks, sportWeeks);
+  }
+
+  renderAll();
+  renderMyPicks(myPicksList, currentPicks, allGames);
+  avatarPreview.innerHTML = avatarHtml(select.value, 32);
+
+  async function switchPlayer() {
     currentPicks = await loadPicks(select.value);
+    originalPicks = { ...currentPicks };
+    pendingUpserts.clear();
+    pendingDeletes.clear();
     avatarPreview.innerHTML = avatarHtml(select.value, 32);
-    renderGames(container, pickable, currentPicks);
+    renderAll();
     renderMyPicks(myPicksList, currentPicks, allGames);
     statusTop.textContent = "";
     statusBottom.textContent = "";
   }
 
-  select.addEventListener("change", refresh);
+  select.addEventListener("change", switchPlayer);
 
   document.querySelectorAll("[data-sport]").forEach((el) => {
     el.addEventListener("click", () => {
       document.querySelectorAll("[data-sport]").forEach((c) => c.classList.remove("selected"));
       el.classList.add("selected");
       selectedSport = el.getAttribute("data-sport");
-      rebuildWeekOptions();
-      pickable = pickableForSelectedWeek();
-      renderGames(container, pickable, currentPicks);
-      statusTop.textContent = "";
-      statusBottom.textContent = "";
+      renderAll();
     });
   });
 
   weekSelect.addEventListener("change", () => {
-    pickable = pickableForSelectedWeek();
-    renderGames(container, pickable, currentPicks);
-    statusTop.textContent = "";
-    statusBottom.textContent = "";
+    sportWeeks[selectedSport] = weekSelect.value;
+    renderAll();
   });
 
   container.addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");
     if (!chip) return;
-    const groupEl = chip.closest(".pick-game");
-    const cardEl = chip.closest("[data-game-card]");
-    const groupId = groupEl.getAttribute("data-group");
-    const gameId = cardEl.getAttribute("data-game-card");
-    const game = pickable.find((g) => g.id === gameId);
+    const catEl = chip.closest("[data-category]");
+    const category = catEl.getAttribute("data-category");
+    const gameId = chip.getAttribute("data-game-id");
+    const value = JSON.parse(chip.getAttribute("data-value"));
+    const betType = value.type; // "spread" | "total"
+    const newGroupId = partsToGroupId(gameId, betType);
 
-    currentPicks[groupId] = {
-      value: JSON.parse(chip.getAttribute("data-value")),
-      snapshot: game ? gameSnapshot(game) : null,
-    };
-    groupEl.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
-    chip.classList.add("selected");
+    const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
+    const game = games.find((g) => g.id === gameId);
+
+    // Replace whatever was previously filling this (sport, week, category) slot.
+    const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
+    const old = slots[category];
+    if (old && old.groupId !== newGroupId) {
+      delete currentPicks[old.groupId];
+      pendingUpserts.delete(old.groupId);
+      if (originalPicks[old.groupId]) {
+        pendingDeletes.add(old.groupId);
+      }
+    }
+
+    currentPicks[newGroupId] = { value, snapshot: game ? gameSnapshot(game) : null };
+    pendingUpserts.add(newGroupId);
+    pendingDeletes.delete(newGroupId);
+
+    renderAll();
     statusTop.textContent = "";
     statusBottom.textContent = "";
   });
 
   async function doSave() {
+    if (pendingUpserts.size === 0 && pendingDeletes.size === 0) {
+      const msg = "Nothing new to save.";
+      statusTop.textContent = msg;
+      statusBottom.textContent = msg;
+      return;
+    }
+
     saveBtnTop.disabled = true;
     saveBtnBottom.disabled = true;
     statusTop.textContent = "Saving…";
     statusBottom.textContent = "Saving…";
 
-    // Only the groups for games currently on screen — not the player's whole
-    // pick history — so re-saving never touches an already-locked old pick.
-    const visibleGroupIds = pickable.flatMap(buildBetGroups).map((g) => g.id);
-    const { error, count } = await savePicks(select.value, currentPicks, visibleGroupIds);
+    const player = select.value;
+
+    for (const groupId of pendingDeletes) {
+      const parts = groupIdToParts(groupId);
+      const err = await deletePick(player, parts.gameId, parts.betType);
+      if (err) {
+        saveBtnTop.disabled = false;
+        saveBtnBottom.disabled = false;
+        const msg = "Couldn't save — a removed pick's game may have already kicked off. Refresh and try again.";
+        statusTop.textContent = msg;
+        statusBottom.textContent = msg;
+        console.error("deletePick failed:", err);
+        return;
+      }
+    }
+
+    const rows = [...pendingUpserts]
+      .filter((id) => currentPicks[id])
+      .map((id) => {
+        const parts = groupIdToParts(id);
+        const entry = currentPicks[id];
+        return {
+          player_name: player,
+          game_id: parts.gameId,
+          bet_type: parts.betType,
+          pick: entry.value,
+          snapshot: entry.snapshot,
+          kickoff_at: entry.snapshot?.date,
+          updated_at: new Date().toISOString(),
+        };
+      });
+    const { error } = await upsertPicks(player, rows);
 
     saveBtnTop.disabled = false;
     saveBtnBottom.disabled = false;
@@ -422,9 +515,13 @@ async function initPicksPage() {
       return;
     }
 
+    originalPicks = { ...currentPicks };
+    pendingUpserts.clear();
+    pendingDeletes.clear();
+
     renderMyPicks(myPicksList, currentPicks, allGames);
-    const total = pickable.flatMap(buildBetGroups).length;
-    const msg = `Saved ${count} of ${total} picks for ${titleCase(select.value)}.`;
+    const { total } = computeProgress(currentPicks, sportWeeks);
+    const msg = `Saved — ${total} of 8 picks made this week for ${titleCase(player)}.`;
     statusTop.textContent = msg;
     statusBottom.textContent = msg;
   }

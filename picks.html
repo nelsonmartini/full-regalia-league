@@ -53,12 +53,17 @@
   </div>
 
   <div id="view-week">
+    <div class="card" style="padding:12px 16px;margin-bottom:10px">
+      <div id="picks-progress" style="font-size:13px;font-weight:700;text-align:center;color:var(--text-dim)">Loading…</div>
+    </div>
+
     <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
       <div class="chip selected" id="sport-nfl" data-sport="nfl">🏈 NFL</div>
       <div class="chip" id="sport-cfb" data-sport="cfb">🎓 NCAA</div>
     </div>
 
     <select id="week-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer;margin-bottom:10px"></select>
+    <p class="footer-note" style="margin-top:0">Pick 1 game per category below — favorite/underdog and over/under can be different games.</p>
 
     <button id="save-btn-top" class="btn btn-primary btn-block" style="margin-bottom:6px">Save my picks</button>
     <div id="save-status-top" class="footer-note" style="min-height:18px;margin-top:0"></div>

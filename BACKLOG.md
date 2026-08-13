@@ -53,15 +53,47 @@
   (`js/live-scores.js` now captures `seasonType`; `js/picks.js`'s week bucketing
   uses it) — dropdown now correctly shows "Preseason Week 2/3/4" then "Week 1"
   (regular season, no prefix) in true chronological order.
-- **OPEN QUESTION, not resolved — placeholder only, per Neil (2026-08-10):**
-  showing an entire NFL week's games (up to 16 games × 3 bet types ≈ 48-96 possible
-  picks) is a lot more than the original workbook's pattern of a small curated set
-  per week (~6 picks: 1 NFL game's spread/ML/O-U + 2 college games' spreads). Neil
-  flagged the "Saved 3 of 96" style count as off and doesn't think there should
-  really be that many weekly picks — exact number/format to be decided later this
-  week. **Don't build a fix for this without checking back** — may mean adding a
-  commissioner step to hand-pick which games are "live" for picks each week,
-  rather than auto-including every game with posted odds.
+- **RESOLVED (2026-08-13) — the "too many picks" open question:** Picks page
+  rebuilt around a fixed weekly quota instead of "every game with odds." **4
+  categories: Minus Spread, Plus Spread, Over, Under. Moneyline dropped entirely.**
+  8 picks/week total: 4 NFL (1 per category) + 4 NCAA (1 per category). A
+  Minus/Plus Spread pick (or an Over/Under pick) can be on ANY game that week —
+  they don't have to be the same game (confirmed with Neil) — but a single game
+  can't fill BOTH sides of the same bet family (e.g. can't be both your Minus
+  Spread AND Plus Spread pick) since that's both contradictory and a real DB
+  conflict; enforced by excluding a game from the opposite pool once used.
+  Cross-family reuse is fine (a game CAN be both your Over pick and your Minus
+  Spread pick). NFL/NCAA toggle kept (not replaced with both-sports-on-one-page)
+  per Neil's call — each sport remembers its own selected week independently. A
+  persistent progress indicator ("N of 8 · NFL x/4 · NCAA y/4") stays visible
+  regardless of which sport is toggled, so overall status is never hidden.
+  - **New DB requirement:** swapping a category pick to a different game means
+    deleting the old row (different `game_id`, so upsert's conflict target
+    doesn't touch it) — needs `DELETE` granted to `anon` (wasn't before, only
+    select/insert/update). SQL given to Neil:
+    ```sql
+    grant delete on public.picks to anon;
+    create policy "Anyone can delete picks before kickoff"
+      on picks for delete using (kickoff_at > now());
+    ```
+    **Status as of the redesign push: not yet confirmed run** (checked via direct
+    API test — still returns permission denied). Not a blocker for shipping: if
+    missing, a category-swap save just fails cleanly with a retry message
+    (delete is attempted before upsert, returns early on failure) — doesn't
+    corrupt anything, just means swaps silently won't work until the grant lands.
+    **Verify this before considering the feature fully done**, and test an actual
+    swap-to-a-different-game end to end once confirmed (only the "fresh pick, no
+    prior save" path has been empirically tested so far — the swap/delete path
+    was verified by code tracing, not by an actual successful delete call).
+  - More test data in the live table from this round: player `MICHAELA`, games
+    `nfl-g1`/`nfl-g2` (fixture IDs, obviously fake, safe to delete) and one row
+    for player `TESTDEL` (`game_id` 9990099, also fake). Combined cleanup SQL:
+    `delete from picks where player_name in ('MICHAELA','TESTDEL') or game_id
+    like 'nfl-g%' or game_id like 'cfb-g%';` — **double check this doesn't
+    accidentally match a real ESPN game_id before running** (ESPN's real IDs are
+    long numeric strings, so `nfl-g%`/`cfb-g%` shouldn't collide, but eyeball the
+    SELECT first: `select * from picks where player_name in ('MICHAELA',
+    'TESTDEL') or game_id like 'nfl-g%' or game_id like 'cfb-g%';`).
 - **Current phase:** Core feature-complete beta as of 2026-08-01. Live at
   **https://nelsonmartini.github.io/full-regalia-league/** (passphrase `regalia2026`).
   7 pages: Home, Standings, Picks, History, Player detail, Live (now covers Results
@@ -135,16 +167,17 @@
    Avatars, Championship Picks scoping question, and the Results-filter approach
    are all done too (see checklist below) — this list was stale, cleaned up
    2026-08-10.
-2. **Build the live Standings computation** — query all picks from Supabase, cross
-   -reference with graded results (`js/grading.js`, already built and tested), sum
-   points per player. This is what finally makes Standings stop being a frozen
-   snapshot. Next up.
-3. **Open question, not blocking:** how many/which games should actually be
-   pickable per week (see "OPEN QUESTION" note above) — Neil to decide later this
-   week, don't build a fix preemptively.
+2. **Done (2026-08-13):** the "8 picks/week, 4 categories" redesign — see Status
+   above for full detail. **First thing next session: confirm the DELETE grant
+   was run and actually test a category-swap end to end** (the one path not yet
+   empirically verified).
+3. **Build the live Standings computation** — query all picks from Supabase,
+   cross-reference with graded results (`js/grading.js`, already built and
+   tested), sum points per player. This is what finally makes Standings stop
+   being a frozen snapshot. Next up once the swap path is confirmed.
 4. Championship/Bowl Picks page — still needs its own scoping for prop bets
-   (First TD scorer, etc.) that the current Spread/ML/Total structure doesn't
-   cover. Lower urgency, months out.
+   (First TD scorer, etc.) that the current category system doesn't cover.
+   Lower urgency, months out.
 
 ## Living checklist
 
