@@ -4,17 +4,29 @@
 
 ## Status
 
-- **NEW REQUEST, not started — planned but blocked on 2 decisions from Neil
-  (2026-08-13):** three related features requested together:
-  1. Confirm picks stay enterable/viewable/editable pre-kickoff and locked after
-     (this part is already true today — no change needed, just confirming).
-  2. **Per-week "who's submitted picks" tracker** — a view showing every player
-     and their status for a given week (e.g. "Alex 8/8 · Calli 3/8 · Drew — not
-     started"). Needs a Supabase query across ALL players' picks for a given
-     week, not just the signed-in player's own.
-  3. **Super Admin panel**: add players to the league, and rename a player
-     WITHOUT losing their pick history.
-  - **The real architectural piece (item 3 is why this needs planning, not just
+- **Three-part request from Neil (2026-08-13) — 2 of 3 done, 1 still blocked:**
+  1. ✅ **Confirmed:** picks stay enterable/viewable/editable pre-kickoff and
+     locked after — already true, no change was needed.
+  2. ✅ **DONE — "who's submitted picks" tracker.** Lives as a collapsible card
+     at the TOP of the "Make Picks" view (moved there from a separate tab per
+     Neil's follow-up — more visible where people already are, without
+     permanently pushing the picking UI down the page for people who just want
+     to pick quickly). Collapsed by default, shows "N of 15 submitted this week
+     · ▼ Who's in?"; expands to show every player's NFL x/4 · NCAA y/4 with a
+     Submitted/In progress/Not started badge, sorted least-complete-first so
+     stragglers surface at the top. Defaulted to **visible to everyone** (not
+     admin-only) since Neil didn't specify and it's a low-stakes, reversible
+     choice — say the word if you'd rather it be admin-only. Refreshes on
+     expand, on sport/week change, and right after a save. Tested end to end
+     (15 players render correctly, sort order confirmed, badge states correct).
+     One real bug found & fixed during testing: the click-to-expand handler was
+     bound to the whole card, so clicking a player row (a link to their page)
+     inside the expanded list both navigated away AND collapsed the card at the
+     same time — fixed by scoping the click listener to just the header line.
+  3. ⛔ **Still blocked — Super Admin panel** (add players, rename without
+     losing history). This is the one that needs real architecture work — see
+     below. Not started.
+  - **The real architectural piece (why item 3 needs planning, not just
     coding):** player names currently live as a hardcoded list in `js/app.js`
     (`LEAGUE_PLAYERS`), and `picks.player_name` stores the name as plain text.
     Renaming someone today would orphan their old picks (still tagged with the
@@ -23,21 +35,17 @@
     rename is just editing a label, every historical pick follows automatically.
     This also makes "add a player" a real DB action instead of something only
     Claude can do by editing code and redeploying.
-  - **Two open decisions, asked but not yet answered — do not build until
-    Neil weighs in:**
-    1. **Admin auth strength.** Option A (recommended): a real Supabase Auth
-       login for Neil (email+password) — genuine security, the database itself
-       enforces only that logged-in account can write to the players table, not
-       bypassable via browser dev tools. Small one-time setup (Neil creates one
-       login). Option B: reuse the existing passphrase-gate pattern
-       (`js/gate.js`) — quick, consistent with the beta gate, but same honest
-       caveat as before: client-side speed bump, not real security — and this
-       time it'd be protecting who's officially in the league, not just picks,
-       so leaning against it, but it's Neil's call.
-    2. **Tracker visibility** — should the "who's submitted" view be visible to
-       the whole group (transparent, works as a friendly nudge, recommended) or
-       admin-only (commissioner-only tool)?
-  - **SQL that will be needed once decisions land** (not written yet — exact
+  - **One open decision, asked but not yet answered — do not build until
+    Neil weighs in:** **admin auth strength.** Option A (recommended): a real
+    Supabase Auth login for Neil (email+password) — genuine security, the
+    database itself enforces only that logged-in account can write to the
+    players table, not bypassable via browser dev tools. Small one-time setup
+    (Neil creates one login). Option B: reuse the existing passphrase-gate
+    pattern (`js/gate.js`) — quick, consistent with the beta gate, but same
+    honest caveat as before: client-side speed bump, not real security — and
+    this time it'd be protecting who's officially in the league, not just
+    picks, so leaning against it, but it's Neil's call.
+  - **SQL that will be needed once the decision lands** (not written yet — exact
     shape of the admin-write RLS policy depends on decision #1 above):
     - Create a `players` table (id uuid primary key, name text unique, couple
       text nullable, active boolean default true, created_at).
@@ -249,11 +257,10 @@
 4. Championship/Bowl Picks page — still needs its own scoping for prop bets
    (First TD scorer, etc.) that the current category system doesn't cover.
    Lower urgency, months out.
-5. **Blocked on Neil:** players-table migration + Super Admin panel (add/rename
-   players) + per-week submission tracker — see Status section above for full
-   detail. Two decisions needed before building: admin auth strength (real
-   Supabase login vs. passphrase gate) and tracker visibility (everyone vs.
-   admin-only).
+5. **Done:** per-week "who's submitted picks" tracker — see checklist/Status
+   above. **Still blocked on Neil:** players-table migration + Super Admin
+   panel (add/rename players) — one decision needed before building: admin
+   auth strength (real Supabase login vs. passphrase gate).
 
 ## Living checklist
 
@@ -317,15 +324,14 @@
 - [ ] **Live Standings computation** — query Supabase picks + graded results, sum
       points per player. This is the last piece of "eliminate Excel." Next up
       once the swap path above is confirmed.
+- [x] **Per-week "who's submitted picks" tracker** — collapsible card at the top
+      of the Make Picks view, visible to everyone, sorted least-complete-first
 - [ ] **Players table migration** — real DB table with a stable id, so renaming a
       player doesn't orphan their pick history (currently just a hardcoded list
       + plain-text name on each pick row). Blocked on Neil picking admin auth
       strength (real Supabase login vs. passphrase gate) — see Status section.
 - [ ] **Super Admin panel** — add/rename players through the site instead of a
       code change + redeploy. Blocked on the same decision as above.
-- [ ] **Per-week "who's submitted picks" tracker** — every player's status for a
-      given week at a glance. Blocked on visibility decision (everyone vs.
-      admin-only) — see Status section.
 - [ ] Championship/Bowl Picks page — needs its own scoping for prop bets, lower
       urgency (months out)
 

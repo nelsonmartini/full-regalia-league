@@ -49,12 +49,19 @@
 
   <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
     <div class="chip selected" id="tab-week" data-tab="week">Make Picks</div>
-    <div class="chip" id="tab-mine" data-tab="mine">My Picks — Season</div>
+    <div class="chip" id="tab-mine" data-tab="mine">My Picks</div>
   </div>
 
   <div id="view-week">
     <div class="card" style="padding:12px 16px;margin-bottom:10px">
       <div id="picks-progress" style="font-size:13px;font-weight:700;text-align:center;color:var(--text-dim)">Loading…</div>
+    </div>
+
+    <div class="card" id="status-card" style="padding:12px 16px;margin-bottom:10px">
+      <div id="status-summary" style="font-size:13px;font-weight:700;text-align:center;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer">
+        <span>Loading who's picked…</span>
+      </div>
+      <div id="week-status-list" style="display:none;margin-top:10px"></div>
     </div>
 
     <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
@@ -97,16 +104,5 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/picks.js"></script>
-<script>
-  document.querySelectorAll("[data-tab]").forEach((el) => {
-    el.addEventListener("click", () => {
-      document.querySelectorAll("[data-tab]").forEach((c) => c.classList.remove("selected"));
-      el.classList.add("selected");
-      const tab = el.getAttribute("data-tab");
-      document.getElementById("view-week").style.display = tab === "week" ? "block" : "none";
-      document.getElementById("view-mine").style.display = tab === "mine" ? "block" : "none";
-    });
-  });
-</script>
 </body>
 </html>
