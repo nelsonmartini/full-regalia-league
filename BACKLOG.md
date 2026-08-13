@@ -4,6 +4,30 @@
 
 ## Status
 
+- **DONE (2026-08-13): collapsible, color-coded pick categories** — Neil's
+  request to cut down scroll length on the Picks page. Each of the 4 categories
+  (Minus Spread, Plus Spread, Over, Under) now:
+  - Starts **collapsed by default** (all 4 closed on page load), with a
+    clickable header (icon + label + summary + ▼/▲ chevron) that expands/
+    collapses just that one category. Reused the same click-scoping lesson
+    from the "Who's Picked" tracker: the header is a *sibling* of the chip
+    body, not a wrapper around it, so header clicks and chip-pick clicks can
+    never bubble into each other (checked `data-category-header` before
+    `.chip` in the delegated `#games-list` click handler).
+  - Shows a **live summary in the collapsed header** — either the picked
+    game/line (styled in the category's accent color) or "Tap to pick a game"
+    — so you can see what's done and what's left across all 4 categories
+    without expanding anything.
+  - Got a **distinct accent color + icon per category** (minus = blue "−",
+    plus = violet "+", over = cyan "▲", under = amber "▼") via a `--cat-color`
+    CSS var keyed off `data-category`, plus a matching left border on each
+    section, so the 4 are easy to tell apart at a glance.
+  - Tested via Playwright (mocked ESPN scoreboard + Supabase REST calls,
+    real gate bypass): all-collapsed-on-load, distinct per-category colors,
+    single-category expand/collapse, chip-pick-doesn't-collapse-header, and
+    collapsed-summary-updates-after-pick all confirmed working, zero console
+    errors. Shipped as `sw.js` shell-v14.
+
 - **Three fixes from Neil's follow-up questions (2026-08-13):**
   1. **Date/time restored on chips** — a real regression from the category-pool
      redesign: the old per-game-card design showed kickoff date/time in the

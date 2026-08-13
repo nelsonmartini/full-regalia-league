@@ -368,19 +368,73 @@ a { color: inherit; text-decoration: none; }
 /* ---------- Pick selector chips ---------- */
 
 .pick-game {
+  --cat-color: var(--accent);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--cat-color);
   border-radius: var(--radius-sm);
-  padding: 12px;
   margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.pick-game[data-category="minus"] { --cat-color: #4a90d9; }
+.pick-game[data-category="plus"] { --cat-color: #a78bfa; }
+.pick-game[data-category="over"] { --cat-color: #22d3ee; }
+.pick-game[data-category="under"] { --cat-color: #fbbf24; }
+
+.pick-game-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pick-game-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--cat-color);
+  color: #061020;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pick-game-label {
-  font-size: 11.5px;
-  color: var(--text-faint);
-  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
+}
+
+.pick-game-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pick-game-summary.is-set {
+  color: var(--cat-color);
+}
+
+.pick-game-chevron {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.pick-game-body {
+  padding: 0 12px 12px;
 }
 
 .chip-row {

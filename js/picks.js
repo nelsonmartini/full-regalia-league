@@ -25,6 +25,7 @@
 const PLAYER_KEY = "fr_selected_player";
 const CATEGORIES = ["minus", "plus", "over", "under"];
 const CATEGORY_LABEL = { minus: "Minus Spread", plus: "Plus Spread", over: "Over", under: "Under" };
+const CATEGORY_ICON = { minus: "−", plus: "+", over: "▲", under: "▼" };
 const SPORTS = ["nfl", "cfb"];
 const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
 
@@ -303,7 +304,7 @@ function sortGroupKeys(sport, keys) {
   return [...keys].sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
 }
 
-function renderCategoryPools(container, sport, games, slots, nflDivisions) {
+function renderCategoryPools(container, sport, games, slots, nflDivisions, categoryExpanded) {
   const pools = buildCategoryPools(sport, games, slots, nflDivisions);
 
   if (games.length === 0) {
@@ -317,12 +318,30 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions) {
     // odds value — two different games can easily share the same total line
     // (e.g. two games both set at "Over 44.5"), and comparing by value alone
     // was marking every game with that line as selected (confirmed bug).
-    const currentGameId = slots[cat]?.entry.snapshot?.gameId ?? null;
+    const slot = slots[cat];
+    const currentGameId = slot?.entry.snapshot?.gameId ?? null;
+    const expanded = !!categoryExpanded[cat];
+    // Collapsed-state summary: show what's already picked (so the pick is
+    // visible without expanding), or a prompt to pick one, so scanning the
+    // 4 collapsed headers alone tells you what's left to do this week.
+    const summaryHtml = currentGameId
+      ? `<span class="pick-game-summary is-set">${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}</span>`
+      : `<span class="pick-game-summary">Tap to pick a game</span>`;
+    const headerHtml = `
+      <div class="pick-game-header" data-category-header="${cat}">
+        <span class="pick-game-icon">${CATEGORY_ICON[cat]}</span>
+        <span class="pick-game-label">${CATEGORY_LABEL[cat]}</span>
+        ${summaryHtml}
+        <span class="pick-game-chevron">${expanded ? "▲" : "▼"}</span>
+      </div>`;
+
     if (options.length === 0) {
       return `
         <div class="pick-game" data-category="${cat}">
-          <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
-          <div class="empty-state" style="padding:10px 0">No eligible games left for this category.</div>
+          ${headerHtml}
+          <div class="pick-game-body" style="display:${expanded ? "block" : "none"}">
+            <div class="empty-state" style="padding:10px 0">No eligible games left for this category.</div>
+          </div>
         </div>`;
     }
 
@@ -351,8 +370,10 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions) {
 
     return `
       <div class="pick-game" data-category="${cat}">
-        <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
-        ${subgroupsHtml}
+        ${headerHtml}
+        <div class="pick-game-body" style="display:${expanded ? "block" : "none"}">
+          ${subgroupsHtml}
+        </div>
       </div>`;
   }).join("");
 }
@@ -501,6 +522,10 @@ async function initPicksPage() {
   let originalPicks = { ...currentPicks };
   const pendingUpserts = new Set();
   const pendingDeletes = new Set();
+  // Each of the 4 categories starts collapsed to cut down on scroll — the
+  // per-category state lives here (not inside render) so it survives re-renders
+  // triggered by sport/week switches and chip picks.
+  const categoryExpanded = { minus: false, plus: false, over: false, under: false };
 
   function currentWeekKey() {
     return sportWeeks[selectedSport];
@@ -516,7 +541,7 @@ async function initPicksPage() {
 
     const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
     const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
-    renderCategoryPools(container, selectedSport, games, slots, nflDivisions);
+    renderCategoryPools(container, selectedSport, games, slots, nflDivisions, categoryExpanded);
     renderProgress(progressEl, currentPicks, sportWeeks);
   }
 
@@ -555,6 +580,18 @@ async function initPicksPage() {
   });
 
   container.addEventListener("click", (e) => {
+    // Category headers toggle collapse/expand. The header is a sibling of the
+    // chip body (not a wrapper around it), so this never fires for chip clicks
+    // and the chip logic below never fires for header clicks — no bubbling
+    // conflict, unlike the earlier "Who's Picked" row-click bug.
+    const header = e.target.closest("[data-category-header]");
+    if (header) {
+      const cat = header.getAttribute("data-category-header");
+      categoryExpanded[cat] = !categoryExpanded[cat];
+      renderAll();
+      return;
+    }
+
     const chip = e.target.closest(".chip");
     if (!chip) return;
     const catEl = chip.closest("[data-category]");
