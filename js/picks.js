@@ -28,6 +28,36 @@ const CATEGORY_LABEL = { minus: "Minus Spread", plus: "Plus Spread", over: "Over
 const SPORTS = ["nfl", "cfb"];
 const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
 
+/**
+ * NCAA conference groupings, for browsability within each pick category —
+ * unlike NFL (which has a live ESPN endpoint with the full conference/division
+ * hierarchy, fetched dynamically, see fetchNflDivisions() in live-scores.js),
+ * college football has no equivalently clean single source, so this is
+ * hardcoded: Power 4 conferences explicitly (covers the vast majority of games
+ * people will actually pick), everyone else falls into "Other". Verified
+ * against ESPN's team list where possible (2026 season, post-2024
+ * realignment); a few entries are best-known-convention rather than
+ * individually confirmed — if a team ever shows up in "Other" when it
+ * shouldn't, that's just this map needing a one-line fix, not a deeper bug.
+ */
+const NCAA_CONFERENCES = {
+  SEC: ["ALA", "ARK", "AUB", "FLA", "UGA", "UK", "LSU", "MSST", "MIZ", "MISS", "OU", "SC", "TENN", "TEX", "TA&M", "VAN"],
+  "Big Ten": ["ILL", "IU", "IOWA", "MD", "MICH", "MSU", "MINN", "NEB", "NU", "OSU", "ORE", "PSU", "PUR", "RUTG", "UCLA", "USC", "WASH", "WIS"],
+  ACC: ["BC", "CAL", "CLEM", "DUKE", "FSU", "GT", "LOU", "MIA", "NCSU", "UNC", "PITT", "SMU", "STAN", "SYR", "UVA", "VT", "WAKE"],
+  "Big 12": ["ARIZ", "ASU", "BAY", "BYU", "CIN", "COLO", "HOU", "ISU", "KU", "KSU", "OKST", "TCU", "TTU", "UCF", "UTAH", "WVU"],
+};
+const NCAA_TEAM_TO_CONF = new Map();
+for (const [conf, teams] of Object.entries(NCAA_CONFERENCES)) {
+  for (const abbr of teams) NCAA_TEAM_TO_CONF.set(abbr, conf);
+}
+
+/** Sub-group label for a team within a category's chip list — "AFC East" for
+ * NFL (live data), a Power 4 conference or "Other" for NCAA (hardcoded above). */
+function teamGroupLabel(sport, teamAbbr, nflDivisions) {
+  if (sport === "nfl") return nflDivisions.get(teamAbbr) || "Other";
+  return NCAA_TEAM_TO_CONF.get(teamAbbr) || "Other";
+}
+
 /** groupId is "<gameId>_spread" | "<gameId>_ml" | "<gameId>_total" — the DB
  * stores game_id and bet_type as separate columns, so convert both ways.
  * ("_ml"/"moneyline" kept only so any legacy rows from before this redesign
@@ -174,8 +204,11 @@ function weekBucketLabel(key, games) {
  * games, excluding whichever game is already the OTHER side of the same bet
  * family (a game used for Minus Spread can't also appear in Plus Spread, etc.)
  * — both because betting both sides of one line is contradictory and because
- * the database can only hold one spread pick and one total pick per game. */
-function buildCategoryPools(games, slots) {
+ * the database can only hold one spread pick and one total pick per game.
+ * Each option is tagged with a `group` (conference/division) for sub-grouping
+ * in the UI — spread options group by the specific team picked; total options
+ * (which aren't about one team) group by the home team, as a simple anchor. */
+function buildCategoryPools(sport, games, slots, nflDivisions) {
   const pools = { minus: [], plus: [], over: [], under: [] };
   const minusGameId = slots.minus?.entry.snapshot?.gameId ?? null;
   const plusGameId = slots.plus?.entry.snapshot?.gameId ?? null;
@@ -187,6 +220,7 @@ function buildCategoryPools(games, slots) {
       home = game.home;
     if (!away || !home) continue;
     const matchup = `${away.abbr} @ ${home.abbr}`;
+    const homeGroup = teamGroupLabel(sport, home.abbr, nflDivisions);
 
     if (game.odds?.homeSpread != null && game.odds?.awaySpread != null) {
       const sides = [
@@ -201,6 +235,7 @@ function buildCategoryPools(games, slots) {
           gameId: game.id,
           display: `${side.team.abbr} ${fmtLine(side.line)}`,
           sub: `vs ${side.opp.abbr}`,
+          group: teamGroupLabel(sport, side.team.abbr, nflDivisions),
           value: { type: "spread", team: side.team.abbr, line: side.line },
         });
       }
@@ -208,10 +243,10 @@ function buildCategoryPools(games, slots) {
 
     if (game.odds?.overUnder != null) {
       if (game.id !== underGameId) {
-        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, value: { type: "total", direction: "over", line: game.odds.overUnder } });
+        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, group: homeGroup, value: { type: "total", direction: "over", line: game.odds.overUnder } });
       }
       if (game.id !== overGameId) {
-        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, value: { type: "total", direction: "under", line: game.odds.overUnder } });
+        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, group: homeGroup, value: { type: "total", direction: "under", line: game.odds.overUnder } });
       }
     }
   }
@@ -250,8 +285,24 @@ function renderProgress(el, picks, sportWeeks) {
   el.textContent = `${total} of 8 picks made this week · NFL ${perSport.nfl}/4 · NCAA ${perSport.cfb}/4`;
 }
 
-function renderCategoryPools(container, games, slots) {
-  const pools = buildCategoryPools(games, slots);
+const NCAA_GROUP_ORDER = ["ACC", "Big 12", "Big Ten", "SEC", "Other"];
+
+/** Sort a category's sub-group labels for display — NFL sorts naturally
+ * alphabetically (gives AFC before NFC, divisions East/North/South/West in
+ * order); NCAA uses an explicit Power-4 order with "Other" always last. */
+function sortGroupKeys(sport, keys) {
+  if (sport === "cfb") {
+    return [...keys].sort((a, b) => {
+      const ia = NCAA_GROUP_ORDER.indexOf(a);
+      const ib = NCAA_GROUP_ORDER.indexOf(b);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+  }
+  return [...keys].sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
+}
+
+function renderCategoryPools(container, sport, games, slots, nflDivisions) {
+  const pools = buildCategoryPools(sport, games, slots, nflDivisions);
 
   if (games.length === 0) {
     container.innerHTML = '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>';
@@ -272,11 +323,19 @@ function renderCategoryPools(container, games, slots) {
           <div class="empty-state" style="padding:10px 0">No eligible games left for this category.</div>
         </div>`;
     }
-    return `
-      <div class="pick-game" data-category="${cat}">
-        <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
+
+    const byGroup = new Map();
+    for (const o of options) {
+      if (!byGroup.has(o.group)) byGroup.set(o.group, []);
+      byGroup.get(o.group).push(o);
+    }
+    const subgroupsHtml = sortGroupKeys(sport, [...byGroup.keys()])
+      .map(
+        (group) => `
+        <div style="font-size:10.5px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px">${group}</div>
         <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">
-          ${options
+          ${byGroup
+            .get(group)
             .map(
               (o) => `
             <div class="chip${o.gameId === currentGameId ? " selected" : ""}"
@@ -284,7 +343,14 @@ function renderCategoryPools(container, games, slots) {
           `
             )
             .join("")}
-        </div>
+        </div>`
+      )
+      .join("");
+
+    return `
+      <div class="pick-game" data-category="${cat}">
+        <div class="pick-game-label">${CATEGORY_LABEL[cat]}</div>
+        ${subgroupsHtml}
       </div>`;
   }).join("");
 }
@@ -390,7 +456,11 @@ async function initPicksPage() {
   // (only appear close to kickoff), but fetch the same wide window anyway — future
   // college weeks just won't have pickable games yet until books actually post lines,
   // which is correct/expected, not a bug.
-  const [nfl, cfb] = await Promise.all([fetchScoreboard("nfl", { daysForward: 200 }), fetchScoreboard("cfb", { daysForward: 200 })]);
+  const [nfl, cfb, nflDivisions] = await Promise.all([
+    fetchScoreboard("nfl", { daysForward: 200 }),
+    fetchScoreboard("cfb", { daysForward: 200 }),
+    fetchNflDivisions(),
+  ]);
   const allGames = [...nfl, ...cfb];
   const pickableAll = allGames.filter((g) => g.status.state === "pre" && g.odds).sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -436,7 +506,7 @@ async function initPicksPage() {
 
     const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
     const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
-    renderCategoryPools(container, games, slots);
+    renderCategoryPools(container, selectedSport, games, slots, nflDivisions);
     renderProgress(progressEl, currentPicks, sportWeeks);
   }
 

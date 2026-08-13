@@ -4,6 +4,40 @@
 
 ## Status
 
+- **DONE (2026-08-13): conference/division sub-grouping within each pick
+  category**, for browsability — before this, each category (Minus Spread,
+  Plus Spread, Over, Under) was one long flat chip list, hard to scan once a
+  full week's games were in it.
+  - **NFL: sourced live**, not hardcoded. ESPN has a dedicated endpoint
+    (`/apis/site/v2/sports/football/nfl/groups`) that returns the complete
+    AFC/NFC → division → team hierarchy — fetched once per page load, cached
+    in memory (`fetchNflDivisions()` in `js/live-scores.js`). Always accurate,
+    zero maintenance.
+  - **NCAA: hardcoded**, because no equivalent clean live source exists —
+    checked ESPN's `/groups` endpoint (returns an incomplete ~25-team FBS
+    list, not conference-organized) and the bulk `/teams?limit=300` endpoint
+    (caps at 300 total teams across all divisions, missing several major
+    programs alphabetically/by-ID past that cutoff). Went with Neil's choice:
+    explicit Power 4 lists (SEC, Big Ten, ACC, Big 12) in `js/picks.js`
+    (`NCAA_CONFERENCES`), everyone else falls into "Other". Abbreviations
+    cross-checked against live ESPN data where possible; a few (Tennessee,
+    Purdue, Miami, SMU, Cincinnati, Kansas, Kansas State, TCU, Texas Tech,
+    UCF, South Carolina, Oregon) weren't confirmable via the API and rely on
+    standard/well-known ESPN abbreviation convention instead — soft failure
+    mode if wrong (team just lands in "Other", not a crash). **Spot-check
+    once real games are live and flag anything landing in "Other" that
+    shouldn't be**, since this list may need updating if conference
+    realignment happens again (it's happened twice in the last few years).
+  - Spread picks group by the specific team's own conference/division; total
+    (Over/Under) picks — which aren't about one team — group by the home
+    team, as a simple anchor. Tested end to end with fixture data mirroring
+    real groupings (4/4 checks passed, including the "Other" fallback case).
+- **Answered: odds refresh cadence.** Checked ESPN's own `Cache-Control`
+  header directly — it regenerates roughly every ~10 seconds server-side.
+  That's how often we *could* get freshly-checked data, not how often the
+  actual odds change (that depends on real market activity — several times a
+  day normally, more near kickoff). Current polling (Live page every 30s,
+  Picks page on load/interaction) is well within what ESPN's cache supports.
 - **Three-part request from Neil (2026-08-13) — 2 of 3 done, 1 still blocked:**
   1. ✅ **Confirmed:** picks stay enterable/viewable/editable pre-kickoff and
      locked after — already true, no change was needed.

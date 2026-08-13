@@ -41,6 +41,34 @@ async function fetchScoreboard(sport, { daysBack = 10, daysForward = 35 } = {}) 
   }
 }
 
+let _nflGroupsCache = null;
+
+/** Team abbreviation -> "AFC East" style label, sourced live from ESPN's own
+ * conference/division hierarchy endpoint (not hardcoded) — so it's always
+ * correct and needs no maintenance. Cached in memory for the page session
+ * since it's static seasonal data (fine to refetch on a full page reload). */
+async function fetchNflDivisions() {
+  if (_nflGroupsCache) return _nflGroupsCache;
+  const map = new Map();
+  try {
+    const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/groups", { cache: "no-store" });
+    if (!res.ok) return map;
+    const data = await res.json();
+    for (const conf of data.groups || []) {
+      for (const div of conf.children || []) {
+        const label = `${conf.abbreviation} ${div.abbreviation}`;
+        for (const team of div.teams || []) {
+          map.set(team.abbreviation, label);
+        }
+      }
+    }
+  } catch {
+    // fails soft — callers should treat a missing entry as "ungrouped"
+  }
+  _nflGroupsCache = map;
+  return map;
+}
+
 function normalizeEvent(e, sport) {
   const comp = e.competitions?.[0];
   const competitors = comp?.competitors || [];
