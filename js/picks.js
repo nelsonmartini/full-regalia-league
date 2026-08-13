@@ -221,6 +221,7 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
     if (!away || !home) continue;
     const matchup = `${away.abbr} @ ${home.abbr}`;
     const homeGroup = teamGroupLabel(sport, home.abbr, nflDivisions);
+    const when = typeof formatKickoff === "function" ? formatKickoff(game.date) : "";
 
     if (game.odds?.homeSpread != null && game.odds?.awaySpread != null) {
       const sides = [
@@ -235,6 +236,7 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
           gameId: game.id,
           display: `${side.team.abbr} ${fmtLine(side.line)}`,
           sub: `vs ${side.opp.abbr}`,
+          when,
           group: teamGroupLabel(sport, side.team.abbr, nflDivisions),
           value: { type: "spread", team: side.team.abbr, line: side.line },
         });
@@ -243,10 +245,10 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
 
     if (game.odds?.overUnder != null) {
       if (game.id !== underGameId) {
-        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, group: homeGroup, value: { type: "total", direction: "over", line: game.odds.overUnder } });
+        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, value: { type: "total", direction: "over", line: game.odds.overUnder } });
       }
       if (game.id !== overGameId) {
-        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, group: homeGroup, value: { type: "total", direction: "under", line: game.odds.overUnder } });
+        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, value: { type: "total", direction: "under", line: game.odds.overUnder } });
       }
     }
   }
@@ -339,7 +341,7 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions) {
             .map(
               (o) => `
             <div class="chip${o.gameId === currentGameId ? " selected" : ""}"
-                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}</div>
+                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}${o.when ? `<div style="font-size:9.5px;font-weight:600;opacity:0.55;margin-top:1px">${o.when}</div>` : ""}</div>
           `
             )
             .join("")}
@@ -462,7 +464,14 @@ async function initPicksPage() {
     fetchNflDivisions(),
   ]);
   const allGames = [...nfl, ...cfb];
-  const pickableAll = allGames.filter((g) => g.status.state === "pre" && g.odds).sort((a, b) => new Date(a.date) - new Date(b.date));
+  // NFL preseason (seasonType 1) is exhibition football — backups and roster
+  // battles, nothing that should count for a real pick'em league — excluded
+  // from what's pickable. (Confirmed this was confusing: it showed up as its
+  // own "Preseason Week N" option right alongside real "Week 1".)
+  const pickableAll = allGames
+    .filter((g) => g.status.state === "pre" && g.odds)
+    .filter((g) => !(g.sport === "nfl" && g.seasonType === 1))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const gamesBySport = { nfl: pickableAll.filter((g) => g.sport === "nfl"), cfb: pickableAll.filter((g) => g.sport === "cfb") };
 
@@ -503,6 +512,7 @@ async function initPicksPage() {
         ? `<option value="">No upcoming games</option>`
         : weeksBySport[selectedSport].map((k) => `<option value="${k}">${weekBucketLabel(k, gamesBySport[selectedSport])}</option>`).join("");
     weekSelect.value = currentWeekKey() || "";
+    document.getElementById("ncaa-week-note").style.display = selectedSport === "cfb" ? "block" : "none";
 
     const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
     const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());

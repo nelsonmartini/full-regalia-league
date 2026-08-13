@@ -4,6 +4,28 @@
 
 ## Status
 
+- **Three fixes from Neil's follow-up questions (2026-08-13):**
+  1. **Date/time restored on chips** — a real regression from the category-pool
+     redesign: the old per-game-card design showed kickoff date/time in the
+     card header, but that info got dropped when chips became the unit of
+     display. Every chip now shows 3 lines: the pick, opponent/matchup, and
+     kickoff time (e.g. "Thu 8:15 PM").
+  2. **"Why does NCAA only go to Week 4?" — confirmed as expected, not a bug.**
+     Checked live: as of today only NCAA Week 1 (98 games) through Week 4 (3
+     games) have any posted odds — sportsbooks simply haven't priced later
+     college weeks yet (matches the earlier finding that college odds lag,
+     unlike NFL's full-season advance posting). Added an explanatory note
+     under the week selector, visible only when NCAA is toggled, so this
+     doesn't look broken to anyone else.
+  3. **NFL preseason excluded from pickable weeks.** Was showing as its own
+     "Preseason Week N" option right next to real "Week 1," which is exactly
+     what confused Neil — preseason is exhibition football (backups, roster
+     battles), meaningless for a real pick'em league. Filtered out entirely
+     rather than just relabeled.
+  - All 3 verified end to end (3-line chips confirmed, preseason confirmed
+    absent from the dropdown, NCAA note confirmed hidden/shown correctly on
+    toggle) — no console errors.
+
 - **DONE (2026-08-13): conference/division sub-grouping within each pick
   category**, for browsability — before this, each category (Minus Spread,
   Plus Spread, Over, Under) was one long flat chip list, hard to scan once a
