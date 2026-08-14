@@ -4,10 +4,29 @@
 
 ## Status
 
-- **NEEDS ACTION FROM NEIL (2026-08-14): run this SQL in the Supabase SQL
-  Editor before the new Admin page will work** — creates the `players` table
-  (replaces the hardcoded `LEAGUE_PLAYERS` list in `js/app.js`) and seeds it
-  with the current 15-person roster so nobody's lost in the migration:
+- **DONE (2026-08-14): dropped "Beta" and internal-doc references from the
+  live site.** Neil didn't want the product presenting as unfinished/beta
+  anymore. Removed: the "Beta" badge on `index.html`'s "This week" card and
+  `picks.html`'s page title (and deleted the now-unused `.badge.beta` CSS
+  rule), the gate overlay's "Private beta preview" copy across all 8 pages
+  (now "Private league site"), and two "See ROADMAP.md" mentions
+  (`standings.html`, `admin.html`) — `ROADMAP.md` is an internal planning
+  doc, not something a player should be pointed at. Shipped as `sw.js`
+  shell-v17.
+- **Backlogged, not started (2026-08-14):** replacing the "Live" tab in the
+  bottom nav with an "Analytics" tab for the two stats/trends ideas below —
+  see "New backlog" further down. Explicitly deferred until after the season
+  starts.
+- **players table SQL confirmed run (2026-08-14)** — verified live via direct
+  Supabase REST calls: all 15 players read back correctly, and a throwaway
+  insert+delete round-trip confirmed the RLS grants work. Admin page is fully
+  functional.
+
+- **RUN — kept for reference (2026-08-14): the `players` table SQL Neil ran**
+  in the Supabase SQL Editor to unblock the new Admin page — creates the
+  `players` table (replaces the hardcoded `LEAGUE_PLAYERS` list in
+  `js/app.js`) and seeded it with the 15-person roster so nobody was lost in
+  the migration. Confirmed live and working (see status entry just above):
   ```sql
   create table public.players (
     name text primary key,
@@ -45,10 +64,8 @@
     ('PHIL', null, 15)
   on conflict (name) do nothing;
   ```
-  Until this is run, `js/players.js`'s `loadPlayers()` will fail (no table to
-  query) and every page's roster-dependent bits (player picker, standings,
-  admin roster list) will come up empty — fails soft (no crash), but nothing
-  useful will show.
+  (Note: while unrun, `loadPlayers()` fails soft — empty roster everywhere,
+  no crash — which is how this was safely shipped before Neil ran it.)
 
 - **DONE (2026-08-14): four features from Neil's follow-up request.**
   1. **Admin page to add/remove players** (`admin.html`) — no more hardcoding
@@ -442,6 +459,16 @@
      graded picks by player + category, compute hit rate) and a place to
      show it — natural fit for `player.html`, next to the existing points
      trend.
+   - **Nav idea from Neil (2026-08-14), not decided/built:** replace the
+     "Live" tab in the bottom nav with an "Analytics" tab housing both stats
+     features above, instead of adding a 7th nav item. Open questions to
+     settle when this gets picked up (not now): where do live scores/odds
+     move to if "Live" is removed as a standalone tab (folded into Home? kept
+     as a page just not nav-linked, like Admin is now?), and does Analytics
+     need its own sub-nav given it'd hold two fairly different things (team
+     trends vs. player trends). **Explicitly deferred — do not start any of
+     this (including the nav change) until Neil says go, expected after the
+     season is underway and there's real data to show.**
 
 ## Living checklist
 
@@ -520,7 +547,9 @@
       urgency (months out)
 - [ ] **Stats/trends pages (new backlog, 2026-08-14):** team ATS trends
       (possibly sourced from teamrankings.com) and per-player category
-      performance history. See Status → "New backlog" for detail.
+      performance history, possibly surfaced via a new "Analytics" tab
+      replacing "Live" in the bottom nav. Deferred until after the season
+      starts and there's real data — see Status → "New backlog" for detail.
 
 ## Session log
 
