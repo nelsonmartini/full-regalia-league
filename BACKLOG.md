@@ -4,6 +4,38 @@
 
 ## Status
 
+- **DONE (2026-08-14): scoring math independently verified against the
+  original workbook, plus two follow-up features.**
+  - **Verification method:** rather than re-checking my own prior code
+    comments, opened `C:\Users\neilm\Downloads\Full Regalia 2025 Pick'Em.xlsx`
+    directly with a Python script (openpyxl) and pulled the real formulas out
+    of the `Results`/`Standings`/`History` sheets. Confirmed algebraically
+    that `gradeSpread()` in `js/grading.js` is mathematically identical to the
+    original `IFS()` spread formula (favorite side and, by inversion, the
+    underdog side). Found 6 real "Push" results in the actual season history
+    and confirmed every one contributed exactly 0.5 points to that player's
+    weekly total (hits=1, misses=0) — an exact match to `pointsForResult()`.
+    Confirmed all categories are weighted equally (1 pt each) and that the
+    original Standings sheet's win% denominator ("# of picks") counts pushes
+    too, same as `computeStandings()`'s `graded` count today. **No bugs
+    found** — the math has been correct since the grading engine was built.
+  - **Gap found (not a bug, a documentation hole):** `betting-guide.html`
+    explained what Spread/Moneyline/O-U bets *are* but never explained how
+    points are scored. Added a "How picks are scored" section: 8 picks/week
+    (4 categories × 2 sports), 1pt/hit, 0.5pt/push, 0pt/miss, every category
+    weighted the same.
+  - **New: team search on the Picks page** (`#team-search` input above
+    `#games-list` in `picks.html`). Typing filters every category's chips to
+    matches on team abbreviation OR full name (e.g. "SEA" and "Seahawks" both
+    work — added a `search` field per chip option in `buildCategoryPools()`,
+    `js/picks.js`), auto-expands any category with a match regardless of its
+    collapsed state, and hides categories with zero matches entirely rather
+    than showing them empty. Clearing the box restores normal
+    collapsed/expanded state. Added `escapeHtml()` to `js/pick-utils.js`
+    since the "no matches" empty-state message echoes the typed search text
+    back into the page — this is the one path on the site where raw user
+    input gets reflected into innerHTML, so it needed escaping.
+
 - **DONE (2026-08-14): dropped "Beta" and internal-doc references from the
   live site.** Neil didn't want the product presenting as unfinished/beta
   anymore. Removed: the "Beta" badge on `index.html`'s "This week" card and
@@ -543,6 +575,14 @@
       was conference + division
 - [x] **"@"/"vs" on spread pick chips** (2026-08-14) — matches Over/Under's
       existing matchup format
+- [x] **Scoring math independently verified against the original workbook**
+      (2026-08-14) — no bugs found; see Status for the verification method
+- [x] **"How picks are scored" section added to the Betting Guide** (2026-08-14)
+      — was previously undocumented on the live site
+- [x] **Team search/filter on the Picks page** (2026-08-14) — filters all 4
+      categories by team abbreviation or full name
+- [x] **Dropped "Beta" and internal-doc references from the live site**
+      (2026-08-14)
 - [ ] Championship/Bowl Picks page — needs its own scoping for prop bets, lower
       urgency (months out)
 - [ ] **Stats/trends pages (new backlog, 2026-08-14):** team ATS trends

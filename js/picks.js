@@ -223,21 +223,30 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
           sub: `${side.atHome ? "vs" : "@"} ${side.opp.abbr}`,
           when,
           group: teamGroupLabel(sport, side.team.abbr, nflDivisions),
+          search: searchText(side.team, side.opp),
           value: { type: "spread", team: side.team.abbr, line: side.line },
         });
       }
     }
 
     if (game.odds?.overUnder != null) {
+      const totalSearch = searchText(away, home);
       if (game.id !== underGameId) {
-        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, value: { type: "total", direction: "over", line: game.odds.overUnder } });
+        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, search: totalSearch, value: { type: "total", direction: "over", line: game.odds.overUnder } });
       }
       if (game.id !== overGameId) {
-        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, value: { type: "total", direction: "under", line: game.odds.overUnder } });
+        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, search: totalSearch, value: { type: "total", direction: "under", line: game.odds.overUnder } });
       }
     }
   }
   return pools;
+}
+
+/** Lowercased searchable text for a chip — team abbreviation AND full name for
+ * both sides, so typing either "SEA" or "Seahawks" finds a game (abbreviations
+ * alone aren't how most people think of a team). */
+function searchText(teamA, teamB) {
+  return [teamA?.abbr, teamA?.name, teamB?.abbr, teamB?.name].filter(Boolean).join(" ").toLowerCase();
 }
 
 /** Derive the 4 category slots currently filled for one sport+week from the
@@ -289,23 +298,32 @@ function sortGroupKeys(sport, keys) {
   return [...keys].sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
 }
 
-function renderCategoryPools(container, sport, games, slots, nflDivisions, categoryExpanded) {
+function renderCategoryPools(container, sport, games, slots, nflDivisions, categoryExpanded, searchQuery = "") {
   const pools = buildCategoryPools(sport, games, slots, nflDivisions);
+  const query = searchQuery.trim().toLowerCase();
 
   if (games.length === 0) {
     container.innerHTML = '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>';
     return;
   }
 
-  container.innerHTML = CATEGORIES.map((cat) => {
-    const options = pools[cat];
+  let anyMatched = false;
+  const categoriesHtml = CATEGORIES.map((cat) => {
+    let options = pools[cat];
+    if (query) {
+      options = options.filter((o) => o.search.includes(query));
+      if (options.length === 0) return ""; // hide the whole category rather than show an empty one while searching
+    }
+    anyMatched = true;
     // Identify the selected chip by which GAME it's for, not by matching its
     // odds value — two different games can easily share the same total line
     // (e.g. two games both set at "Over 44.5"), and comparing by value alone
     // was marking every game with that line as selected (confirmed bug).
     const slot = slots[cat];
     const currentGameId = slot?.entry.snapshot?.gameId ?? null;
-    const expanded = !!categoryExpanded[cat];
+    // While a search is active, force every matching category open so results
+    // are visible without also having to tap through the collapse state.
+    const expanded = query ? true : !!categoryExpanded[cat];
     // Collapsed-state summary: show what's already picked (so the pick is
     // visible without expanding), or a prompt to pick one, so scanning the
     // 4 collapsed headers alone tells you what's left to do this week.
@@ -361,6 +379,10 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
         </div>
       </div>`;
   }).join("");
+
+  container.innerHTML = anyMatched
+    ? categoriesHtml
+    : `<div class="empty-state">No games match "${escapeHtml(searchQuery.trim())}" this week.</div>`;
 }
 
 // statusBadge/pickLabel/weekGroupLabel live in js/pick-utils.js.
@@ -428,6 +450,7 @@ async function initPicksPage() {
   const myPicksList = document.getElementById("my-picks-list");
   const weekStatusList = document.getElementById("week-status-list");
   const statusSummary = document.getElementById("status-summary");
+  const teamSearch = document.getElementById("team-search");
 
   const avatarPreview = document.getElementById("player-avatar-preview");
   select.innerHTML = '<option value="">Loading roster…</option>';
@@ -489,6 +512,7 @@ async function initPicksPage() {
   // per-category state lives here (not inside render) so it survives re-renders
   // triggered by sport/week switches and chip picks.
   const categoryExpanded = { minus: false, plus: false, over: false, under: false };
+  let searchQuery = "";
 
   function currentWeekKey() {
     return sportWeeks[selectedSport];
@@ -504,9 +528,14 @@ async function initPicksPage() {
 
     const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
     const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
-    renderCategoryPools(container, selectedSport, games, slots, nflDivisions, categoryExpanded);
+    renderCategoryPools(container, selectedSport, games, slots, nflDivisions, categoryExpanded, searchQuery);
     renderProgress(progressEl, currentPicks, sportWeeks);
   }
+
+  teamSearch.addEventListener("input", () => {
+    searchQuery = teamSearch.value;
+    renderAll();
+  });
 
   renderAll();
   renderMyPicks(myPicksList, currentPicks, allGames);

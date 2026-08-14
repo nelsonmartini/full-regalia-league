@@ -14,6 +14,13 @@ function fmtLine(n) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
+/** Escape text before interpolating it into innerHTML — needed anywhere
+ * user-typed input (e.g. the Picks page team search box) gets echoed back
+ * into the page. */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function sportLabel(sport) {
   return sport === "nfl" ? "NFL" : "College";
 }
