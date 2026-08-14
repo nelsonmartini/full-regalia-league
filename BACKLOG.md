@@ -25,10 +25,13 @@
   - New `.section-label` CSS class (`css/style.css`) — small uppercase
     muted label, reused for both sections above.
 
-- **NEEDS ACTION FROM NEIL (2026-08-14): run this SQL to make scoring
-  admin-editable** — creates the `scoring_config` table `js/grading.js`'s
+- **OPTIONAL, NO RUSH — run whenever (2026-08-14): SQL to make scoring
+  admin-editable.** Not urgent: current scoring (1/hit, 0.5/push, 0/miss) is
+  already verified correct and works fine as-is without this — this SQL just
+  unlocks the *ability* to change those numbers from the admin page later, if
+  ever needed. Creates the `scoring_config` table `js/grading.js`'s
   `loadScoringConfig()`/`saveScoringConfig()` read/write, seeded with the
-  verified defaults (1/hit, 0.5/push, 0/miss):
+  verified defaults:
   ```sql
   create table public.scoring_config (
     id smallint primary key default 1,
@@ -54,7 +57,10 @@
   ```
   Until this is run, every page falls back to the same hardcoded defaults
   (1/0.5/0) that were already correct — fails soft, nothing breaks, the
-  Scoring card on `admin.html` just won't be able to save changes.
+  Scoring card on `admin.html` just won't be able to save changes. Neil's
+  call on timing (2026-08-14): "keep it in the backlog for me to run" —
+  scoring itself is fine, this was about having the option available, not
+  an active need to change it right now.
 
 - **DONE (2026-08-14): admin can now edit scoring** — added a "Scoring" card
   to `admin.html` (3 number inputs: Hit/Push/Miss points, plus a Save button)
