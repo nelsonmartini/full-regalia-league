@@ -4,6 +4,26 @@
 
 ## Status
 
+- **DONE (2026-08-14): third Picks page pass — removed the "My Picks" tab.**
+  Neil's follow-up after the reorg above: the Make Picks / My Picks tab
+  toggle felt confusing/redundant now that "My picks this week" already
+  exists on the page. Removed entirely from `picks.html`/`js/picks.js`:
+  - The tab chip row (`#tab-week`/`#tab-mine`) and the `#view-mine` block
+    (full-season pick history for the selected player) are gone. `#view-week`
+    is no longer a toggled view — its contents are just the page now.
+  - Deleted `renderMyPicks()` from `js/picks.js` (the only thing that used
+    it) and its 3 call sites. Since nothing on this page calls
+    `gradePick()`/`pointsForResult()` anymore, also dropped
+    `loadScoringConfig()` from the page's startup `Promise.all` and removed
+    the now-unnecessary `<script src="js/grading.js">` from `picks.html`.
+  - The underlying feature isn't gone, just relocated to where it already
+    lived: added a small "Full season history →" link in the picker card
+    that points to `player.html?name=<selected player>` (updates live as
+    you switch players) — Neil confirmed the full-season reference should
+    keep existing, just not duplicated as a second tab on this page when
+    `player.html`/`history.html` already do it, with filters, dedicated
+    space, and no redundancy.
+
 - **DONE (2026-08-14): second Picks page pass — fixed a real progress-count
   bug and reorganized the flow, per Neil's follow-up feedback.**
   - **Real bug fixed:** the persistent "X of 8 picks made this week" figure

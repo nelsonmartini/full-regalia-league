@@ -399,57 +399,10 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
 }
 
 // statusBadge/pickLabel/weekGroupLabel live in js/pick-utils.js.
-
-/** Full season view: every pick this player has ever saved, grouped by week,
- * newest first, graded where the game data is still available. */
-function renderMyPicks(container, picks, allGames) {
-  const entries = Object.entries(picks).map(([groupId, entry]) => {
-    const game = allGames.find((g) => g.id === (entry.snapshot?.gameId || groupId.replace(/_(spread|ml|total)$/, "")));
-    const result = game ? gradePick(entry.value, game) : null;
-    return { groupId, entry, game, result };
-  });
-
-  if (entries.length === 0) {
-    container.innerHTML = '<div class="empty-state">No picks saved yet this season.</div>';
-    return;
-  }
-
-  const groups = new Map();
-  for (const e of entries) {
-    const label = weekGroupLabel(e.entry.snapshot);
-    if (!groups.has(label)) groups.set(label, []);
-    groups.get(label).push(e);
-  }
-
-  const sortedLabels = [...groups.keys()].sort((a, b) => {
-    const da = groups.get(a)[0]?.entry.snapshot?.date || "";
-    const db = groups.get(b)[0]?.entry.snapshot?.date || "";
-    return new Date(db) - new Date(da);
-  });
-
-  container.innerHTML = sortedLabels
-    .map((label) => {
-      const rows = groups
-        .get(label)
-        .map(
-          (e) => `
-        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px">
-          <span>${e.entry.snapshot?.matchup || "?"} — ${pickLabel(e.entry.value)}</span>
-          ${statusBadge(e.result)}
-        </div>`
-        )
-        .join("");
-      const pts = groups
-        .get(label)
-        .reduce((s, e) => s + (e.result ? pointsForResult(e.result) : 0), 0);
-      return `
-        <div class="card">
-          <div class="card-title"><span>${label}</span><span>${pts} pts</span></div>
-          ${rows}
-        </div>`;
-    })
-    .join("");
-}
+// The full-season "every pick I've ever made" view used to live on this page
+// as a second tab (renderMyPicks) — removed per Neil: it was confusing next
+// to the new "My picks this week" card, and it fully duplicates what
+// player.html already shows (linked from the picker card instead).
 
 async function initPicksPage() {
   const select = document.getElementById("player-select");
@@ -460,10 +413,10 @@ async function initPicksPage() {
   const statusBottom = document.getElementById("save-status-bottom");
   const saveBtnTop = document.getElementById("save-btn-top");
   const saveBtnBottom = document.getElementById("save-btn-bottom");
-  const myPicksList = document.getElementById("my-picks-list");
   const weekStatusList = document.getElementById("week-status-list");
   const statusSummary = document.getElementById("status-summary");
   const teamSearch = document.getElementById("team-search");
+  const fullHistoryLink = document.getElementById("full-history-link");
 
   const avatarPreview = document.getElementById("player-avatar-preview");
   select.innerHTML = '<option value="">Loading roster…</option>';
@@ -482,7 +435,6 @@ async function initPicksPage() {
     fetchScoreboard("nfl", { daysForward: 200 }),
     fetchScoreboard("cfb", { daysForward: 200 }),
     fetchNflDivisions(),
-    loadScoringConfig(), // must resolve before renderMyPicks() calls pointsForResult()
   ]);
   const allGames = [...nfl, ...cfb];
   // NFL preseason (seasonType 1) is exhibition football — backups and roster
@@ -551,9 +503,13 @@ async function initPicksPage() {
     renderAll();
   });
 
+  function updateHistoryLink() {
+    fullHistoryLink.href = `player.html?name=${encodeURIComponent(select.value)}`;
+  }
+
   renderAll();
-  renderMyPicks(myPicksList, currentPicks, allGames);
   avatarPreview.innerHTML = avatarHtml(select.value, 48);
+  updateHistoryLink();
 
   async function switchPlayer() {
     currentPicks = await loadPicks(select.value);
@@ -561,8 +517,8 @@ async function initPicksPage() {
     pendingUpserts.clear();
     pendingDeletes.clear();
     avatarPreview.innerHTML = avatarHtml(select.value, 48);
+    updateHistoryLink();
     renderAll();
-    renderMyPicks(myPicksList, currentPicks, allGames);
     statusTop.textContent = "";
     statusBottom.textContent = "";
   }
@@ -691,7 +647,6 @@ async function initPicksPage() {
     pendingUpserts.clear();
     pendingDeletes.clear();
 
-    renderMyPicks(myPicksList, currentPicks, allGames);
     loadAndRenderStatus();
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
     // Scoped to the sport currently being edited, not a blended cross-sport
@@ -706,9 +661,9 @@ async function initPicksPage() {
   saveBtnTop.addEventListener("click", doSave);
   saveBtnBottom.addEventListener("click", doSave);
 
-  // "Who's picked" lives as a collapsible card at the top of Make Picks (not a
-  // separate tab, per Neil — more visible where people already are, without
-  // permanently pushing the actual picking UI down the page).
+  // "Who's picked" lives as its own collapsible card, not a separate tab —
+  // stays visible where people already are, without permanently pushing the
+  // actual picking UI down the page.
   let statusExpanded = false;
 
   async function loadAndRenderStatus() {
@@ -727,16 +682,6 @@ async function initPicksPage() {
     statusExpanded = !statusExpanded;
     weekStatusList.style.display = statusExpanded ? "block" : "none";
     loadAndRenderStatus(); // refresh on every expand — other players may have saved since load
-  });
-
-  document.querySelectorAll("[data-tab]").forEach((el) => {
-    el.addEventListener("click", () => {
-      document.querySelectorAll("[data-tab]").forEach((c) => c.classList.remove("selected"));
-      el.classList.add("selected");
-      const tab = el.getAttribute("data-tab");
-      document.getElementById("view-week").style.display = tab === "week" ? "block" : "none";
-      document.getElementById("view-mine").style.display = tab === "mine" ? "block" : "none";
-    });
   });
 
   loadAndRenderStatus();

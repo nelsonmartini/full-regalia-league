@@ -53,45 +53,34 @@
       <span id="player-avatar-preview"></span>
       <select id="player-select" class="chip" style="flex:1;appearance:none;text-align:left;padding:14px;cursor:pointer"></select>
     </div>
+    <a class="link" id="full-history-link" href="player.html" style="display:block;text-align:center;font-size:12.5px;margin-top:10px">Full season history →</a>
   </div>
 
-  <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
-    <div class="chip selected" id="tab-week" data-tab="week">Make Picks</div>
-    <div class="chip" id="tab-mine" data-tab="mine">My Picks</div>
+  <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:8px">
+    <div class="chip selected" id="sport-nfl" data-sport="nfl">🏈 NFL</div>
+    <div class="chip" id="sport-cfb" data-sport="cfb">🎓 NCAA</div>
   </div>
 
-  <div id="view-week">
-    <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:8px">
-      <div class="chip selected" id="sport-nfl" data-sport="nfl">🏈 NFL</div>
-      <div class="chip" id="sport-cfb" data-sport="cfb">🎓 NCAA</div>
-    </div>
+  <select id="week-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer;margin-bottom:8px"></select>
+  <p class="footer-note" id="ncaa-week-note" style="margin-top:0;display:none">Only showing weeks sportsbooks have posted lines for — unlike the NFL, college odds usually aren't set until closer to kickoff, so later weeks will appear as game day gets closer.</p>
 
-    <select id="week-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer;margin-bottom:8px"></select>
-    <p class="footer-note" id="ncaa-week-note" style="margin-top:0;display:none">Only showing weeks sportsbooks have posted lines for — unlike the NFL, college odds usually aren't set until closer to kickoff, so later weeks will appear as game day gets closer.</p>
-
-    <div class="section-label">My picks this week</div>
-    <div class="card" style="padding:12px 16px">
-      <div id="picks-progress" style="font-size:13px;color:var(--text-dim)">Loading…</div>
-    </div>
-
-    <div class="section-label">Make picks</div>
-
-    <input type="text" id="team-search" placeholder="🔎 Search for a team…" autocomplete="off"
-           style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
-
-    <button id="save-btn-top" class="btn btn-primary btn-block" style="margin-bottom:6px">Save my picks</button>
-    <div id="save-status-top" class="footer-note" style="min-height:18px;margin-top:0"></div>
-
-    <div id="games-list"></div>
-
-    <button id="save-btn-bottom" class="btn btn-primary btn-block" style="margin-top:6px">Save my picks</button>
-    <div id="save-status-bottom" class="footer-note" style="min-height:18px"></div>
+  <div class="section-label">My picks this week</div>
+  <div class="card" style="padding:12px 16px">
+    <div id="picks-progress" style="font-size:13px;color:var(--text-dim)">Loading…</div>
   </div>
 
-  <div id="view-mine" style="display:none">
-    <p class="page-sub">Every pick you've saved this season, grouped by week, graded automatically once each game finishes.</p>
-    <div id="my-picks-list"></div>
-  </div>
+  <div class="section-label">Make picks</div>
+
+  <input type="text" id="team-search" placeholder="🔎 Search for a team…" autocomplete="off"
+         style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
+
+  <button id="save-btn-top" class="btn btn-primary btn-block" style="margin-bottom:6px">Save my picks</button>
+  <div id="save-status-top" class="footer-note" style="min-height:18px;margin-top:0"></div>
+
+  <div id="games-list"></div>
+
+  <button id="save-btn-bottom" class="btn btn-primary btn-block" style="margin-top:6px">Save my picks</button>
+  <div id="save-status-bottom" class="footer-note" style="min-height:18px"></div>
 </main>
 
 <nav class="bottom-nav">
@@ -109,7 +98,6 @@
 <script src="js/live-scores.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/grading.js"></script>
 <script src="js/pick-utils.js"></script>
 <script src="js/players.js"></script>
 <script src="js/picks.js"></script>
