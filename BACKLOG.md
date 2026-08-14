@@ -4,6 +4,107 @@
 
 ## Status
 
+- **NEEDS ACTION FROM NEIL (2026-08-14): run this SQL in the Supabase SQL
+  Editor before the new Admin page will work** — creates the `players` table
+  (replaces the hardcoded `LEAGUE_PLAYERS` list in `js/app.js`) and seeds it
+  with the current 15-person roster so nobody's lost in the migration:
+  ```sql
+  create table public.players (
+    name text primary key,
+    couple text,
+    sort_order integer not null default 0,
+    created_at timestamptz not null default now()
+  );
+
+  alter table public.players enable row level security;
+
+  create policy "Anyone can read players"
+    on public.players for select using (true);
+  create policy "Anyone can add players"
+    on public.players for insert with check (true);
+  create policy "Anyone can delete players"
+    on public.players for delete using (true);
+
+  grant select, insert, delete on public.players to anon;
+
+  insert into public.players (name, couple, sort_order) values
+    ('ALEX', 'Alex & Calli', 1),
+    ('CALLI', 'Alex & Calli', 2),
+    ('DREW', 'Drew & Michaela', 3),
+    ('MICHAELA', 'Drew & Michaela', 4),
+    ('SEAN', 'Sean & Carlie', 5),
+    ('CARLIE', 'Sean & Carlie', 6),
+    ('JACOB', 'Jacob & Emma', 7),
+    ('EMMA', 'Jacob & Emma', 8),
+    ('NICK', 'Nick & Emily', 9),
+    ('EMILY', 'Nick & Emily', 10),
+    ('LOUIE', 'Louie & Josie', 11),
+    ('JOSIE', 'Louie & Josie', 12),
+    ('CONNOR', 'Connor & Jack', 13),
+    ('JACK', 'Connor & Jack', 14),
+    ('PHIL', null, 15)
+  on conflict (name) do nothing;
+  ```
+  Until this is run, `js/players.js`'s `loadPlayers()` will fail (no table to
+  query) and every page's roster-dependent bits (player picker, standings,
+  admin roster list) will come up empty — fails soft (no crash), but nothing
+  useful will show.
+
+- **DONE (2026-08-14): four features from Neil's follow-up request.**
+  1. **Admin page to add/remove players** (`admin.html`) — no more hardcoding
+     a name in `js/app.js` and redeploying every time someone joins. Gated by
+     a *second*, admin-only passphrase (separate from the site's
+     `regalia2026`), checked client-side the same way `js/gate.js` already
+     works — **this is a UI speed bump, not real auth**: the passphrase hash
+     lives in `js/admin.js` and is readable by anyone who opens dev tools,
+     and the underlying Supabase RLS on `players` is open to the anon key
+     (same trust model the `picks` table already uses). Neil explicitly chose
+     this lightweight approach over building real Supabase Auth login — this
+     resolves the "admin auth strength" decision that was blocking the
+     players-table work noted below in the item-3 planning notes.
+     - Admin passphrase: **`commish`** (Neil's choice) — change it any time
+       by following the same self-service steps documented at the top of
+       `js/gate.js`/`js/admin.js` (hash a new phrase in the browser console,
+       paste the hash in).
+     - Removing a player doesn't delete their past `picks` rows (kept for
+       data integrity) — it just drops them from the roster, so they stop
+       appearing in the Picks player-picker and in Standings/History (which
+       iterate the roster, not a distinct-name scan of `picks`).
+     - Linked from a small "Admin" link in `index.html`'s footer — not in the
+       main bottom-nav, so regular players don't see it.
+  2. **Live Standings + History, replacing the old workbook-snapshot data.**
+     Per Neil: discard the old season's numbers entirely and start fresh —
+     this season is the first one tracked live. Deleted `js/standings-data.js`
+     (the old `STANDINGS` sample array) and `js/history-data.js` (the old
+     344-pick `HISTORY` dump, incompatible anyway with the new 4-category
+     pick model). New `js/season-data.js` computes both Standings and History
+     on page load, straight from the real `picks` table + live/final scores
+     (`js/live-scores.js`) + the grading engine (`js/grading.js`) — no more
+     manual data entry or stale snapshots. `standings.html`, `history.html`,
+     `player.html`, and `index.html`'s top-3 preview all rewired to this.
+     Also fixed stale copy on `index.html` left over from before the Supabase
+     migration ("your picks save on this device... not synced yet" — they
+     have been synced since 2026-08-10).
+  3. **NFL pick groups: conference-only, chronological within** (was
+     conference *and* division). `teamGroupLabel()` in `js/picks.js` now
+     takes just the first word of the live "AFC East"-style label from
+     `fetchNflDivisions()`. Chip order within a conference was already
+     chronological for free (the underlying game list is date-sorted before
+     grouping) — only the grouping itself needed to change.
+  4. **"@" for away, "vs" for home on spread picks** — matches what Over/Under
+     picks already showed via their matchup subtext. `buildCategoryPools()`
+     in `js/picks.js` now tags each spread side with `atHome`, so the away
+     side reads "CAR @ TB" ... "CAR -3.5 · @ TB" and the home side reads
+     "TB +3.5 · vs CAR".
+  - Extracted `js/pick-utils.js` (new) out of `js/picks.js` — the pure
+    pick-formatting helpers (`pickLabel`, `weekGroupLabel`,
+    `weekBucketKeyFromSnapshot`, `statusBadge`, `CATEGORY_LABEL`, etc.) that
+    both `js/picks.js` and the new `js/season-data.js` need, without pulling
+    picks.js's DOM-binding code (which assumes picks.html's elements exist)
+    into pages that don't have them.
+  - Shipped as `sw.js` shell-v15. **Not yet tested — see "Test full change
+    set via Playwright" below; do that before telling Neil this is live.**
+
 - **DONE (2026-08-13): collapsible, color-coded pick categories** — Neil's
   request to cut down scroll length on the Picks page. Each of the 4 categories
   (Minus Spread, Plus Spread, Over, Under) now:
@@ -103,46 +204,26 @@
      bound to the whole card, so clicking a player row (a link to their page)
      inside the expanded list both navigated away AND collapsed the card at the
      same time — fixed by scoping the click listener to just the header line.
-  3. ⛔ **Still blocked — Super Admin panel** (add players, rename without
-     losing history). This is the one that needs real architecture work — see
-     below. Not started.
-  - **The real architectural piece (why item 3 needs planning, not just
-    coding):** player names currently live as a hardcoded list in `js/app.js`
-    (`LEAGUE_PLAYERS`), and `picks.player_name` stores the name as plain text.
-    Renaming someone today would orphan their old picks (still tagged with the
-    old name). The correct fix is a real `players` table with a stable id, and
-    `picks` referencing that id instead of storing the name directly — then a
-    rename is just editing a label, every historical pick follows automatically.
-    This also makes "add a player" a real DB action instead of something only
-    Claude can do by editing code and redeploying.
-  - **One open decision, asked but not yet answered — do not build until
-    Neil weighs in:** **admin auth strength.** Option A (recommended): a real
-    Supabase Auth login for Neil (email+password) — genuine security, the
-    database itself enforces only that logged-in account can write to the
-    players table, not bypassable via browser dev tools. Small one-time setup
-    (Neil creates one login). Option B: reuse the existing passphrase-gate
-    pattern (`js/gate.js`) — quick, consistent with the beta gate, but same
-    honest caveat as before: client-side speed bump, not real security — and
-    this time it'd be protecting who's officially in the league, not just
-    picks, so leaning against it, but it's Neil's call.
-  - **SQL that will be needed once the decision lands** (not written yet — exact
-    shape of the admin-write RLS policy depends on decision #1 above):
-    - Create a `players` table (id uuid primary key, name text unique, couple
-      text nullable, active boolean default true, created_at).
-    - Seed it from the current `LEAGUE_PLAYERS` list in `js/app.js` (15 players).
-    - Add `player_id uuid references players(id)` to `picks`; backfill existing
-      rows by matching `player_name` text to the new table; can drop
-      `player_name` later once confirmed working, or just leave it as a
-      harmless legacy column.
-    - New RLS: `players` needs public SELECT (everyone reads the roster to
-      populate the picker dropdown); INSERT/UPDATE on `players` needs to be
-      locked down per decision #1 — either `using (auth.uid() = '<neil's uid>')`
-      style (Option A) or left open like `picks` currently is (Option B, not
-      recommended here).
-    - `picks` RLS policies need updating to reference `player_id` instead of
-      `player_name` once the migration happens.
-  - Not blocking the rest of the site — Standings computation (next up
-    regardless) doesn't depend on this.
+  3. ✅ **DONE (2026-08-14) — Admin panel to add/delete players.** Neil
+     answered the open "admin auth strength" question below by directly
+     asking for the passphrase-gate approach (Option B) — see the
+     2026-08-14 status entry above for what shipped (`admin.html`,
+     `js/admin.js`, `js/players.js`, new `players` table).
+     - **Scope note:** this shipped the simpler half of the architecture
+       described below — `players.name` is the primary key (matches how
+       `picks.player_name` already works, no migration needed), which
+       supports add/delete but **not rename-without-losing-history** (that
+       still needs the `player_id` foreign-key migration described just
+       below, and wasn't asked for this round). Revisit if Neil wants
+       renames later.
+  - **If rename support is ever wanted:** player names currently live in the
+    new `players` table but `picks.player_name` still stores the name as
+    plain text, so renaming someone today would orphan their old picks (still
+    tagged with the old name). The fix would be adding a stable
+    `id uuid primary key` to `players`, adding `player_id uuid references
+    players(id)` to `picks`, backfilling existing rows by matching
+    `player_name` to the new table, and updating `picks` RLS to reference
+    `player_id`. Not started — add/delete (what's live now) doesn't need it.
 - **Backend decision made (2026-08-02): Supabase**, using Neil's existing account. Not
   building on a throwaway/personal setup he can't hand off — Supabase project
   transfers cleanly to another org later (verified via their docs): source must be
@@ -326,21 +407,39 @@
    Avatars, Championship Picks scoping question, and the Results-filter approach
    are all done too (see checklist below) — this list was stale, cleaned up
    2026-08-10.
-2. **Done (2026-08-13):** the "8 picks/week, 4 categories" redesign — see Status
-   above for full detail. **First thing next session: confirm the DELETE grant
-   was run and actually test a category-swap end to end** (the one path not yet
-   empirically verified).
-3. **Build the live Standings computation** — query all picks from Supabase,
-   cross-reference with graded results (`js/grading.js`, already built and
-   tested), sum points per player. This is what finally makes Standings stop
-   being a frozen snapshot. Next up once the swap path is confirmed.
+2. **Still open: confirm the DELETE grant SQL was run and test a
+   category-swap end to end** (the one path not yet empirically verified) —
+   see the SQL near the top of Status. Been carried for a few sessions now.
+3. **Done (2026-08-14):** live Standings + History computation — see Status
+   above. Standings is no longer a frozen snapshot.
 4. Championship/Bowl Picks page — still needs its own scoping for prop bets
    (First TD scorer, etc.) that the current category system doesn't cover.
    Lower urgency, months out.
-5. **Done:** per-week "who's submitted picks" tracker — see checklist/Status
-   above. **Still blocked on Neil:** players-table migration + Super Admin
-   panel (add/rename players) — one decision needed before building: admin
-   auth strength (real Supabase login vs. passphrase gate).
+5. **Done:** per-week "who's submitted picks" tracker, admin add/delete
+   players panel — see Status above.
+6. **NEEDS ACTION FROM NEIL:** run the `players` table SQL near the top of
+   Status — the new Admin page and the roster picker on every page are
+   non-functional until that's run.
+7. **New backlog, not started — stats/trends pages** (Neil's idea, sourced
+   from teamrankings.com):
+   - **Team ATS trends per betting category.** teamrankings.com/nfl/trends/ats-trends
+     (and the college-football equivalent) publishes exactly this: how each
+     team performs against the spread, over/under, as favorite/underdog —
+     maps closely onto our own 4 categories. No public API — would need
+     either scraping (fragile, same "fails soft" caution as the ESPN
+     integration, more so since it's not CORS-open like ESPN's endpoint, so
+     it can't be fetched client-side and would need a small server-side
+     fetcher) or manual/periodic data entry. Needs its own research pass
+     before committing to an approach.
+   - **Player (league member) performance history per betting category.**
+     E.g. "Neil hits 68% on Unders but only 40% on Plus Spread this season."
+     Unlike the team-trends idea, this needs NO external source — it's
+     fully derivable from data already in Supabase: every saved pick already
+     records its category (via `pickCategory()` in `js/pick-utils.js`) and
+     gets graded (`js/grading.js`). Just needs a new aggregation (group
+     graded picks by player + category, compute hit rate) and a place to
+     show it — natural fit for `player.html`, next to the existing points
+     trend.
 
 ## Living checklist
 
@@ -352,7 +451,8 @@
 - [x] PWA manifest + icons + basic service worker (Add to Home Screen)
 - [x] Betting Guide page (static content from the workbook, ported as-is; dropped one
       slightly off-tone line from the original to keep it welcoming for the whole group)
-- [x] Standings page (sample data tonight, 15 players, sorted by points)
+- [x] Standings page — live-computed from real Supabase picks (2026-08-14; was
+      sample/workbook data before)
 - [x] Home dashboard page
 - [x] Picks-entry UI — real chip selectors per game (5 sample games), saves to browser
       local storage as a placeholder (no permanent backend yet)
@@ -401,19 +501,24 @@
 - [ ] **Confirm the DELETE grant SQL was run**, then test an actual category-swap
       (changing an already-saved pick to a different game) end to end — the one
       path not yet empirically verified, see Status section for the SQL
-- [ ] **Live Standings computation** — query Supabase picks + graded results, sum
-      points per player. This is the last piece of "eliminate Excel." Next up
-      once the swap path above is confirmed.
+- [x] **Live Standings + History computation** (2026-08-14) — `js/season-data.js`
+      queries Supabase picks + grades them against live/final scores, no more
+      frozen snapshot. Old workbook-season data deleted per Neil ("start fresh").
 - [x] **Per-week "who's submitted picks" tracker** — collapsible card at the top
       of the Make Picks view, visible to everyone, sorted least-complete-first
-- [ ] **Players table migration** — real DB table with a stable id, so renaming a
-      player doesn't orphan their pick history (currently just a hardcoded list
-      + plain-text name on each pick row). Blocked on Neil picking admin auth
-      strength (real Supabase login vs. passphrase gate) — see Status section.
-- [ ] **Super Admin panel** — add/rename players through the site instead of a
-      code change + redeploy. Blocked on the same decision as above.
+- [x] **Admin panel to add/delete players** (2026-08-14, `admin.html`) — real
+      `players` Supabase table replaces the hardcoded roster list. Passphrase-
+      gated (Neil's explicit choice); doesn't yet support renaming without
+      losing pick history (see the players-table-migration note in Status).
+- [x] **NFL pick groups: conference-only, chronological within** (2026-08-14) —
+      was conference + division
+- [x] **"@"/"vs" on spread pick chips** (2026-08-14) — matches Over/Under's
+      existing matchup format
 - [ ] Championship/Bowl Picks page — needs its own scoping for prop bets, lower
       urgency (months out)
+- [ ] **Stats/trends pages (new backlog, 2026-08-14):** team ATS trends
+      (possibly sourced from teamrankings.com) and per-player category
+      performance history. See Status → "New backlog" for detail.
 
 ## Session log
 

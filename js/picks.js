@@ -22,12 +22,12 @@
  *   { value: {type:"spread", team:"CAR", line:-1.5}, snapshot: {...} }
  */
 
+// CATEGORIES/CATEGORY_LABEL/SPORTS/SEASON_PHASE_PREFIX/fmtLine/sportLabel/
+// pickCategory/pickLabel/weekBucketKeyFromSnapshot/weekGroupLabel/statusBadge
+// now live in js/pick-utils.js (loaded before this file), shared with the
+// Standings/History/Player pages so they can format picks the same way.
 const PLAYER_KEY = "fr_selected_player";
-const CATEGORIES = ["minus", "plus", "over", "under"];
-const CATEGORY_LABEL = { minus: "Minus Spread", plus: "Plus Spread", over: "Over", under: "Under" };
 const CATEGORY_ICON = { minus: "−", plus: "+", over: "▲", under: "▼" };
-const SPORTS = ["nfl", "cfb"];
-const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
 
 /**
  * NCAA conference groupings, for browsability within each pick category —
@@ -55,7 +55,10 @@ for (const [conf, teams] of Object.entries(NCAA_CONFERENCES)) {
 /** Sub-group label for a team within a category's chip list — "AFC East" for
  * NFL (live data), a Power 4 conference or "Other" for NCAA (hardcoded above). */
 function teamGroupLabel(sport, teamAbbr, nflDivisions) {
-  if (sport === "nfl") return nflDivisions.get(teamAbbr) || "Other";
+  // NFL groups by CONFERENCE only (not division) — games within a conference
+  // sort chronologically instead (per Neil, easier to scan than division
+  // clusters). nflDivisions values look like "AFC East"; take the first word.
+  if (sport === "nfl") return nflDivisions.get(teamAbbr)?.split(" ")[0] || "Other";
   return NCAA_TEAM_TO_CONF.get(teamAbbr) || "Other";
 }
 
@@ -71,21 +74,6 @@ function groupIdToParts(groupId) {
 
 function partsToGroupId(gameId, betType) {
   return `${gameId}_${betType === "moneyline" ? "ml" : betType}`;
-}
-
-function fmtLine(n) {
-  return n > 0 ? `+${n}` : `${n}`;
-}
-
-function sportLabel(sport) {
-  return sport === "nfl" ? "NFL" : "College";
-}
-
-/** Which of the 4 categories a pick belongs to. */
-function pickCategory(pick) {
-  if (pick.type === "spread") return pick.line < 0 ? "minus" : "plus";
-  if (pick.type === "total") return pick.direction === "over" ? "over" : "under";
-  return null;
 }
 
 async function loadPicks(player) {
@@ -180,13 +168,9 @@ function weekBucketKey(game) {
   return game.week != null ? `w${game.seasonType ?? "x"}-${game.week}` : `d${game.date?.slice(0, 10)}`;
 }
 
-/** Same as weekBucketKey but built from a saved pick's snapshot instead of a
- * live game object, so slot-fill can be derived without needing the game to
- * still be in the live fetch window. */
-function weekBucketKeyFromSnapshot(snapshot) {
-  if (!snapshot) return null;
-  return snapshot.week != null ? `w${snapshot.seasonType ?? "x"}-${snapshot.week}` : `d${snapshot.date?.slice(0, 10)}`;
-}
+// weekBucketKeyFromSnapshot lives in js/pick-utils.js — same logic, built from
+// a saved pick's snapshot instead of a live game object, so slot-fill works
+// even after a game rolls out of the live fetch window.
 
 function weekBucketLabel(key, games) {
   const game = games.find((g) => weekBucketKey(g) === key);
@@ -226,8 +210,8 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
 
     if (game.odds?.homeSpread != null && game.odds?.awaySpread != null) {
       const sides = [
-        { team: away, opp: home, line: game.odds.awaySpread },
-        { team: home, opp: away, line: game.odds.homeSpread },
+        { team: away, opp: home, line: game.odds.awaySpread, atHome: false },
+        { team: home, opp: away, line: game.odds.homeSpread, atHome: true },
       ];
       for (const side of sides) {
         const cat = side.line < 0 ? "minus" : "plus";
@@ -236,7 +220,7 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
         pools[cat].push({
           gameId: game.id,
           display: `${side.team.abbr} ${fmtLine(side.line)}`,
-          sub: `vs ${side.opp.abbr}`,
+          sub: `${side.atHome ? "vs" : "@"} ${side.opp.abbr}`,
           when,
           group: teamGroupLabel(sport, side.team.abbr, nflDivisions),
           value: { type: "spread", team: side.team.abbr, line: side.line },
@@ -291,8 +275,9 @@ function renderProgress(el, picks, sportWeeks) {
 const NCAA_GROUP_ORDER = ["ACC", "Big 12", "Big Ten", "SEC", "Other"];
 
 /** Sort a category's sub-group labels for display — NFL sorts naturally
- * alphabetically (gives AFC before NFC, divisions East/North/South/West in
- * order); NCAA uses an explicit Power-4 order with "Other" always last. */
+ * alphabetically (gives AFC before NFC; games within each conference are
+ * already chronological, see buildCategoryPools); NCAA uses an explicit
+ * Power-4 order with "Other" always last. */
 function sortGroupKeys(sport, keys) {
   if (sport === "cfb") {
     return [...keys].sort((a, b) => {
@@ -378,31 +363,7 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
   }).join("");
 }
 
-function statusBadge(result) {
-  if (result === "hit") return `<span style="color:var(--positive);font-weight:800">Hit</span>`;
-  if (result === "miss") return `<span style="color:var(--negative);font-weight:800">Miss</span>`;
-  if (result === "push") return `<span style="color:var(--text-faint);font-weight:800">Push</span>`;
-  return `<span style="color:var(--text-faint);font-weight:700">Pending</span>`;
-}
-
-function pickLabel(pick) {
-  if (pick.type === "total") return `${pick.direction === "over" ? "Over" : "Under"} ${pick.line}`;
-  return `${pick.team}${pick.line != null ? " " + fmtLine(pick.line) : " ML"}`;
-}
-
-function weekGroupLabel(snapshot) {
-  if (!snapshot) return "Unknown week";
-  if (snapshot.week) {
-    const prefix = SEASON_PHASE_PREFIX[snapshot.seasonType] ?? "";
-    return `${sportLabel(snapshot.sport)} · ${prefix}Week ${snapshot.week}`;
-  }
-  try {
-    const d = new Date(snapshot.date);
-    return `Week of ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-  } catch {
-    return "Unknown week";
-  }
-}
+// statusBadge/pickLabel/weekGroupLabel live in js/pick-utils.js.
 
 /** Full season view: every pick this player has ever saved, grouped by week,
  * newest first, graded where the game data is still available. */
@@ -469,8 +430,10 @@ async function initPicksPage() {
   const statusSummary = document.getElementById("status-summary");
 
   const avatarPreview = document.getElementById("player-avatar-preview");
+  select.innerHTML = '<option value="">Loading roster…</option>';
+  await loadPlayers();
   select.innerHTML = LEAGUE_PLAYERS.map((p) => `<option value="${p.name}">${titleCase(p.name)}</option>`).join("");
-  const savedPlayer = localStorage.getItem(PLAYER_KEY) || LEAGUE_PLAYERS[0].name;
+  const savedPlayer = localStorage.getItem(PLAYER_KEY) || LEAGUE_PLAYERS[0]?.name;
   select.value = savedPlayer;
   avatarPreview.innerHTML = avatarHtml(select.value, 32);
 

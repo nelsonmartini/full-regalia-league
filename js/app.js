@@ -22,27 +22,12 @@ function titleCase(s) {
 }
 
 /**
- * Players in the league, paired by couple where applicable.
- * This mirrors the workbook's Standings/Picks tabs. Update here once the
- * real backend replaces this static list (see BACKLOG.md).
+ * Players in the league, paired by couple where applicable. Loaded from the
+ * Supabase `players` table by loadPlayers() (js/players.js) — empty until
+ * that resolves, so any page that needs the roster must await it first. Kept
+ * as a top-level `let` (not const) because loadPlayers() reassigns it.
  */
-const LEAGUE_PLAYERS = [
-  { name: "ALEX", couple: "Alex & Calli" },
-  { name: "CALLI", couple: "Alex & Calli" },
-  { name: "DREW", couple: "Drew & Michaela" },
-  { name: "MICHAELA", couple: "Drew & Michaela" },
-  { name: "SEAN", couple: "Sean & Carlie" },
-  { name: "CARLIE", couple: "Sean & Carlie" },
-  { name: "JACOB", couple: "Jacob & Emma" },
-  { name: "EMMA", couple: "Jacob & Emma" },
-  { name: "NICK", couple: "Nick & Emily" },
-  { name: "EMILY", couple: "Nick & Emily" },
-  { name: "LOUIE", couple: "Louie & Josie" },
-  { name: "JOSIE", couple: "Louie & Josie" },
-  { name: "CONNOR", couple: "Connor & Jack" },
-  { name: "JACK", couple: "Connor & Jack" },
-  { name: "PHIL", couple: null },
-];
+let LEAGUE_PLAYERS = [];
 
 /**
  * Generated avatars — initials on a deterministic color, no photo dependency.

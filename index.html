@@ -61,14 +61,14 @@
 
   <div class="card">
     <div class="card-title">Top of the standings <a class="link" href="standings.html">Full board →</a></div>
-    <div id="top-standings"></div>
+    <div id="top-standings"><div class="empty-state">Loading standings…</div></div>
   </div>
 
   <div class="card">
     <div class="card-title">This week <span class="badge beta">Beta</span></div>
     <p class="prose" style="margin-bottom:12px">
-      Picks entry is open. It's an early beta — your picks save on this device for now,
-      not synced across everyone yet.
+      Picks entry is open — picks save to the group's shared board and lock automatically
+      at kickoff.
     </p>
     <a class="btn btn-primary btn-block" href="picks.html">Enter your picks →</a>
   </div>
@@ -81,6 +81,7 @@
   <div class="footer-note">
     Built for the league, by the league. Odds/results shown once live, via public
     sports data feeds — always double-check against your sportsbook before betting real money.
+    &nbsp;·&nbsp; <a class="link" href="admin.html">Admin</a>
   </div>
 </main>
 
@@ -96,11 +97,22 @@
 </nav>
 
 <script src="js/app.js"></script>
-<script src="js/standings-data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/pick-utils.js"></script>
+<script src="js/players.js"></script>
 <script src="js/live-scores.js"></script>
+<script src="js/grading.js"></script>
+<script src="js/season-data.js"></script>
 <script>
-  const top3 = STANDINGS.slice(0, 3);
-  document.getElementById("top-standings").innerHTML = top3.map((p, i) => renderStandingsRow(p, i + 1)).join("");
+  (async function loadTopStandings() {
+    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames()]);
+    const graded = gradeSeasonPicks(picksRows, games);
+    const top3 = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 3);
+    document.getElementById("top-standings").innerHTML = top3.length
+      ? top3.map((p, i) => renderStandingsRow(p, i + 1)).join("")
+      : '<div class="empty-state">No graded picks yet this season.</div>';
+  })();
 
   (async function loadHomeGames() {
     const games = await loadAllGames();
