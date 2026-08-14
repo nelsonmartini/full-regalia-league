@@ -13,6 +13,11 @@
  * {abbr, score}, status.state/completed).
  *
  * Returns "hit" | "miss" | "push" | null (null = game not final yet, can't grade).
+ *
+ * Grading itself (gradePick and friends, above) is pure — no dependencies.
+ * Point VALUES (below) are admin-configurable and read from Supabase, so
+ * this file must load after js/supabase-client.js on any page that calls
+ * loadScoringConfig() or saveScoringConfig().
  */
 
 function teamScores(pick, game) {
@@ -62,9 +67,41 @@ function gradePick(pick, game) {
   return null;
 }
 
-/** 1 point per hit, 0.5 per push, 0 per miss — matches the workbook's scoring pattern. */
+/** Defaults match the original workbook's scoring pattern (verified against
+ * its actual formulas, see BACKLOG.md) — 1 point per hit, 0.5 per push, 0 per
+ * miss. Admin-editable (admin.html) via the `scoring_config` Supabase table;
+ * loadScoringConfig() overwrites these before any page grades a pick. Kept
+ * as a mutable object (not consts) so the override actually takes effect —
+ * pointsForResult() always reads the current values, never the defaults
+ * directly. */
+let SCORING = { hit: 1, push: 0.5, miss: 0 };
+
 function pointsForResult(result) {
-  if (result === "hit") return 1;
-  if (result === "push") return 0.5;
-  return 0;
+  if (result === "hit") return SCORING.hit;
+  if (result === "push") return SCORING.push;
+  return SCORING.miss;
+}
+
+/** Every page that grades picks (Picks, Standings, History, Player, Home)
+ * must await this before rendering anything that calls pointsForResult() —
+ * mirrors loadPlayers() in js/players.js. Fails soft to the defaults above
+ * if the table doesn't exist yet or the request errors. */
+async function loadScoringConfig() {
+  const { data, error } = await sb.from("scoring_config").select("hit_points, push_points, miss_points").eq("id", 1).maybeSingle();
+  if (error || !data) {
+    console.error("loadScoringConfig failed, using defaults:", error);
+    return SCORING;
+  }
+  SCORING = { hit: Number(data.hit_points), push: Number(data.push_points), miss: Number(data.miss_points) };
+  return SCORING;
+}
+
+async function saveScoringConfig(hit, push, miss) {
+  const { error } = await sb
+    .from("scoring_config")
+    .update({ hit_points: hit, push_points: push, miss_points: miss, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) return { error: "Couldn't save scoring — try again." };
+  SCORING = { hit, push, miss };
+  return { error: null };
 }

@@ -122,4 +122,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadPlayers();
     renderRoster();
   });
+
+  const scoreHit = document.getElementById("score-hit");
+  const scorePush = document.getElementById("score-push");
+  const scoreMiss = document.getElementById("score-miss");
+  const scoreSaveBtn = document.getElementById("score-save-btn");
+  const scoreStatus = document.getElementById("score-status");
+
+  await loadScoringConfig();
+  scoreHit.value = SCORING.hit;
+  scorePush.value = SCORING.push;
+  scoreMiss.value = SCORING.miss;
+
+  scoreSaveBtn.addEventListener("click", async () => {
+    const hit = Number(scoreHit.value);
+    const push = Number(scorePush.value);
+    const miss = Number(scoreMiss.value);
+    if ([hit, push, miss].some((n) => Number.isNaN(n) || n < 0)) {
+      scoreStatus.textContent = "Points must be numbers, 0 or greater.";
+      return;
+    }
+    scoreSaveBtn.disabled = true;
+    scoreStatus.textContent = "Saving…";
+    const { error } = await saveScoringConfig(hit, push, miss);
+    scoreSaveBtn.disabled = false;
+    scoreStatus.textContent = error || "Saved — applies to every page immediately.";
+  });
 });

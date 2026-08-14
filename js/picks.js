@@ -469,6 +469,7 @@ async function initPicksPage() {
     fetchScoreboard("nfl", { daysForward: 200 }),
     fetchScoreboard("cfb", { daysForward: 200 }),
     fetchNflDivisions(),
+    loadScoringConfig(), // must resolve before renderMyPicks() calls pointsForResult()
   ]);
   const allGames = [...nfl, ...cfb];
   // NFL preseason (seasonType 1) is exhibition football — backups and roster

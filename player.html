@@ -102,7 +102,7 @@
       return;
     }
 
-    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames()]);
+    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows.filter((r) => r.player_name === name), games);
     const rows = computeHistoryEntries(graded).sort((a, b) => new Date(a.date) - new Date(b.date));
     const couple = findCouple(name);

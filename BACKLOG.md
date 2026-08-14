@@ -4,6 +4,67 @@
 
 ## Status
 
+- **DONE (2026-08-14): Picks page decluttered** — Neil said it felt clunky
+  (player filter, who's-picked, sport/week filters, then all the options,
+  all stacked with equal visual weight). Changes, all in `picks.html`:
+  - Merged the separate "progress" card into the player-select card (one
+    card instead of two — avatar+select on top, progress line below).
+  - Removed the generic "Pick 1 game per category below" instructional note
+    — redundant now that it's also explained in the Betting Guide's new
+    "How picks are scored" section (see above), and the category headers
+    are already self-explanatory ("Tap to pick a game").
+  - **Moved "who's picked" league-wide status tracker to the END of the
+    page** (after the picks and the bottom Save button), behind a `<hr
+    class="divider">` and a new `.section-label` ("League status") — this is
+    the "clear sectioned off" part of the ask: it no longer competes with
+    the actual picking flow at the top, it's a distinct zone you scroll to
+    on purpose. Same collapsible behavior as before, same element IDs, so
+    no `js/picks.js` logic changed — this was a pure HTML restructure.
+    Added a matching "Who's picking?" section-label above the player card
+    for visual consistency between the two labeled sections.
+  - New `.section-label` CSS class (`css/style.css`) — small uppercase
+    muted label, reused for both sections above.
+
+- **NEEDS ACTION FROM NEIL (2026-08-14): run this SQL to make scoring
+  admin-editable** — creates the `scoring_config` table `js/grading.js`'s
+  `loadScoringConfig()`/`saveScoringConfig()` read/write, seeded with the
+  verified defaults (1/hit, 0.5/push, 0/miss):
+  ```sql
+  create table public.scoring_config (
+    id smallint primary key default 1,
+    hit_points numeric not null default 1,
+    push_points numeric not null default 0.5,
+    miss_points numeric not null default 0,
+    updated_at timestamptz not null default now(),
+    constraint scoring_config_single_row check (id = 1)
+  );
+
+  alter table public.scoring_config enable row level security;
+
+  create policy "Anyone can read scoring config"
+    on public.scoring_config for select using (true);
+  create policy "Anyone can update scoring config"
+    on public.scoring_config for update using (true);
+
+  grant select, update on public.scoring_config to anon;
+
+  insert into public.scoring_config (id, hit_points, push_points, miss_points)
+  values (1, 1, 0.5, 0)
+  on conflict (id) do nothing;
+  ```
+  Until this is run, every page falls back to the same hardcoded defaults
+  (1/0.5/0) that were already correct — fails soft, nothing breaks, the
+  Scoring card on `admin.html` just won't be able to save changes.
+
+- **DONE (2026-08-14): admin can now edit scoring** — added a "Scoring" card
+  to `admin.html` (3 number inputs: Hit/Push/Miss points, plus a Save button)
+  wired to the new `scoring_config` table above. `pointsForResult()` in
+  `js/grading.js` now reads a mutable `SCORING` object instead of hardcoded
+  constants; every page that grades picks (Picks, Standings, History, Player,
+  Home) now awaits `loadScoringConfig()` before rendering anything that calls
+  it — same pattern as `loadPlayers()`. Changing the values on the admin page
+  applies site-wide immediately (next page load), no code change needed.
+
 - **DONE (2026-08-14): scoring math independently verified against the
   original workbook, plus two follow-up features.**
   - **Verification method:** rather than re-checking my own prior code

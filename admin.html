@@ -66,11 +66,33 @@
     <div class="card-title">Current roster <span id="roster-count" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px"></span></div>
     <div id="roster-list"><div class="empty-state">Loading roster…</div></div>
   </div>
+
+  <div class="card">
+    <div class="card-title">Scoring</div>
+    <p class="prose" style="margin-bottom:12px">Points awarded per pick. Applies to every graded pick site-wide — Standings, History, and Player pages all read these values.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <label for="score-hit" style="display:block;font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Hit</label>
+        <input type="number" id="score-hit" step="0.5" min="0" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px" />
+      </div>
+      <div>
+        <label for="score-push" style="display:block;font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Push</label>
+        <input type="number" id="score-push" step="0.5" min="0" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px" />
+      </div>
+      <div>
+        <label for="score-miss" style="display:block;font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Miss</label>
+        <input type="number" id="score-miss" step="0.5" min="0" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px" />
+      </div>
+    </div>
+    <button id="score-save-btn" class="btn btn-primary btn-block">Save scoring</button>
+    <div id="score-status" class="footer-note" style="min-height:18px;margin-top:0"></div>
+  </div>
 </main>
 
 <script src="js/app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js"></script>
+<script src="js/grading.js"></script>
 <script src="js/players.js"></script>
 <script src="js/admin.js"></script>
 </body>

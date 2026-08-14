@@ -68,7 +68,7 @@
 <script src="js/season-data.js"></script>
 <script>
   (async function () {
-    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames()]);
+    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
     const standings = computeStandings(graded, LEAGUE_PLAYERS);
     document.getElementById("standings-list").innerHTML = standings.length

@@ -78,7 +78,7 @@
     const empty = document.getElementById("history-empty");
     list.innerHTML = '<div class="empty-state">Loading history…</div>';
 
-    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames()]);
+    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
     let entries = computeHistoryEntries(graded);
 
