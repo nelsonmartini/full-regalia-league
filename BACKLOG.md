@@ -70,8 +70,10 @@
        data integrity) — it just drops them from the roster, so they stop
        appearing in the Picks player-picker and in Standings/History (which
        iterate the roster, not a distinct-name scan of `picks`).
-     - Linked from a small "Admin" link in `index.html`'s footer — not in the
-       main bottom-nav, so regular players don't see it.
+     - Linked from a proper card on `index.html` (Neil said the original
+       footer text link was too easy to miss) — still not in the main
+       bottom-nav, so it's one tap from Home but not shoved in front of
+       regular players on every page.
   2. **Live Standings + History, replacing the old workbook-snapshot data.**
      Per Neil: discard the old season's numbers entirely and start fresh —
      this season is the first one tracked live. Deleted `js/standings-data.js`
