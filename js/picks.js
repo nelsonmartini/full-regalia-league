@@ -262,23 +262,36 @@ function slotsForSportWeek(picks, sport, weekKey) {
   return slots;
 }
 
-/** Overall progress across BOTH sports' currently-selected weeks (not the
- * whole season) — the 8-pick cap is per week, so that's the meaningful count. */
-function computeProgress(picks, sportWeeks) {
+/** Progress for each sport's OWN currently-selected week — kept separate
+ * rather than summed into one blended "X of 8" figure, because NFL and NCAA
+ * weeks are independent (see sportWeeks) and a combined total doesn't
+ * actually correspond to any single week filter on screen; showing "5 of 8"
+ * while NFL is on Week 3 and NCAA is on Week 5 was confirmed confusing —
+ * looked like it counted picks for a week you weren't even looking at. Each
+ * entry's `filled` count is guaranteed to match exactly what's shown for
+ * that sport's currently-selected week, nothing else. */
+function computeProgress(picks, sportWeeks, gamesBySport) {
   const perSport = {};
   let total = 0;
   for (const sport of SPORTS) {
     const slots = slotsForSportWeek(picks, sport, sportWeeks[sport]);
     const filled = CATEGORIES.filter((c) => slots[c]).length;
-    perSport[sport] = filled;
+    const weekLabel = sportWeeks[sport] ? weekBucketLabel(sportWeeks[sport], gamesBySport[sport]) : "No week selected";
+    perSport[sport] = { filled, weekLabel };
     total += filled;
   }
   return { perSport, total };
 }
 
-function renderProgress(el, picks, sportWeeks) {
-  const { perSport, total } = computeProgress(picks, sportWeeks);
-  el.textContent = `${total} of 8 picks made this week · NFL ${perSport.nfl}/4 · NCAA ${perSport.cfb}/4`;
+function renderProgress(el, picks, sportWeeks, gamesBySport) {
+  const { perSport } = computeProgress(picks, sportWeeks, gamesBySport);
+  el.innerHTML = SPORTS.map(
+    (sport) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
+      <span style="color:var(--text-dim)">${sportLabel(sport)} · ${perSport[sport].weekLabel}</span>
+      <span style="font-weight:800">${perSport[sport].filled}/4 picks</span>
+    </div>`
+  ).join("");
 }
 
 const NCAA_GROUP_ORDER = ["ACC", "Big 12", "Big Ten", "SEC", "Other"];
@@ -458,7 +471,7 @@ async function initPicksPage() {
   select.innerHTML = LEAGUE_PLAYERS.map((p) => `<option value="${p.name}">${titleCase(p.name)}</option>`).join("");
   const savedPlayer = localStorage.getItem(PLAYER_KEY) || LEAGUE_PLAYERS[0]?.name;
   select.value = savedPlayer;
-  avatarPreview.innerHTML = avatarHtml(select.value, 32);
+  avatarPreview.innerHTML = avatarHtml(select.value, 48);
 
   container.innerHTML = '<div class="empty-state">Loading the season\'s games…</div>';
   // NFL odds are posted for essentially the whole season in advance; college odds lag
@@ -530,7 +543,7 @@ async function initPicksPage() {
     const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
     const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
     renderCategoryPools(container, selectedSport, games, slots, nflDivisions, categoryExpanded, searchQuery);
-    renderProgress(progressEl, currentPicks, sportWeeks);
+    renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
   }
 
   teamSearch.addEventListener("input", () => {
@@ -540,14 +553,14 @@ async function initPicksPage() {
 
   renderAll();
   renderMyPicks(myPicksList, currentPicks, allGames);
-  avatarPreview.innerHTML = avatarHtml(select.value, 32);
+  avatarPreview.innerHTML = avatarHtml(select.value, 48);
 
   async function switchPlayer() {
     currentPicks = await loadPicks(select.value);
     originalPicks = { ...currentPicks };
     pendingUpserts.clear();
     pendingDeletes.clear();
-    avatarPreview.innerHTML = avatarHtml(select.value, 32);
+    avatarPreview.innerHTML = avatarHtml(select.value, 48);
     renderAll();
     renderMyPicks(myPicksList, currentPicks, allGames);
     statusTop.textContent = "";
@@ -680,8 +693,12 @@ async function initPicksPage() {
 
     renderMyPicks(myPicksList, currentPicks, allGames);
     loadAndRenderStatus();
-    const { total } = computeProgress(currentPicks, sportWeeks);
-    const msg = `Saved — ${total} of 8 picks made this week for ${titleCase(player)}.`;
+    renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
+    // Scoped to the sport currently being edited, not a blended cross-sport
+    // total — same reasoning as renderProgress above.
+    const { perSport } = computeProgress(currentPicks, sportWeeks, gamesBySport);
+    const p = perSport[selectedSport];
+    const msg = `Saved — ${p.filled}/4 ${sportLabel(selectedSport)} picks made for ${titleCase(player)}, ${p.weekLabel}.`;
     statusTop.textContent = msg;
     statusBottom.textContent = msg;
   }

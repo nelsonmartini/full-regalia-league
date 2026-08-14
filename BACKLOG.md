@@ -4,6 +4,45 @@
 
 ## Status
 
+- **DONE (2026-08-14): second Picks page pass — fixed a real progress-count
+  bug and reorganized the flow, per Neil's follow-up feedback.**
+  - **Real bug fixed:** the persistent "X of 8 picks made this week" figure
+    summed NFL's and NCAA's picks into one blended number even though NFL
+    and NCAA weeks are independently selected (`sportWeeks.nfl` /
+    `sportWeeks.cfb` can point at totally different weeks). Neil confirmed
+    this read as confusing — "should match the filter for the week
+    selected." Fixed: `computeProgress()`/`renderProgress()` in
+    `js/picks.js` now show two separate, clearly week-labeled lines (e.g.
+    "NFL · Week 3 — 2/4 picks", "NCAA · Week 5 — 1/4 picks") instead of one
+    combined total — each number now unambiguously matches a specific,
+    visible week. Applied the same fix to the post-save confirmation
+    message (was also blending sports into "X of 8").
+  - **Reorganized page flow**, per Neil: "who's picking, then the week...
+    based on the week it shows how many picks you've made (my picks
+    section)... then the make picks section (NFL/NCAA toggle, then the 4
+    categories)... league status at the top." New top-to-bottom order in
+    `picks.html`:
+    1. **League status** (moved from the bottom, where the *previous* pass
+       had put it, back to the top — Neil's direct follow-up ask) — same
+       collapsible card, same behavior, just repositioned.
+    2. **Who's picking?** — given a distinct "hero" treatment
+       (`.picker-card` in `css/style.css`: subtle accent-tinted gradient
+       background + border) and a bigger avatar (32px → 48px) per "needs to
+       be much more predominant and better looking."
+    3. Sport toggle (NFL/NCAA) + week selector, grouped together — kept
+       adjacent out of technical necessity (week options are inherently
+       sport-scoped, so a "week" picker can't function without knowing which
+       sport first; Neil's literal ordering had "week" before the "toggle
+       NFL/NCAA" step, but the two are coupled).
+    4. **My picks this week** — the fixed, per-sport-scoped progress card
+       (see bug fix above), now its own clearly labeled section.
+    5. **Make picks** — team search + the 4 collapsible categories, same as
+       before.
+  - The full-season "My Picks" tab (`#tab-mine`) is unchanged — Neil
+    confirmed it should stay as the all-time reference; the new "My picks
+    this week" card is a distinct, smaller, week-scoped concept, not a
+    replacement.
+
 - **DONE (2026-08-14): Picks page decluttered** — Neil said it felt clunky
   (player filter, who's-picked, sport/week filters, then all the options,
   all stacked with equal visual weight). Changes, all in `picks.html`:

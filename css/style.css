@@ -216,6 +216,18 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 14px;
 }
 
+/* Hero treatment for the Picks page's player selector — meant to read as
+ * the clear starting point of the page, distinct from ordinary cards. */
+.picker-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--bg-elev)), var(--bg-elev));
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+}
+
+.picker-card select {
+  font-size: 17px;
+  font-weight: 700;
+}
+
 .card-title {
   font-size: 13px;
   font-weight: 800;

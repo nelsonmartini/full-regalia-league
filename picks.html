@@ -39,13 +39,20 @@
     even for late edits.
   </p>
 
-  <div class="section-label">Who's picking?</div>
-  <div class="card" style="padding:14px 16px">
-    <div style="display:flex;align-items:center;gap:10px">
-      <span id="player-avatar-preview"></span>
-      <select id="player-select" class="chip" style="flex:1;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer"></select>
+  <div class="section-label">League status</div>
+  <div class="card" id="status-card" style="padding:12px 16px">
+    <div id="status-summary" style="font-size:13px;font-weight:700;text-align:center;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer">
+      <span>Loading who's picked…</span>
     </div>
-    <div id="picks-progress" style="font-size:12.5px;font-weight:700;text-align:center;color:var(--text-dim);margin-top:10px">Loading…</div>
+    <div id="week-status-list" style="display:none;margin-top:10px"></div>
+  </div>
+
+  <div class="section-label">Who's picking?</div>
+  <div class="card picker-card" style="padding:16px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span id="player-avatar-preview"></span>
+      <select id="player-select" class="chip" style="flex:1;appearance:none;text-align:left;padding:14px;cursor:pointer"></select>
+    </div>
   </div>
 
   <div class="chip-row" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
@@ -62,6 +69,13 @@
     <select id="week-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer;margin-bottom:8px"></select>
     <p class="footer-note" id="ncaa-week-note" style="margin-top:0;display:none">Only showing weeks sportsbooks have posted lines for — unlike the NFL, college odds usually aren't set until closer to kickoff, so later weeks will appear as game day gets closer.</p>
 
+    <div class="section-label">My picks this week</div>
+    <div class="card" style="padding:12px 16px">
+      <div id="picks-progress" style="font-size:13px;color:var(--text-dim)">Loading…</div>
+    </div>
+
+    <div class="section-label">Make picks</div>
+
     <input type="text" id="team-search" placeholder="🔎 Search for a team…" autocomplete="off"
            style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
 
@@ -72,16 +86,6 @@
 
     <button id="save-btn-bottom" class="btn btn-primary btn-block" style="margin-top:6px">Save my picks</button>
     <div id="save-status-bottom" class="footer-note" style="min-height:18px"></div>
-
-    <hr class="divider" />
-
-    <div class="section-label">League status</div>
-    <div class="card" id="status-card" style="padding:12px 16px">
-      <div id="status-summary" style="font-size:13px;font-weight:700;text-align:center;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer">
-        <span>Loading who's picked…</span>
-      </div>
-      <div id="week-status-list" style="display:none;margin-top:10px"></div>
-    </div>
   </div>
 
   <div id="view-mine" style="display:none">
