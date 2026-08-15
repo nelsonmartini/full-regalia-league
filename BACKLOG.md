@@ -4,6 +4,19 @@
 
 ## Status
 
+- **DONE (2026-08-14): Picks page cleanup — dropped the week-linking
+  explainer text, moved team search to the bottom.** Neil: the "NFL's week
+  numbering is the anchor..." footer-note under the week picker was internal
+  mechanics a player doesn't need to know — removed entirely, no
+  replacement (the linked pair is already self-evident from each week
+  picker row's "NFL: Week X · College: Week Y" text). `#team-search` moved
+  from just above the top Save button to just above the bottom one, after
+  `#games-list` — pure HTML reorder, no JS changes needed since the search
+  input's `id` and event wiring are unchanged. **Open question, not
+  resolved:** Neil is weighing whether the bottom "Save my picks" button is
+  still worth keeping at all — left in place for now since he said he's
+  still deciding, not asked to remove it yet.
+
 - **DONE (2026-08-14): removed the NFL/NCAA toggle chips — both sports show
   together now.** Follow-up on the Regalia Week linking above. Neil: now
   that weeks are linked, the toggle felt like an unneeded extra step; wanted
