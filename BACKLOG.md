@@ -4,6 +4,43 @@
 
 ## Status
 
+- **DONE (2026-08-14): Home page polish pass — branded quote, week-aware
+  copy, reordering.** Follow-up on the Home redesign above, per Neil.
+  - **Brand quote** below the header: "We do the 💰 Bags right, then we go
+    **FULL REGALIA**" — two Google Fonts loaded for the first time on this
+    site (previously system-font-only): Pacifico (cursive, the main phrase)
+    and Anton (bold condensed impact font, just for "Full Regalia" so it
+    visibly pops against the cursive). New `.brand-quote`/`.quote-cursive`/
+    `.quote-pop` classes in `css/style.css`, scoped to this one quote block
+    — not a site-wide rebrand of the wordmark elsewhere.
+  - **Removed** the "Here's where the league stands right now" subtitle and
+    the "This week at a glance" section-label (Neil asked what the latter
+    was referring to and leaned toward cutting it — agreed: once Standings
+    got its own freshness line and Awards got renamed, below, the wrapper
+    label wasn't adding anything, especially once Live scores moved out of
+    that group per the last bullet).
+  - **"Enter your picks" CTA** now shows a subline with the specific week
+    and date range it's for (e.g. "Week 3 · Sep 15–21"), and a new
+    **"Standings as of [date] (Week N)"** line sits above the Standings
+    card — both reuse the exact same computed "current week," so the page
+    tells one consistent story rather than two different guesses at what
+    week it is.
+  - **New shared helper, `earliestPickableWeek(games, sport)`** in
+    `js/pick-utils.js` — finds the soonest upcoming pickable week for a
+    sport (same "pickable" definition — not kicked off, odds posted, NFL
+    preseason excluded — that `js/picks.js` already used inline). Extracted
+    a matching `filterPickableGames()` too, and `js/picks.js`'s own
+    `pickableAll` now calls it instead of keeping a second copy of the same
+    filter logic. `js/picks.js`'s existing `weekBucketKey()` moved into
+    `js/pick-utils.js` as well, since both files need it now.
+  - **"Weekly Awards" renamed "Last Week Awards"** (Neil's suggested name,
+    semantically accurate — the awards already compute off the most
+    recently *completed* calendar week, which is "last week" relative to
+    "now"). Logic unchanged, just the card title.
+  - **Live scores & odds card moved** to sit directly below the Analytics
+    card (was previously up near the top, in the now-removed "at a glance"
+    group).
+
 - **DONE (2026-08-14): fourth Picks page pass — personalization "wayfinding"
   combo, per Neil ("how can we make sure players know absolutely they're
   picking their picks — color backgrounds? wayfinding?").** Landed all three

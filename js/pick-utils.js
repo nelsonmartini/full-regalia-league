@@ -65,3 +65,38 @@ function statusBadge(result) {
   if (result === "push") return `<span style="color:var(--text-faint);font-weight:800">Push</span>`;
   return `<span style="color:var(--text-faint);font-weight:700">Pending</span>`;
 }
+
+function weekBucketKey(game) {
+  return game.week != null ? `w${game.seasonType ?? "x"}-${game.week}` : `d${game.date?.slice(0, 10)}`;
+}
+
+/** Games actually offerable as picks: not yet kicked off, odds posted, and
+ * — for NFL specifically — not preseason (exhibition football, excluded
+ * from the real pick'em league). Shared by js/picks.js (the full week
+ * picker) and index.html (just needs "the current week"). */
+function filterPickableGames(games) {
+  return games
+    .filter((g) => g.status.state === "pre" && g.odds)
+    .filter((g) => !(g.sport === "nfl" && g.seasonType === 1))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+/** The soonest upcoming pickable week for one sport, from an already-fetched
+ * games list — used wherever "the current week" needs a single answer (e.g.
+ * index.html's picks CTA and standings freshness line), as opposed to
+ * js/picks.js's full week *selector*, which needs every upcoming week, not
+ * just the first one. Returns null if there's nothing pickable yet. */
+function earliestPickableWeek(games, sport) {
+  const pickable = filterPickableGames(games).filter((g) => g.sport === sport);
+  if (pickable.length === 0) return null;
+  const key = weekBucketKey(pickable[0]);
+  const weekGames = pickable.filter((g) => weekBucketKey(g) === key);
+  const dates = weekGames.map((g) => new Date(g.date));
+  return {
+    weekKey: key,
+    weekNumber: pickable[0].week ?? null,
+    seasonType: pickable[0].seasonType ?? null,
+    startDate: new Date(Math.min(...dates)),
+    endDate: new Date(Math.max(...dates)),
+  };
+}

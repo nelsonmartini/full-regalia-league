@@ -162,6 +162,32 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5;
 }
 
+/* Home page brand quote — "We Do the Bags Right and Then We Go Full
+ * Regalia." Two deliberately different display fonts (loaded via Google
+ * Fonts, see index.html <head>): a bold script for the main phrase, and a
+ * punchy condensed-impact font for "Full Regalia" so it visually pops out
+ * of the cursive around it. Scoped to just this quote block, not a
+ * site-wide rebrand of the wordmark elsewhere. */
+.brand-quote {
+  text-align: center;
+  margin: 4px 0 18px;
+  line-height: 1.3;
+}
+
+.brand-quote .quote-cursive {
+  font-family: "Pacifico", cursive;
+  font-size: 19px;
+  color: var(--accent-2);
+}
+
+.brand-quote .quote-pop {
+  font-family: "Anton", sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
 /* ---------- Bottom nav ---------- */
 
 .bottom-nav {

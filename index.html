@@ -20,6 +20,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Full Regalia" />
 <meta name="theme-color" content="#0a1424" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Pacifico&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -47,13 +50,18 @@
     <span class="mark" style="width:56px;height:56px;border-radius:16px;flex-shrink:0"><svg viewBox="0 0 24 24" width="60%" height="60%" xmlns="http://www.w3.org/2000/svg"><path d="M3 17 L5 8 L9 13 L12 5 L15 13 L19 8 L21 17 Z" fill="white"/><rect x="3" y="17" width="18" height="3" rx="1" fill="white"/><circle cx="5" cy="8" r="1.3" fill="white"/><circle cx="12" cy="5" r="1.3" fill="white"/><circle cx="19" cy="8" r="1.3" fill="white"/></svg></span>
     <div>
       <h1 class="page-title" style="margin:0">Full Regalia</h1>
-      <p class="page-sub" style="margin:2px 0 0">Here's where the league stands right now.</p>
     </div>
   </div>
 
-  <a class="btn btn-primary btn-block" href="picks.html" style="margin-bottom:14px">Enter your picks →</a>
+  <p class="brand-quote">
+    <span class="quote-cursive">We do the 💰 Bags right, then we go</span><br />
+    <span class="quote-pop">Full Regalia</span>
+  </p>
 
-  <div class="section-label">This week at a glance</div>
+  <a class="btn btn-primary btn-block" href="picks.html" id="picks-cta" style="margin-bottom:2px">Enter your picks →</a>
+  <div id="picks-cta-week" class="footer-note" style="padding-top:2px;padding-bottom:14px"></div>
+
+  <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
 
   <div class="card">
     <div class="card-title">Top of the standings <a class="link" href="standings.html">Full board →</a></div>
@@ -61,13 +69,8 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🏅 Weekly Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
+    <div class="card-title">🏅 Last Week Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
     <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
-    <div id="home-games"><div class="empty-state">Loading games…</div></div>
   </div>
 
   <div class="section-label">Get around the app</div>
@@ -98,6 +101,11 @@
     <div class="card-title">📊 Analytics <span class="badge" style="background:color-mix(in srgb, var(--text-faint) 20%, transparent);color:var(--text-faint)">Coming soon</span></div>
     <p class="prose" style="margin-bottom:12px">Team and player trends against the 4 betting categories — once there's a season of data.</p>
     <a class="btn btn-ghost btn-block" href="analytics.html">Preview →</a>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
+    <div id="home-games"><div class="empty-state">Loading games…</div></div>
   </div>
 
   <div class="card">
@@ -134,8 +142,9 @@
 <script src="js/awards.js"></script>
 <script>
   (async function loadStandingsAndAwards() {
-    // Shared fetch — Standings and Weekly Awards both grade off the same
-    // picks/games data, no need to fetch either twice.
+    // Shared fetch — Standings, Weekly Awards, and the current-week text
+    // (CTA subline + standings freshness line) all derive from the same
+    // picks/games data, no need to fetch any of it twice.
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
 
@@ -147,6 +156,21 @@
     const awards = computeWeeklyAwards(graded);
     document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(awards);
     document.getElementById("awards-week-label").textContent = awards ? awards.weekLabel : "";
+
+    // Current pickable NFL week (NFL, not NCAA — NFL's the default/primary
+    // sport throughout the site) — reused for both the picks CTA subline and
+    // the standings freshness line, so the whole page tells one consistent
+    // "here's where we are" story.
+    const today = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const currentWeek = earliestPickableWeek(games, "nfl");
+    if (currentWeek && currentWeek.weekNumber != null) {
+      const fmt = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const range = fmt(currentWeek.startDate) === fmt(currentWeek.endDate) ? fmt(currentWeek.startDate) : `${fmt(currentWeek.startDate)}–${fmt(currentWeek.endDate)}`;
+      document.getElementById("picks-cta-week").textContent = `Week ${currentWeek.weekNumber} · ${range}`;
+      document.getElementById("standings-freshness").textContent = `Standings as of ${today} (Week ${currentWeek.weekNumber})`;
+    } else {
+      document.getElementById("standings-freshness").textContent = `Standings as of ${today}`;
+    }
   })();
 
   (async function loadHomeGames() {

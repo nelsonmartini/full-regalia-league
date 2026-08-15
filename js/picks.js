@@ -164,9 +164,9 @@ function gameSnapshot(game) {
   };
 }
 
-function weekBucketKey(game) {
-  return game.week != null ? `w${game.seasonType ?? "x"}-${game.week}` : `d${game.date?.slice(0, 10)}`;
-}
+// weekBucketKey/filterPickableGames/earliestPickableWeek live in
+// js/pick-utils.js — shared with index.html, which needs the same "what's
+// pickable" and "current week" logic for its CTA/standings freshness text.
 
 // weekBucketKeyFromSnapshot lives in js/pick-utils.js — same logic, built from
 // a saved pick's snapshot instead of a live game object, so slot-fill works
@@ -446,10 +446,7 @@ async function initPicksPage() {
   // battles, nothing that should count for a real pick'em league — excluded
   // from what's pickable. (Confirmed this was confusing: it showed up as its
   // own "Preseason Week N" option right alongside real "Week 1".)
-  const pickableAll = allGames
-    .filter((g) => g.status.state === "pre" && g.odds)
-    .filter((g) => !(g.sport === "nfl" && g.seasonType === 1))
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const pickableAll = filterPickableGames(allGames);
 
   const gamesBySport = { nfl: pickableAll.filter((g) => g.sport === "nfl"), cfb: pickableAll.filter((g) => g.sport === "cfb") };
 
