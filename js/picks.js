@@ -400,16 +400,20 @@ function sortGroupKeys(sport, keys) {
   return [...keys].sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
 }
 
-function renderCategoryPools(container, sport, games, slots, nflDivisions, categoryExpanded, searchQuery = "") {
-  const pools = buildCategoryPools(sport, games, slots, nflDivisions);
-  const query = searchQuery.trim().toLowerCase();
-
+/** The 4 category cards for ONE sport — nested inside that sport's
+ * collapsible section by renderSportSections below (not its own top-level
+ * render anymore, now that NFL and NCAA are both shown together instead of
+ * toggled between). Each category/chip element carries data-sport so the
+ * click handler in initPicksPage can tell which sport a click belongs to
+ * without a single global "selected sport" to fall back on. */
+function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query) {
   if (games.length === 0) {
-    container.innerHTML = '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>';
-    return;
+    return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
   }
 
+  const pools = buildCategoryPools(sport, games, slots, nflDivisions);
   let anyMatched = false;
+
   const categoriesHtml = CATEGORIES.map((cat) => {
     let options = pools[cat];
     if (query) {
@@ -433,7 +437,7 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
       ? `<span class="pick-game-summary is-set">${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}</span>`
       : `<span class="pick-game-summary">Tap to pick a game</span>`;
     const headerHtml = `
-      <div class="pick-game-header" data-category-header="${cat}">
+      <div class="pick-game-header" data-category-header="${cat}" data-sport="${sport}">
         <span class="pick-game-icon">${CATEGORY_ICON[cat]}</span>
         <span class="pick-game-label">${CATEGORY_LABEL[cat]}</span>
         ${summaryHtml}
@@ -442,7 +446,7 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
 
     if (options.length === 0) {
       return `
-        <div class="pick-game" data-category="${cat}">
+        <div class="pick-game" data-category="${cat}" data-sport="${sport}">
           ${headerHtml}
           <div class="pick-game-body" style="display:${expanded ? "block" : "none"}">
             <div class="empty-state" style="padding:10px 0">No eligible games left for this category.</div>
@@ -474,7 +478,7 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
       .join("");
 
     return `
-      <div class="pick-game" data-category="${cat}">
+      <div class="pick-game" data-category="${cat}" data-sport="${sport}">
         ${headerHtml}
         <div class="pick-game-body" style="display:${expanded ? "block" : "none"}">
           ${subgroupsHtml}
@@ -482,8 +486,51 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
       </div>`;
   }).join("");
 
-  container.innerHTML = anyMatched
-    ? categoriesHtml
+  return { html: categoriesHtml, anyMatched };
+}
+
+/** Renders BOTH sports at once, each nested under its own collapsible
+ * "🏈 NFL" / "🎓 NCAA" section — replaces the old NFL/NCAA toggle chips
+ * entirely (Neil: with weeks now linked via the Regalia Week picker, there's
+ * no reason picking one sport's games should hide the other's). Collapsed by
+ * default, same reasoning as the category cards inside: 8 categories'
+ * worth of content at once would be too much scroll if it were all
+ * expanded up front. Search now spans both sports — a sport section
+ * auto-expands (or hides entirely if nothing in it matches) the same way
+ * categories already did within one sport. */
+function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery) {
+  const query = searchQuery.trim().toLowerCase();
+  let anySportMatched = false;
+
+  const sectionsHtml = SPORTS.map((sport) => {
+    const weekKey = sportWeeks[sport];
+    const games = gamesBySport[sport].filter((g) => weekBucketKey(g) === weekKey);
+    const slots = slotsForSportWeek(picks, sport, weekKey);
+    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query);
+
+    if (query && !anyMatched) return ""; // hide the whole sport section if nothing in it matches the search
+
+    anySportMatched = true;
+    const filled = CATEGORIES.filter((c) => slots[c]).length;
+    const expanded = query ? true : !!sportExpanded[sport];
+    const icon = sport === "nfl" ? "🏈" : "🎓";
+
+    return `
+      <div class="sport-section" data-sport-section="${sport}">
+        <div class="sport-section-header" data-sport-header="${sport}">
+          <span class="sport-section-icon">${icon}</span>
+          <span class="sport-section-label">${sportLabel(sport)}</span>
+          <span class="sport-section-summary">${filled}/4 picks made</span>
+          <span class="sport-section-chevron">${expanded ? "▲" : "▼"}</span>
+        </div>
+        <div class="sport-section-body" style="display:${expanded ? "block" : "none"}">
+          ${categoriesHtml}
+        </div>
+      </div>`;
+  }).join("");
+
+  container.innerHTML = anySportMatched
+    ? sectionsHtml
     : `<div class="empty-state">No games match "${escapeHtml(searchQuery.trim())}" this week.</div>`;
 }
 
@@ -574,7 +621,6 @@ async function initPicksPage() {
     cfb: regaliaWeeks[0]?.cfbWeekKey ?? null,
   };
 
-  let selectedSport = "nfl";
   let currentPicks = await loadPicks(select.value);
 
   // originalPicks = what's actually saved server-side right now (a snapshot at
@@ -584,15 +630,15 @@ async function initPicksPage() {
   let originalPicks = { ...currentPicks };
   const pendingUpserts = new Set();
   const pendingDeletes = new Set();
-  // Each of the 4 categories starts collapsed to cut down on scroll — the
-  // per-category state lives here (not inside render) so it survives re-renders
-  // triggered by sport/week switches and chip picks.
-  const categoryExpanded = { minus: false, plus: false, over: false, under: false };
+  // Both sport sections AND each of their 4 categories start collapsed to cut
+  // down on scroll — this state lives here (not inside render) so it
+  // survives re-renders triggered by week switches and chip picks.
+  const sportExpanded = { nfl: false, cfb: false };
+  const categoryExpanded = {
+    nfl: { minus: false, plus: false, over: false, under: false },
+    cfb: { minus: false, plus: false, over: false, under: false },
+  };
   let searchQuery = "";
-
-  function currentWeekKey() {
-    return sportWeeks[selectedSport];
-  }
 
   function renderWeekPicker() {
     weekPickerCurrent.textContent = regaliaWeeks.length === 0 ? "No games posted yet — check back soon" : regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex]);
@@ -600,9 +646,7 @@ async function initPicksPage() {
   }
 
   function renderAll() {
-    const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
-    const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
-    renderCategoryPools(container, selectedSport, games, slots, nflDivisions, categoryExpanded, searchQuery);
+    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery);
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
   }
 
@@ -652,16 +696,6 @@ async function initPicksPage() {
 
   select.addEventListener("change", switchPlayer);
 
-  document.querySelectorAll("[data-sport]").forEach((el) => {
-    el.addEventListener("click", () => {
-      document.querySelectorAll("[data-sport]").forEach((c) => c.classList.remove("selected"));
-      el.classList.add("selected");
-      selectedSport = el.getAttribute("data-sport");
-      renderAll();
-      loadAndRenderStatus(); // counts are week-specific, keep them in sync with the toggle
-    });
-  });
-
   // Collapsed by default, same pattern as the pick categories and League
   // status — click the header to expand the full list of Regalia Weeks.
   let weekPickerExpanded = false;
@@ -690,32 +724,51 @@ async function initPicksPage() {
   });
 
   container.addEventListener("click", (e) => {
+    // Sport section headers (🏈 NFL / 🎓 NCAA) toggle collapse/expand for
+    // that whole sport. Checked before category headers since a sport
+    // header click could otherwise also match a category selector if they
+    // were ever nested carelessly — they're siblings here, not nested, but
+    // keeping the order defensive costs nothing.
+    const sportHeader = e.target.closest("[data-sport-header]");
+    if (sportHeader) {
+      const sport = sportHeader.getAttribute("data-sport-header");
+      sportExpanded[sport] = !sportExpanded[sport];
+      renderAll();
+      return;
+    }
+
     // Category headers toggle collapse/expand. The header is a sibling of the
     // chip body (not a wrapper around it), so this never fires for chip clicks
     // and the chip logic below never fires for header clicks — no bubbling
     // conflict, unlike the earlier "Who's Picked" row-click bug.
     const header = e.target.closest("[data-category-header]");
     if (header) {
+      const sport = header.getAttribute("data-sport");
       const cat = header.getAttribute("data-category-header");
-      categoryExpanded[cat] = !categoryExpanded[cat];
+      categoryExpanded[sport][cat] = !categoryExpanded[sport][cat];
       renderAll();
       return;
     }
 
     const chip = e.target.closest(".chip");
     if (!chip) return;
+    // Sport now comes from the clicked chip's own category container, not a
+    // single "currently selected sport" — both sports are visible/editable
+    // at once (no more NFL/NCAA toggle).
     const catEl = chip.closest("[data-category]");
+    const sport = catEl.getAttribute("data-sport");
     const category = catEl.getAttribute("data-category");
     const gameId = chip.getAttribute("data-game-id");
     const value = JSON.parse(chip.getAttribute("data-value"));
     const betType = value.type; // "spread" | "total"
     const newGroupId = partsToGroupId(gameId, betType);
 
-    const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
+    const weekKey = sportWeeks[sport];
+    const games = gamesBySport[sport].filter((g) => weekBucketKey(g) === weekKey);
     const game = games.find((g) => g.id === gameId);
 
     // Replace whatever was previously filling this (sport, week, category) slot.
-    const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
+    const slots = slotsForSportWeek(currentPicks, sport, weekKey);
     const old = slots[category];
     if (old && old.groupId !== newGroupId) {
       delete currentPicks[old.groupId];
@@ -797,11 +850,12 @@ async function initPicksPage() {
 
     loadAndRenderStatus();
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
-    // Scoped to the sport currently being edited, not a blended cross-sport
-    // total — same reasoning as renderProgress above.
+    // Both sports shown per-line, same as the persistent progress card —
+    // there's no single "the sport being edited" anymore now that both are
+    // visible/editable together (no more NFL/NCAA toggle).
     const { perSport } = computeProgress(currentPicks, sportWeeks, gamesBySport);
-    const p = perSport[selectedSport];
-    const msg = `Saved — ${p.filled}/4 ${sportLabel(selectedSport)} picks made for ${titleCase(player)}, ${p.weekLabel}.`;
+    const weekTag = regaliaWeeks[selectedRegaliaIndex] ? `, ${regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex]).replace(/^👑 /, "").replace(/ Picks ·.*$/, "")}` : "";
+    const msg = `Saved for ${titleCase(player)}${weekTag} — NFL ${perSport.nfl.filled}/4 · College ${perSport.cfb.filled}/4.`;
     statusTop.textContent = msg;
     statusBottom.textContent = msg;
   }

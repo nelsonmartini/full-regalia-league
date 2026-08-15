@@ -4,6 +4,28 @@
 
 ## Status
 
+- **DONE (2026-08-14): removed the NFL/NCAA toggle chips — both sports show
+  together now.** Follow-up on the Regalia Week linking above. Neil: now
+  that weeks are linked, the toggle felt like an unneeded extra step; wanted
+  NFL and NCAA as collapsible sections instead, still avoiding excess scroll.
+  - `js/picks.js`: `renderCategoryPools()` split into `categoriesHtmlForSport()`
+    (the 4-category-card logic for one sport, basically unchanged internals)
+    and a new outer `renderSportSections()` that renders BOTH sports, each
+    under its own collapsible "🏈 NFL" / "🎓 NCAA" section — collapsed by
+    default, same reasoning as the categories inside them: expanding all 8
+    categories' worth of content at once would be too much scroll.
+  - Removed `selectedSport`/`currentWeekKey()` entirely — there's no single
+    "currently selected sport" anymore. `categoryExpanded` is now nested per
+    sport (`{nfl:{...}, cfb:{...}}`); every category/chip element carries a
+    `data-sport` attribute so the click handler (which used to just read the
+    one global `selectedSport`) can tell which sport a click belongs to.
+  - Team search now spans both sports at once — a sport section auto-expands
+    (or hides entirely if nothing in it matches) the same way categories
+    already did within one sport.
+  - Save-confirmation message reworked to show both sports' progress
+    together (`NFL 2/4 · College 3/4`) instead of just whichever sport was
+    "selected," since both are now always visible/editable together.
+
 - **DONE (2026-08-14): "Regalia Week" — links NFL and NCAA week selection
   on the Picks page.** Neil: it was genuinely confusing not knowing which
   NCAA week corresponds to whichever NFL week you're picking, since the two
