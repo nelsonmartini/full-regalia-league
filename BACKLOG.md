@@ -4,6 +4,49 @@
 
 ## Status
 
+- **DONE (2026-08-14): "Regalia Week" — links NFL and NCAA week selection
+  on the Picks page.** Neil: it was genuinely confusing not knowing which
+  NCAA week corresponds to whichever NFL week you're picking, since the two
+  are independently numbered and don't share a calendar. Replaced the two
+  separate week concerns with one linked selector:
+  - **New `buildRegaliaWeeks()` in `js/picks.js`** — NFL's own week
+    numbering is the backbone (complete, clean coverage all season, and
+    NFL's already the site's default/primary sport everywhere else); each
+    NFL week is paired with whichever NCAA week's games start closest in
+    time (within a 10-day window). Picking one "Regalia Week" now sets
+    `sportWeeks.nfl` AND `sportWeeks.cfb` together — switching the NFL/NCAA
+    sport toggle afterward never lands on two unrelated weeks, since both
+    are already synced from the same selection.
+  - **Native `<select id="week-select">` replaced with a collapsible
+    picker** (`.week-picker`, same collapsed-by-default pattern as the pick
+    categories and League status card) — chosen over keeping a native
+    `<select>` because Neil's spec called for a two-line rich layout (title
+    + sub-detail) that `<option>` elements can't render (plain text only).
+    Each row shows: **"👑 Week N Picks · [dates]"** as the title (the crown
+    is the site's own existing mark — reused here specifically so "Week N"
+    reads as *our* week, not either sport's native one, per Neil's ask to
+    "stress that"), a Current/Next badge, and underneath: "NFL: Week X ·
+    College: Week Y" (or "College: not posted yet" when there's no NCAA
+    week within the matching window — normal, college odds lag the NFL's).
+  - **No "Past" badge** — the week list only ever contains upcoming,
+    not-yet-locked weeks (already filtered via `filterPickableGames`), so a
+    past week literally can't appear here; only Current (always index 0,
+    since the list is chronologically sorted) and Next are meaningful.
+  - Progress card's "Not posted yet" wording (was "No week selected") — a
+    sport can now legitimately have `sportWeeks[sport] === null` if that
+    sport's linked week hasn't posted odds yet, which isn't an error state,
+    so the message needed to say so plainly.
+  - **Real bug caught by testing, fixed before shipping:** the first version
+    matched each NFL week independently to "whichever CFB week is closest,"
+    which let two different NFL weeks both claim the SAME CFB week whenever
+    only one or two college weeks had odds posted yet — a likely early-week
+    scenario given college odds lag the NFL's. Test built a fixture with one
+    CFB week 1 day from NFL Week 2 and 8 days from NFL Week 3 (both inside
+    the 10-day window) and caught both weeks linking to it. Fixed with
+    proper greedy one-to-one nearest-match pairing (smallest date gap
+    matched first, both sides then removed from the pool) so each CFB week
+    links to at most one NFL week.
+
 - **DONE (2026-08-14): real bug fix — Picks CTA subline was blank on the
   live site, plus Standings freshness line added.** Neil reported not
   seeing the "Week N · dates" text under "Enter your picks." Root cause,

@@ -61,8 +61,14 @@
     <div class="chip" id="sport-cfb" data-sport="cfb">🎓 NCAA</div>
   </div>
 
-  <select id="week-select" class="chip" style="width:100%;appearance:none;text-align:left;padding:12px;font-size:15px;cursor:pointer;margin-bottom:8px"></select>
-  <p class="footer-note" id="ncaa-week-note" style="margin-top:0;display:none">Only showing weeks sportsbooks have posted lines for — unlike the NFL, college odds usually aren't set until closer to kickoff, so later weeks will appear as game day gets closer.</p>
+  <div class="week-picker" id="week-picker">
+    <div class="week-picker-header" id="week-picker-header">
+      <span id="week-picker-current">Loading week…</span>
+      <span id="week-picker-chevron">▼</span>
+    </div>
+    <div class="week-picker-list" id="week-picker-list" style="display:none"></div>
+  </div>
+  <p class="footer-note" style="margin-top:0">NFL's week numbering is the anchor — College's own week number is shown underneath and linked to whichever week is closest in time. College odds usually post later than the NFL's, so "College: not posted yet" will fill in as game day gets closer.</p>
 
   <div class="section-label">My picks this week</div>
   <div class="card" style="padding:12px 16px">

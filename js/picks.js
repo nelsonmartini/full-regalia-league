@@ -185,6 +185,92 @@ function weekBucketLabel(key, games) {
   }
 }
 
+/** One entry per "Regalia Season Week" — NFL's own week numbering is the
+ * backbone (clean, complete coverage all season; NFL's also the site's
+ * default/primary sport everywhere else), paired with whichever NCAA week's
+ * games START closest in time (within 10 days). Confirmed real confusion
+ * (Neil): NFL Week 4 and NCAA Week 4 don't refer to the same calendar dates,
+ * so picking one Regalia Week now sets the correct underlying week for BOTH
+ * sports at once instead of two independently-drifting selectors.
+ * cfbWeekKey/cfbWeekNumber are null when there's no NCAA week within that
+ * window yet — normal, college odds post later than the NFL's, not a bug. */
+function buildRegaliaWeeks(gamesBySport) {
+  function weekInfo(games, key) {
+    const weekGames = games.filter((g) => weekBucketKey(g) === key);
+    const dates = weekGames.map((g) => new Date(g.date));
+    return {
+      key,
+      weekNumber: weekGames[0]?.week ?? null,
+      seasonType: weekGames[0]?.seasonType ?? null,
+      startDate: new Date(Math.min(...dates)),
+      endDate: new Date(Math.max(...dates)),
+    };
+  }
+
+  function sortedWeeks(games) {
+    return [...new Set(games.map(weekBucketKey))]
+      .map((key) => weekInfo(games, key))
+      .sort((a, b) => a.startDate - b.startDate);
+  }
+
+  const nflWeeks = sortedWeeks(gamesBySport.nfl);
+  const cfbWeeks = sortedWeeks(gamesBySport.cfb);
+  const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+  // One-to-one nearest-match pairing (greedy on smallest date gap first), not
+  // "each NFL week independently grabs whichever CFB week is closest" — the
+  // latter let two different NFL weeks both claim the same CFB week whenever
+  // only one or two college weeks had odds posted so far (a real, likely
+  // scenario early in a week — college odds lag the NFL's). Confirmed via
+  // test: with only one posted CFB week, both an NFL week 8 days away and one
+  // 1 day away were independently matching to it. Greedy-pairing by smallest
+  // gap first, removing both sides once matched, guarantees each CFB week
+  // links to at most one NFL week — whichever is genuinely closest.
+  const candidatePairs = [];
+  for (const nfl of nflWeeks) {
+    for (const cfb of cfbWeeks) {
+      const diff = Math.abs(cfb.startDate - nfl.startDate);
+      if (diff <= TEN_DAYS_MS) candidatePairs.push({ nfl, cfb, diff });
+    }
+  }
+  candidatePairs.sort((a, b) => a.diff - b.diff);
+  const linkedCfbByNflKey = new Map();
+  const usedCfbKeys = new Set();
+  for (const pair of candidatePairs) {
+    if (linkedCfbByNflKey.has(pair.nfl.key) || usedCfbKeys.has(pair.cfb.key)) continue;
+    linkedCfbByNflKey.set(pair.nfl.key, pair.cfb);
+    usedCfbKeys.add(pair.cfb.key);
+  }
+
+  return nflWeeks.map((nfl) => {
+    const cfbMatch = linkedCfbByNflKey.get(nfl.key) ?? null;
+    return {
+      regaliaWeekNumber: nfl.weekNumber,
+      nflWeekKey: nfl.key,
+      nflWeekNumber: nfl.weekNumber,
+      nflSeasonType: nfl.seasonType,
+      cfbWeekKey: cfbMatch?.key ?? null,
+      cfbWeekNumber: cfbMatch?.weekNumber ?? null,
+      startDate: nfl.startDate,
+      endDate: nfl.endDate,
+    };
+  });
+}
+
+function regaliaWeekDateRange(week) {
+  const fmt = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return fmt(week.startDate) === fmt(week.endDate) ? fmt(week.startDate) : `${fmt(week.startDate)}–${fmt(week.endDate)}`;
+}
+
+/** The 👑 is deliberate — it's the site's own existing crown mark, reused
+ * here as a quick visual cue that "Week N" means OUR unified week, not
+ * either sport's own native week number (which can, and often does, differ
+ * from this one — see buildRegaliaWeeks above). */
+function regaliaWeekTitle(week) {
+  const prefix = SEASON_PHASE_PREFIX[week.nflSeasonType] ?? "";
+  return `👑 ${prefix}Week ${week.regaliaWeekNumber} Picks · ${regaliaWeekDateRange(week)}`;
+}
+
 /** Build the 4 category pools (one option per eligible game) for a set of
  * games, excluding whichever game is already the OTHER side of the same bet
  * family (a game used for Minus Spread can't also appear in Plus Spread, etc.)
@@ -269,14 +355,17 @@ function slotsForSportWeek(picks, sport, weekKey) {
  * while NFL is on Week 3 and NCAA is on Week 5 was confirmed confusing —
  * looked like it counted picks for a week you weren't even looking at. Each
  * entry's `filled` count is guaranteed to match exactly what's shown for
- * that sport's currently-selected week, nothing else. */
+ * that sport's currently-selected week, nothing else. `sportWeeks[sport]`
+ * can be null now that weeks are Regalia-Week-linked (js/picks.js's
+ * buildRegaliaWeeks) — happens when that sport's odds for the linked week
+ * haven't posted yet, not an error state. */
 function computeProgress(picks, sportWeeks, gamesBySport) {
   const perSport = {};
   let total = 0;
   for (const sport of SPORTS) {
     const slots = slotsForSportWeek(picks, sport, sportWeeks[sport]);
     const filled = CATEGORIES.filter((c) => slots[c]).length;
-    const weekLabel = sportWeeks[sport] ? weekBucketLabel(sportWeeks[sport], gamesBySport[sport]) : "No week selected";
+    const weekLabel = sportWeeks[sport] ? weekBucketLabel(sportWeeks[sport], gamesBySport[sport]) : "Not posted yet";
     perSport[sport] = { filled, weekLabel };
     total += filled;
   }
@@ -404,9 +493,31 @@ function renderCategoryPools(container, sport, games, slots, nflDivisions, categ
 // to the new "My picks this week" card, and it fully duplicates what
 // player.html already shows (linked from the picker card instead).
 
+/** currentIndex is always 0 in practice — regaliaWeeks only ever contains
+ * upcoming pickable weeks (see filterPickableGames), sorted chronologically,
+ * so the first entry IS "current." Kept as a parameter rather than hardcoded
+ * so this doesn't silently break if that invariant ever changes. No "Past"
+ * badge for the same reason — a past week can't appear in this list at all. */
+function renderWeekPickerList(container, regaliaWeeks, selectedIndex, currentIndex) {
+  container.innerHTML = regaliaWeeks
+    .map((week, i) => {
+      const badge = i === currentIndex ? `<span class="badge live">Current</span>` : i === currentIndex + 1 ? `<span class="badge next">Next</span>` : "";
+      const cfbText = week.cfbWeekNumber != null ? `College: Week ${week.cfbWeekNumber}` : `College: not posted yet`;
+      return `
+        <div class="week-picker-row${i === selectedIndex ? " selected" : ""}" data-week-index="${i}">
+          <div class="week-picker-row-title">${regaliaWeekTitle(week)} ${badge}</div>
+          <div class="week-picker-row-sub">NFL: Week ${week.nflWeekNumber} &nbsp;·&nbsp; ${cfbText}</div>
+        </div>`;
+    })
+    .join("");
+}
+
 async function initPicksPage() {
   const select = document.getElementById("player-select");
-  const weekSelect = document.getElementById("week-select");
+  const weekPickerHeader = document.getElementById("week-picker-header");
+  const weekPickerCurrent = document.getElementById("week-picker-current");
+  const weekPickerChevron = document.getElementById("week-picker-chevron");
+  const weekPickerList = document.getElementById("week-picker-list");
   const container = document.getElementById("games-list");
   const progressEl = document.getElementById("picks-progress");
   const statusTop = document.getElementById("save-status-top");
@@ -450,21 +561,18 @@ async function initPicksPage() {
 
   const gamesBySport = { nfl: pickableAll.filter((g) => g.sport === "nfl"), cfb: pickableAll.filter((g) => g.sport === "cfb") };
 
-  function weeksFor(sport) {
-    const games = gamesBySport[sport];
-    const keys = [...new Set(games.map(weekBucketKey))];
-    keys.sort((a, b) => {
-      const gA = games.find((g) => weekBucketKey(g) === a);
-      const gB = games.find((g) => weekBucketKey(g) === b);
-      return new Date(gA.date) - new Date(gB.date);
-    });
-    return keys;
-  }
-
-  const weeksBySport = { nfl: weeksFor("nfl"), cfb: weeksFor("cfb") };
-  // Each sport remembers its own selected week independently, since NFL/NCAA
-  // weeks don't line up on the calendar and both need picks every week.
-  const sportWeeks = { nfl: weeksBySport.nfl[0] || null, cfb: weeksBySport.cfb[0] || null };
+  // "Regalia Week" links an NFL week to whichever NCAA week starts closest in
+  // time (see buildRegaliaWeeks) — picking one sets sportWeeks.nfl AND
+  // sportWeeks.cfb together, so switching the sport toggle below never lands
+  // on two unrelated weeks. Sorted chronologically, so index 0 is always
+  // "current" (only upcoming pickable weeks are ever in this list).
+  const regaliaWeeks = buildRegaliaWeeks(gamesBySport);
+  const currentRegaliaIndex = 0;
+  let selectedRegaliaIndex = currentRegaliaIndex;
+  const sportWeeks = {
+    nfl: regaliaWeeks[0]?.nflWeekKey ?? null,
+    cfb: regaliaWeeks[0]?.cfbWeekKey ?? null,
+  };
 
   let selectedSport = "nfl";
   let currentPicks = await loadPicks(select.value);
@@ -486,14 +594,12 @@ async function initPicksPage() {
     return sportWeeks[selectedSport];
   }
 
-  function renderAll() {
-    weekSelect.innerHTML =
-      weeksBySport[selectedSport].length === 0
-        ? `<option value="">No upcoming games</option>`
-        : weeksBySport[selectedSport].map((k) => `<option value="${k}">${weekBucketLabel(k, gamesBySport[selectedSport])}</option>`).join("");
-    weekSelect.value = currentWeekKey() || "";
-    document.getElementById("ncaa-week-note").style.display = selectedSport === "cfb" ? "block" : "none";
+  function renderWeekPicker() {
+    weekPickerCurrent.textContent = regaliaWeeks.length === 0 ? "No games posted yet — check back soon" : regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex]);
+    renderWeekPickerList(weekPickerList, regaliaWeeks, selectedRegaliaIndex, currentRegaliaIndex);
+  }
 
+  function renderAll() {
     const games = gamesBySport[selectedSport].filter((g) => weekBucketKey(g) === currentWeekKey());
     const slots = slotsForSportWeek(currentPicks, selectedSport, currentWeekKey());
     renderCategoryPools(container, selectedSport, games, slots, nflDivisions, categoryExpanded, searchQuery);
@@ -524,6 +630,7 @@ async function initPicksPage() {
     picksHeading.textContent = `${titleCase(name)}'s Picks`;
   }
 
+  renderWeekPicker();
   renderAll();
   avatarPreview.innerHTML = avatarHtml(select.value, 48);
   updateHistoryLink();
@@ -555,8 +662,29 @@ async function initPicksPage() {
     });
   });
 
-  weekSelect.addEventListener("change", () => {
-    sportWeeks[selectedSport] = weekSelect.value;
+  // Collapsed by default, same pattern as the pick categories and League
+  // status — click the header to expand the full list of Regalia Weeks.
+  let weekPickerExpanded = false;
+  weekPickerHeader.addEventListener("click", () => {
+    if (regaliaWeeks.length === 0) return; // nothing to pick from (offseason gap)
+    weekPickerExpanded = !weekPickerExpanded;
+    weekPickerList.style.display = weekPickerExpanded ? "block" : "none";
+    weekPickerChevron.textContent = weekPickerExpanded ? "▲" : "▼";
+  });
+
+  weekPickerList.addEventListener("click", (e) => {
+    const row = e.target.closest("[data-week-index]");
+    if (!row) return;
+    selectedRegaliaIndex = Number(row.getAttribute("data-week-index"));
+    const week = regaliaWeeks[selectedRegaliaIndex];
+    // The whole point: one click sets BOTH sports' weeks together, correctly
+    // linked — no more manually figuring out which NCAA week matches.
+    sportWeeks.nfl = week.nflWeekKey;
+    sportWeeks.cfb = week.cfbWeekKey;
+    weekPickerExpanded = false;
+    weekPickerList.style.display = "none";
+    weekPickerChevron.textContent = "▼";
+    renderWeekPicker();
     renderAll();
     loadAndRenderStatus();
   });

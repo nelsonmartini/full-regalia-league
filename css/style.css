@@ -338,6 +338,71 @@ a { color: inherit; text-decoration: none; }
   50% { opacity: 0.35; }
 }
 
+.badge.next {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---------- Week picker (Picks page) ---------- */
+/* One "Regalia Week" links an NFL week to its nearest NCAA week by date
+ * (js/picks.js buildRegaliaWeeks) — this is the collapsible selector for it,
+ * same collapsed-by-default pattern as .pick-game and the League status
+ * card. Each row shows the linked pair, so switching sport never lands on
+ * two unrelated weeks. */
+.week-picker {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.week-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.week-picker-chevron {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.week-picker-list {
+  border-top: 1px solid var(--border);
+}
+
+.week-picker-row {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.week-picker-row:last-child { border-bottom: none; }
+.week-picker-row:active { background: var(--bg-elev-2); }
+.week-picker-row.selected { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.week-picker-row-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.week-picker-row-sub {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 3px;
+}
+
 /* ---------- Avatars ---------- */
 
 .avatar {
