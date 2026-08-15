@@ -100,3 +100,27 @@ function earliestPickableWeek(games, sport) {
     endDate: new Date(Math.max(...dates)),
   };
 }
+
+function fmtShortDate(d) {
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** "Week 2 · Aug 19–20" for the Picks CTA subline — or an explicit
+ * "nothing posted yet" message rather than silently rendering blank (real
+ * gap found 2026-08-14: this is genuinely null between NFL preseason ending
+ * and regular season's odds being posted, e.g. mid-August). */
+function pickableWeekText(games, sport = "nfl") {
+  const week = earliestPickableWeek(games, sport);
+  if (!week || week.weekNumber == null) return "No games posted yet — check back soon";
+  const range = fmtShortDate(week.startDate) === fmtShortDate(week.endDate) ? fmtShortDate(week.startDate) : `${fmtShortDate(week.startDate)}–${fmtShortDate(week.endDate)}`;
+  return `Week ${week.weekNumber} · ${range}`;
+}
+
+/** "Standings as of Aug 14 (Week 2)" — falls back to just the date if there's
+ * no current pickable week (same gap as above). Shared by index.html and
+ * standings.html so both show the exact same freshness line. */
+function standingsFreshnessText(games, sport = "nfl") {
+  const today = fmtShortDate(new Date());
+  const week = earliestPickableWeek(games, sport);
+  return week && week.weekNumber != null ? `Standings as of ${today} (Week ${week.weekNumber})` : `Standings as of ${today}`;
+}

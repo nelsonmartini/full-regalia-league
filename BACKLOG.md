@@ -4,6 +4,30 @@
 
 ## Status
 
+- **DONE (2026-08-14): real bug fix — Picks CTA subline was blank on the
+  live site, plus Standings freshness line added.** Neil reported not
+  seeing the "Week N · dates" text under "Enter your picks." Root cause,
+  confirmed by querying ESPN's live NFL scoreboard directly: every upcoming
+  NFL game right now is `seasonType 1` (preseason) — `filterPickableGames()`
+  correctly excludes those, so `earliestPickableWeek()` correctly returns
+  `null` (nothing's pickable yet, regular season odds aren't posted). The
+  bug: `index.html`'s inline script only set `#picks-cta-week`'s text inside
+  the "found a week" branch — the `null` case just left it empty instead of
+  showing anything. This is a real, expected gap (mid-August, between
+  preseason ending and regular season being pickable), not a data problem.
+  - Fixed by moving the text-building logic into two new shared helpers in
+    `js/pick-utils.js`: `pickableWeekText(games, sport)` (used by the CTA
+    subline — falls back to "No games posted yet — check back soon" instead
+    of blank) and `standingsFreshnessText(games, sport)` (falls back to just
+    the date, no week number, when there's nothing pickable). Both are also
+    now what `index.html` calls, replacing the inline duplicate logic from
+    the previous pass.
+  - **Also added, per Neil**: the same "Standings as of [date] (Week N)"
+    line now appears atop `standings.html` too, not just the Home page —
+    reuses `standingsFreshnessText()`, so both pages show identical text
+    whenever both have data (and identical *empty-week* fallback text when
+    they don't).
+
 - **DONE (2026-08-14): Home page polish pass — branded quote, week-aware
   copy, reordering.** Follow-up on the Home redesign above, per Neil.
   - **Brand quote** below the header: "We do the 💰 Bags right, then we go

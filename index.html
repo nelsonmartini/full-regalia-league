@@ -160,17 +160,12 @@
     // Current pickable NFL week (NFL, not NCAA — NFL's the default/primary
     // sport throughout the site) — reused for both the picks CTA subline and
     // the standings freshness line, so the whole page tells one consistent
-    // "here's where we are" story.
-    const today = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const currentWeek = earliestPickableWeek(games, "nfl");
-    if (currentWeek && currentWeek.weekNumber != null) {
-      const fmt = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-      const range = fmt(currentWeek.startDate) === fmt(currentWeek.endDate) ? fmt(currentWeek.startDate) : `${fmt(currentWeek.startDate)}–${fmt(currentWeek.endDate)}`;
-      document.getElementById("picks-cta-week").textContent = `Week ${currentWeek.weekNumber} · ${range}`;
-      document.getElementById("standings-freshness").textContent = `Standings as of ${today} (Week ${currentWeek.weekNumber})`;
-    } else {
-      document.getElementById("standings-freshness").textContent = `Standings as of ${today}`;
-    }
+    // "here's where we are" story. Both helpers explicitly handle "nothing
+    // pickable right now" (e.g. between NFL preseason ending and regular
+    // season odds posting) rather than silently rendering blank — confirmed
+    // gap on the live site 2026-08-14.
+    document.getElementById("picks-cta-week").textContent = pickableWeekText(games);
+    document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
   })();
 
   (async function loadHomeGames() {

@@ -35,6 +35,8 @@
   <h1 class="page-title">Standings</h1>
   <p class="page-sub">Live, computed from every saved pick this season. Sorted by total points.</p>
 
+  <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
+
   <div class="card">
     <div class="card-title">
       <span>Full leaderboard</span>
@@ -74,6 +76,8 @@
     document.getElementById("standings-list").innerHTML = standings.length
       ? standings.map((p, i) => renderStandingsRow(p, i + 1)).join("")
       : '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
+
+    document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
   })();
 </script>
 </body>
