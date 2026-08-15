@@ -4,6 +4,80 @@
 
 ## Status
 
+- **DONE (2026-08-14): fourth Picks page pass — personalization "wayfinding"
+  combo, per Neil ("how can we make sure players know absolutely they're
+  picking their picks — color backgrounds? wayfinding?").** Landed all three
+  ideas discussed, tied together:
+  - **Colored picker card** — `.picker-card` now reads a `--picker-color`
+    CSS custom property (defaults to the site accent), set in `js/picks.js`
+    to `avatarColor(selectedPlayerName)` — the same deterministic
+    per-name color already used for avatars everywhere else. Recolors
+    instantly on player switch.
+  - **Dynamic page heading** — `<h1 id="picks-heading">` now reads
+    "{Name}'s Picks" instead of the static "Picks" — deliberately left OUT
+    of the sport/week (Neil: not necessary to see every time, and putting a
+    single "week" in the heading would've reintroduced the same
+    NFL/NCAA-week-blending confusion just fixed in the prior pass).
+  - **Sticky wayfinding badge** — new `.picker-badge` (`#picker-badge` in
+    `picks.html`), a small pill fixed just above the bottom nav
+    (`bottom: calc(var(--nav-height) + 10px)`), showing avatar + name,
+    also tinted via `--picker-color`. Stays visible the whole time you're
+    scrolled down among the pick categories — this is the piece that
+    actually solves "make sure players are ABSOLUTELY sure," since the
+    picker card itself scrolls out of view but this doesn't.
+  - **Real bug found & fixed while wiring this up:** `PLAYER_KEY`
+    (`fr_selected_player`) was being *read* from localStorage on page load
+    but never *written* — so "remembers your last pick" never actually
+    worked; the page always defaulted to the first roster player. Fixed:
+    `switchPlayer()` in `js/picks.js` now calls `localStorage.setItem()`.
+    This directly matters for the new personalization too — it's much less
+    useful if the page doesn't actually reopen on the right person.
+
+- **DONE (2026-08-14): moved "Add to your phone" off Home, onto a permanent
+  Guide section.** Neil: the dismissible Home card should either actually
+  go away for good on dismiss (it already did — `localStorage` flag,
+  confirmed working), or move to a permanent reference instead. Went with
+  moving it: deleted `#add-home-card` and the `addToHomeScreenPrompt()` IIFE
+  from `index.html` entirely. Added a new "How to use the app" section at
+  the top of `betting-guide.html` with static (not device-detected, since
+  it's now a permanent reference anyone might view from any device)
+  iOS + Android instructions, plus a one-line "where everything lives"
+  rundown of each nav tab — doubles as a lightweight answer to "how is
+  the app organized," ahead of a fuller Home page redesign (see below).
+
+- **DONE (2026-08-14): Analytics placeholder page.** Neil: "prepare" an
+  Analytics tab for the team/player betting-trend stats already in the
+  backlog — explicitly do NOT build the actual charts/data yet. Added
+  `analytics.html`: gated like every other page, "Not built yet" empty
+  state, a "What's planned" card describing the two stats ideas. Linked
+  from a new Home page card (`index.html`, styled like the Admin card, with
+  a muted "Coming soon" badge) — **deliberately NOT added to the bottom
+  nav**, same treatment as Admin, to avoid committing to the earlier-floated
+  "replace Live with Analytics" nav change before that's actually decided.
+
+- **NOT STARTED — new backlog (2026-08-14): "Weekly Awards."** Neil's idea:
+  ~4 funny/light awards computed per week (one confirmed example: "Dumbass
+  of the Week" — whoever got the most picks wrong that week). Mechanically
+  straightforward — fully derivable from data already in Supabase, same
+  computation path as `computeStandings()`/`computeHistoryEntries()` in
+  `js/season-data.js` (group graded picks by player for a given week, rank
+  by miss count for this one). **What's missing before this is buildable:
+  the other ~3 award categories** — needs a quick brainstorm with Neil
+  (ideas to pitch when this gets picked up: best week / "Nostradamus,"
+  biggest single-week point swing, most Pushes, closest-to-cutting-it-close
+  saves right before kickoff) and a decision on where it lives (Home page
+  card? Standings page section? Its own bit of the Analytics page above?).
+
+- **Not started — Home page redesign (2026-08-14, Neil's direction after
+  declining a "Welcome back, Name" greeting):** skip the greeting — flagged
+  that the site can't actually know who's visiting (no login, only
+  `localStorage`'s last-picked-name-per-device, same honor-system caveat as
+  everywhere else; would be wrong on a shared device). Instead: "a more
+  sleek and stylish landing page on how information is structured in the
+  app" — i.e. Home becomes more of an orientation/hub page (what each tab
+  is for) than a live-data snapshot. Not scoped or started yet — own
+  focused pass, deliberately not bundled into this batch.
+
 - **DONE (2026-08-14): third Picks page pass — removed the "My Picks" tab.**
   Neil's follow-up after the reorg above: the Make Picks / My Picks tab
   toggle felt confusing/redundant now that "My picks this week" already

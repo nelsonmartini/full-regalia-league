@@ -51,14 +51,6 @@
     </div>
   </div>
 
-  <div class="card" id="add-home-card" style="display:none">
-    <div class="card-title">
-      <span>📲 Add this to your phone</span>
-      <span class="link" id="add-home-dismiss" style="cursor:pointer">Got it</span>
-    </div>
-    <p class="prose" id="add-home-copy" style="margin:0"></p>
-  </div>
-
   <div class="card">
     <div class="card-title">Top of the standings <a class="link" href="standings.html">Full board →</a></div>
     <div id="top-standings"><div class="empty-state">Loading standings…</div></div>
@@ -76,6 +68,12 @@
   <div class="card">
     <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
     <div id="home-games"><div class="empty-state">Loading games…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Analytics <span class="badge" style="background:color-mix(in srgb, var(--text-faint) 20%, transparent);color:var(--text-faint)">Coming soon</span></div>
+    <p class="prose" style="margin-bottom:12px">Team and player trends against the 4 betting categories — once there's a season of data.</p>
+    <a class="btn btn-ghost btn-block" href="analytics.html">Preview →</a>
   </div>
 
   <div class="card">
@@ -127,24 +125,6 @@
     el.innerHTML = top.length
       ? top.map(renderGameCard).join("")
       : '<div class="empty-state">No games found right now.</div>';
-  })();
-
-  (function addToHomeScreenPrompt() {
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-    const dismissed = localStorage.getItem("fr_hide_add_home") === "1";
-    if (isStandalone || dismissed) return;
-
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const copy = isIOS
-      ? 'Tap the <strong>Share</strong> icon (square with an arrow) in Safari\'s toolbar, then scroll down and tap <strong>"Add to Home Screen."</strong>'
-      : 'Open your browser menu (⋮) and tap <strong>"Add to Home screen"</strong> or <strong>"Install app."</strong>';
-
-    document.getElementById("add-home-copy").innerHTML = copy;
-    document.getElementById("add-home-card").style.display = "block";
-    document.getElementById("add-home-dismiss").addEventListener("click", () => {
-      localStorage.setItem("fr_hide_add_home", "1");
-      document.getElementById("add-home-card").style.display = "none";
-    });
   })();
 </script>
 </body>

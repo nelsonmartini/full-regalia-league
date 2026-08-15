@@ -417,6 +417,11 @@ async function initPicksPage() {
   const statusSummary = document.getElementById("status-summary");
   const teamSearch = document.getElementById("team-search");
   const fullHistoryLink = document.getElementById("full-history-link");
+  const pickerCard = document.querySelector(".picker-card");
+  const pickerBadge = document.getElementById("picker-badge");
+  const pickerBadgeAvatar = document.getElementById("picker-badge-avatar");
+  const pickerBadgeName = document.getElementById("picker-badge-name");
+  const picksHeading = document.getElementById("picks-heading");
 
   const avatarPreview = document.getElementById("player-avatar-preview");
   select.innerHTML = '<option value="">Loading roster…</option>';
@@ -507,17 +512,35 @@ async function initPicksPage() {
     fullHistoryLink.href = `player.html?name=${encodeURIComponent(select.value)}`;
   }
 
+  // Wayfinding: color the picker card + the sticky badge to the selected
+  // player's own avatar color, and put their name in the page heading, so
+  // it's unmistakable (at a glance, and while scrolled down among the
+  // categories) whose picks you're making — not just whatever the dropdown
+  // says at the top of the page.
+  function updatePersonalization() {
+    const name = select.value;
+    const color = avatarColor(name);
+    pickerCard.style.setProperty("--picker-color", color);
+    pickerBadge.style.setProperty("--picker-color", color);
+    pickerBadgeAvatar.innerHTML = avatarHtml(name, 24);
+    pickerBadgeName.textContent = titleCase(name);
+    picksHeading.textContent = `${titleCase(name)}'s Picks`;
+  }
+
   renderAll();
   avatarPreview.innerHTML = avatarHtml(select.value, 48);
   updateHistoryLink();
+  updatePersonalization();
 
   async function switchPlayer() {
+    localStorage.setItem(PLAYER_KEY, select.value); // remember for next visit — was read but never written (confirmed bug)
     currentPicks = await loadPicks(select.value);
     originalPicks = { ...currentPicks };
     pendingUpserts.clear();
     pendingDeletes.clear();
     avatarPreview.innerHTML = avatarHtml(select.value, 48);
     updateHistoryLink();
+    updatePersonalization();
     renderAll();
     statusTop.textContent = "";
     statusBottom.textContent = "";
