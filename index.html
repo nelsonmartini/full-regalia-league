@@ -51,23 +51,47 @@
     </div>
   </div>
 
+  <a class="btn btn-primary btn-block" href="picks.html" style="margin-bottom:14px">Enter your picks →</a>
+
+  <div class="section-label">This week at a glance</div>
+
   <div class="card">
     <div class="card-title">Top of the standings <a class="link" href="standings.html">Full board →</a></div>
     <div id="top-standings"><div class="empty-state">Loading standings…</div></div>
   </div>
 
   <div class="card">
-    <div class="card-title">This week</div>
-    <p class="prose" style="margin-bottom:12px">
-      Picks entry is open — picks save to the group's shared board and lock automatically
-      at kickoff.
-    </p>
-    <a class="btn btn-primary btn-block" href="picks.html">Enter your picks →</a>
+    <div class="card-title">🏅 Weekly Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
+    <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
   </div>
 
   <div class="card">
     <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
     <div id="home-games"><div class="empty-state">Loading games…</div></div>
+  </div>
+
+  <div class="section-label">Get around the app</div>
+  <div class="hub-grid">
+    <a class="hub-card" href="standings.html">
+      <span class="hub-icon">🏆</span>
+      <span class="hub-title">Standings</span>
+      <span class="hub-desc">Full leaderboard, updates automatically as games finish.</span>
+    </a>
+    <a class="hub-card" href="history.html">
+      <span class="hub-icon">📜</span>
+      <span class="hub-title">History</span>
+      <span class="hub-desc">Every pick, every week, filterable by player.</span>
+    </a>
+    <a class="hub-card" href="live.html">
+      <span class="hub-icon">📡</span>
+      <span class="hub-title">Live</span>
+      <span class="hub-desc">Real-time scores and odds for games in progress.</span>
+    </a>
+    <a class="hub-card" href="betting-guide.html">
+      <span class="hub-icon">📘</span>
+      <span class="hub-title">Guide</span>
+      <span class="hub-desc">How the bets work, how scoring works, how to use the app.</span>
+    </a>
   </div>
 
   <div class="card">
@@ -107,14 +131,22 @@
 <script src="js/live-scores.js"></script>
 <script src="js/grading.js"></script>
 <script src="js/season-data.js"></script>
+<script src="js/awards.js"></script>
 <script>
-  (async function loadTopStandings() {
+  (async function loadStandingsAndAwards() {
+    // Shared fetch — Standings and Weekly Awards both grade off the same
+    // picks/games data, no need to fetch either twice.
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
+
     const top3 = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 3);
     document.getElementById("top-standings").innerHTML = top3.length
       ? top3.map((p, i) => renderStandingsRow(p, i + 1)).join("")
       : '<div class="empty-state">No graded picks yet this season.</div>';
+
+    const awards = computeWeeklyAwards(graded);
+    document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(awards);
+    document.getElementById("awards-week-label").textContent = awards ? awards.weekLabel : "";
   })();
 
   (async function loadHomeGames() {

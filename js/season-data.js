@@ -32,7 +32,7 @@ function renderStandingsRow(player, rank) {
 
 /** Every saved pick, across every player/week. */
 async function loadSeasonPicks() {
-  const { data, error } = await sb.from("picks").select("player_name, game_id, bet_type, pick, snapshot");
+  const { data, error } = await sb.from("picks").select("player_name, game_id, bet_type, pick, snapshot, updated_at");
   if (error) {
     console.error("loadSeasonPicks failed:", error);
     return [];

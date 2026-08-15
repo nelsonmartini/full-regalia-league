@@ -55,28 +55,47 @@
   nav**, same treatment as Admin, to avoid committing to the earlier-floated
   "replace Live with Analytics" nav change before that's actually decided.
 
-- **NOT STARTED — new backlog (2026-08-14): "Weekly Awards."** Neil's idea:
-  ~4 funny/light awards computed per week (one confirmed example: "Dumbass
-  of the Week" — whoever got the most picks wrong that week). Mechanically
-  straightforward — fully derivable from data already in Supabase, same
-  computation path as `computeStandings()`/`computeHistoryEntries()` in
-  `js/season-data.js` (group graded picks by player for a given week, rank
-  by miss count for this one). **What's missing before this is buildable:
-  the other ~3 award categories** — needs a quick brainstorm with Neil
-  (ideas to pitch when this gets picked up: best week / "Nostradamus,"
-  biggest single-week point swing, most Pushes, closest-to-cutting-it-close
-  saves right before kickoff) and a decision on where it lives (Home page
-  card? Standings page section? Its own bit of the Analytics page above?).
+- **DONE (2026-08-14): "Weekly Awards" — 4 of the ~7 pitched categories
+  built and live on Home.** New `js/awards.js`: `computeWeeklyAwards()`
+  groups graded picks by **calendar week** (Monday-start, from each pick's
+  real kickoff date via `calendarWeekKey()`) rather than either sport's own
+  week numbering — deliberate, to avoid reintroducing the NFL/NCAA
+  week-blending confusion fixed earlier this project (the two are
+  independently selected and don't line up on the calendar). Picks the most
+  recent calendar week with any graded picks and computes:
+  - 🤡 **Dumbass of the Week** — most misses that week
+  - 🔮 **Nostradamus** — most hits that week
+  - 🎰 **High Roller** — biggest underdog taken (largest `+line` among that
+    week's Plus Spread picks)
+  - ⏰ **Buzzer Beater** — closest save to kickoff (`updated_at` vs.
+    `snapshot.date` gap) — needed adding `updated_at` to `loadSeasonPicks()`'s
+    select in `js/season-data.js`, wasn't fetched before.
+  - **Not built (kept in reserve, easy to add later — same data model):**
+    🎢 Rollercoaster (point swing vs. own average), 🥶 Ice Cold (miss streak).
+    Whole-list is in the Status entry below this one for reference if Neil
+    wants to swap any of the live 4 out later.
+  - Lives on Home only, in a card between Standings and Live scores.
 
-- **Not started — Home page redesign (2026-08-14, Neil's direction after
-  declining a "Welcome back, Name" greeting):** skip the greeting — flagged
-  that the site can't actually know who's visiting (no login, only
-  `localStorage`'s last-picked-name-per-device, same honor-system caveat as
-  everywhere else; would be wrong on a shared device). Instead: "a more
-  sleek and stylish landing page on how information is structured in the
-  app" — i.e. Home becomes more of an orientation/hub page (what each tab
-  is for) than a live-data snapshot. Not scoped or started yet — own
-  focused pass, deliberately not bundled into this batch.
+- **DONE (2026-08-14): Home page redesign** — Neil declined a "Welcome
+  back, Name" greeting (flagged: the site can't actually know who's
+  visiting, no login, only `localStorage`'s last-picked-name-per-device —
+  same honor-system caveat as everywhere else, would show the wrong name on
+  a shared device) in favor of "a more sleek and stylish landing page on how
+  information is structured in the app." `index.html` restructured:
+  - "Enter your picks" promoted to the single primary CTA at the very top
+    (was previously buried in a "This week" card further down).
+  - **"This week at a glance"** section: Top standings, Weekly Awards (new,
+    see above), Live scores — the site's actual live data, kept prominent
+    rather than replaced by pure navigation.
+  - **"Get around the app"** — new `.hub-grid`/`.hub-card` (2-col grid,
+    `css/style.css`) of orientation cards for Standings/History/Live/Guide,
+    each with a one-line "what's this for" description — the actual
+    "how information is structured" piece Neil asked for. Picks isn't in
+    the grid (it's the primary CTA above instead); Admin/Analytics stay as
+    smaller cards near the bottom, unchanged from before.
+  - Removed a redundant network fetch: Standings and Weekly Awards both
+    grade off the same picks/games data, so `loadStandingsAndAwards()` now
+    fetches once and derives both, instead of two separate fetches.
 
 - **DONE (2026-08-14): third Picks page pass — removed the "My Picks" tab.**
   Neil's follow-up after the reorg above: the Make Picks / My Picks tab
@@ -790,6 +809,15 @@
       performance history, possibly surfaced via a new "Analytics" tab
       replacing "Live" in the bottom nav. Deferred until after the season
       starts and there's real data — see Status → "New backlog" for detail.
+- [x] **Picks page personalization/wayfinding** (2026-08-14) — colored
+      picker card, dynamic "{Name}'s Picks" heading, sticky bottom badge, all
+      tied to the player's existing avatar color; fixed a real bug where
+      "remember last player" was never actually persisted to `localStorage`
+- [x] **Analytics placeholder page** (2026-08-14) — not built, just a "coming
+      soon" stub linked from Home, not yet in the bottom nav
+- [x] **Weekly Awards** (2026-08-14) — 4 of ~7 pitched categories, live on Home
+- [x] **Home page redesign** (2026-08-14) — orientation hub grid + promoted
+      primary CTA, replacing the old live-data-only layout
 
 ## Session log
 
