@@ -4,6 +4,47 @@
 
 ## Status
 
+- **DONE (2026-08-16): batch of Home + Picks polish requests.**
+  - **Home** (`index.html`): moved the 💰 emoji to after "Bags" in the brand
+    quote ("We do the Bags 💰 right..."). Added a small instructional line
+    below the quote ("👇 Tap below to make your picks for the week")
+    pointing at the CTA button.
+  - **Picks — top text collapsed, not deleted**: the old always-visible
+    onboarding paragraph (below "{Name}'s Picks") is now a native
+    `<details>/<summary>` "ℹ️ How this works" — collapsed by default, no JS
+    needed, content unchanged for anyone who wants to read it.
+  - **Week picker made more prominent**: bigger header (14px → 17px),
+    accent-tinted background (new `.week-picker-prominent` modifier,
+    matching `.picker-card`'s existing hero treatment), and — the
+    functionally important part — the Current/Next badge now shows in the
+    *collapsed* header text too (`renderWeekPicker()` in `js/picks.js`), not
+    just inside the expanded list. Neil: this is the single most important
+    indicator on the page for "what do I need to pick right now," so it
+    shouldn't require opening the list to see.
+  - **Reordered**: League status moved from the very top of the page to
+    directly below the week picker (was: League status → Who's picking →
+    week picker; now: Who's picking → week picker → League status).
+  - **Progress visualized**: "My picks this week" now shows a small gradient
+    progress bar per sport plus a "✅ All set" swap-in (replacing "4/4
+    picks") once a sport's 4 categories are all filled — new
+    `.progress-row`/`.progress-bar`/`.progress-bar-fill` classes.
+  - **"College" renamed "NCAA" site-wide** — `sportLabel()` in
+    `js/pick-utils.js` is the single source most pages read this from
+    (Standings/History/Player/Picks progress/save messages all inherit the
+    rename automatically); 2 more hardcoded literals fixed by hand in
+    `js/picks.js` (week picker row text) and `js/live-scores.js` (Live page
+    game-card sport badge).
+  - **One sticky Save button, not two.** Removed `#save-btn-top` and
+    `#save-btn-bottom` (and their separate status lines) entirely — replaced
+    with a single `#save-btn` in a new fixed `.sticky-save-bar`, positioned
+    directly above the bottom nav (same fixed-positioning technique already
+    used for the picker-color badge, which now stacks above this bar via a
+    new `--save-bar-height` CSS variable both elements share). `body` gets a
+    `has-sticky-save` class on this page only, adding extra bottom padding
+    so page content can scroll clear of both stacked fixed elements instead
+    of hiding underneath them. `doSave()` in `js/picks.js` consolidated to
+    reference one button/one status element instead of two of each.
+
 - **DONE (2026-08-14): Picks page cleanup — dropped the week-linking
   explainer text, moved team search to the bottom.** Neil: the "NFL's week
   numbering is the anchor..." footer-note under the week picker was internal

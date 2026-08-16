@@ -25,6 +25,10 @@
   --radius-sm: 10px;
   --nav-height: 64px;
   --header-height: 56px;
+  /* Height of .sticky-save-bar (picks.html only) — kept as a variable so
+   * .picker-badge (which stacks above it) and body.has-sticky-save's extra
+   * bottom padding can both reference the same number. */
+  --save-bar-height: 72px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -87,6 +91,13 @@ html, body {
 body {
   padding-bottom: calc(var(--nav-height) + 16px);
   min-height: 100vh;
+}
+
+/* picks.html only — extra room so content can scroll clear of the two
+ * stacked fixed elements (sticky save bar + picker badge) instead of being
+ * hidden underneath them. */
+body.has-sticky-save {
+  padding-bottom: calc(var(--nav-height) + var(--save-bar-height) + 56px);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -162,6 +173,30 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5;
 }
 
+/* Collapsed-by-default explainer (Picks page) — the onboarding text was
+ * cluttering the top of the page for anyone who already knows how it works;
+ * kept accessible instead of deleted entirely. Native <details>, no JS. */
+.how-it-works {
+  margin: 0 0 16px;
+}
+
+.how-it-works summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  list-style: none;
+}
+
+.how-it-works summary::-webkit-details-marker { display: none; }
+
+.how-it-works p {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
 /* Home page brand quote — "We Do the Bags Right and Then We Go Full
  * Regalia." Two deliberately different display fonts (loaded via Google
  * Fonts, see index.html <head>): a bold script for the main phrase, and a
@@ -186,6 +221,14 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.02em;
   color: var(--text);
   text-transform: uppercase;
+}
+
+.brand-quote-instruction {
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  margin: 0 0 10px;
 }
 
 /* ---------- Bottom nav ---------- */
@@ -261,14 +304,15 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Sticky "who am I picking as" reminder — stays visible while scrolling
- * through the categories, pinned just above the bottom nav. Purely
+ * through the categories, pinned above the sticky save bar (which sits
+ * directly above the bottom nav — see .sticky-save-bar). Purely
  * informational (not a button), matching the same --picker-color as the
  * card above. */
 .picker-badge {
   --picker-color: var(--accent);
   position: fixed;
   left: 50%;
-  bottom: calc(var(--nav-height) + 10px);
+  bottom: calc(var(--nav-height) + var(--save-bar-height) + 8px);
   transform: translateX(-50%);
   z-index: 25;
   display: flex;
@@ -284,6 +328,29 @@ a { color: inherit; text-decoration: none; }
   font-weight: 800;
   color: var(--text);
   transition: border-color 0.2s;
+}
+
+/* Single sticky "Save my picks" bar, replacing the old top+bottom button
+ * pair — always reachable regardless of scroll position, sits directly
+ * above the bottom nav (picker-badge stacks above this). */
+.sticky-save-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--nav-height);
+  z-index: 26;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--bg-elev) 94%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+}
+
+.sticky-save-status {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  min-height: 15px;
+  margin-bottom: 4px;
 }
 
 .card-title {
@@ -366,6 +433,26 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
   font-weight: 800;
   font-size: 14px;
+}
+
+/* Given extra visual weight — this is the single most important control on
+ * the page for knowing what to pick, so it needs to read as more important
+ * than an ordinary card, similar treatment to .picker-card's accent tint. */
+.week-picker-prominent {
+  border: 1.5px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+.week-picker-prominent .week-picker-header {
+  padding: 16px;
+  font-size: 17px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--bg-elev)), var(--bg-elev));
+}
+
+.week-picker-prominent .week-picker-header .badge {
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .week-picker-chevron {
@@ -452,6 +539,44 @@ a { color: inherit; text-decoration: none; }
 
 .sport-section-body {
   padding: 12px;
+}
+
+/* ---------- Progress rows ("My picks this week" card) ---------- */
+.progress-row { margin-bottom: 12px; }
+.progress-row:last-child { margin-bottom: 0; }
+
+.progress-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.progress-row-label { color: var(--text-dim); }
+
+.progress-row-count {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.progress-row-count.complete { color: var(--positive); }
+
+.progress-bar {
+  background: var(--bg-elev-2);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s ease;
+}
+
+.progress-bar-fill.complete {
+  background: linear-gradient(90deg, var(--positive), #22c55e);
 }
 
 /* ---------- Avatars ---------- */

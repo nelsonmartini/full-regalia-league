@@ -22,7 +22,7 @@ function escapeHtml(s) {
 }
 
 function sportLabel(sport) {
-  return sport === "nfl" ? "NFL" : "College";
+  return sport === "nfl" ? "NFL" : "NCAA";
 }
 
 /** Which of the 4 categories a pick belongs to. */

@@ -374,13 +374,19 @@ function computeProgress(picks, sportWeeks, gamesBySport) {
 
 function renderProgress(el, picks, sportWeeks, gamesBySport) {
   const { perSport } = computeProgress(picks, sportWeeks, gamesBySport);
-  el.innerHTML = SPORTS.map(
-    (sport) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
-      <span style="color:var(--text-dim)">${sportLabel(sport)} · ${perSport[sport].weekLabel}</span>
-      <span style="font-weight:800">${perSport[sport].filled}/4 picks</span>
-    </div>`
-  ).join("");
+  el.innerHTML = SPORTS.map((sport) => {
+    const { filled, weekLabel } = perSport[sport];
+    const complete = filled === 4;
+    const pct = Math.round((filled / 4) * 100);
+    return `
+    <div class="progress-row">
+      <div class="progress-row-top">
+        <span class="progress-row-label">${sportLabel(sport)} · ${weekLabel}</span>
+        <span class="progress-row-count${complete ? " complete" : ""}">${complete ? "✅ All set" : `${filled}/4 picks`}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-fill${complete ? " complete" : ""}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join("");
 }
 
 const NCAA_GROUP_ORDER = ["ACC", "Big 12", "Big Ten", "SEC", "Other"];
@@ -549,7 +555,7 @@ function renderWeekPickerList(container, regaliaWeeks, selectedIndex, currentInd
   container.innerHTML = regaliaWeeks
     .map((week, i) => {
       const badge = i === currentIndex ? `<span class="badge live">Current</span>` : i === currentIndex + 1 ? `<span class="badge next">Next</span>` : "";
-      const cfbText = week.cfbWeekNumber != null ? `College: Week ${week.cfbWeekNumber}` : `College: not posted yet`;
+      const cfbText = week.cfbWeekNumber != null ? `NCAA: Week ${week.cfbWeekNumber}` : `NCAA: not posted yet`;
       return `
         <div class="week-picker-row${i === selectedIndex ? " selected" : ""}" data-week-index="${i}">
           <div class="week-picker-row-title">${regaliaWeekTitle(week)} ${badge}</div>
@@ -567,10 +573,8 @@ async function initPicksPage() {
   const weekPickerList = document.getElementById("week-picker-list");
   const container = document.getElementById("games-list");
   const progressEl = document.getElementById("picks-progress");
-  const statusTop = document.getElementById("save-status-top");
-  const statusBottom = document.getElementById("save-status-bottom");
-  const saveBtnTop = document.getElementById("save-btn-top");
-  const saveBtnBottom = document.getElementById("save-btn-bottom");
+  const saveStatus = document.getElementById("save-status");
+  const saveBtn = document.getElementById("save-btn");
   const weekStatusList = document.getElementById("week-status-list");
   const statusSummary = document.getElementById("status-summary");
   const teamSearch = document.getElementById("team-search");
@@ -641,7 +645,20 @@ async function initPicksPage() {
   let searchQuery = "";
 
   function renderWeekPicker() {
-    weekPickerCurrent.textContent = regaliaWeeks.length === 0 ? "No games posted yet — check back soon" : regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex]);
+    if (regaliaWeeks.length === 0) {
+      weekPickerCurrent.textContent = "No games posted yet — check back soon";
+    } else {
+      // Current/Next badge shown even while collapsed — this is the single
+      // most important indicator on the page for "what do I need to pick
+      // right now," so it shouldn't require opening the list to see.
+      const badge =
+        selectedRegaliaIndex === currentRegaliaIndex
+          ? `<span class="badge live">Current</span>`
+          : selectedRegaliaIndex === currentRegaliaIndex + 1
+          ? `<span class="badge next">Next</span>`
+          : "";
+      weekPickerCurrent.innerHTML = `${regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex])} ${badge}`;
+    }
     renderWeekPickerList(weekPickerList, regaliaWeeks, selectedRegaliaIndex, currentRegaliaIndex);
   }
 
@@ -690,8 +707,7 @@ async function initPicksPage() {
     updateHistoryLink();
     updatePersonalization();
     renderAll();
-    statusTop.textContent = "";
-    statusBottom.textContent = "";
+    saveStatus.textContent = "";
   }
 
   select.addEventListener("change", switchPlayer);
@@ -783,22 +799,17 @@ async function initPicksPage() {
     pendingDeletes.delete(newGroupId);
 
     renderAll();
-    statusTop.textContent = "";
-    statusBottom.textContent = "";
+    saveStatus.textContent = "";
   });
 
   async function doSave() {
     if (pendingUpserts.size === 0 && pendingDeletes.size === 0) {
-      const msg = "Nothing new to save.";
-      statusTop.textContent = msg;
-      statusBottom.textContent = msg;
+      saveStatus.textContent = "Nothing new to save.";
       return;
     }
 
-    saveBtnTop.disabled = true;
-    saveBtnBottom.disabled = true;
-    statusTop.textContent = "Saving…";
-    statusBottom.textContent = "Saving…";
+    saveBtn.disabled = true;
+    saveStatus.textContent = "Saving…";
 
     const player = select.value;
 
@@ -806,11 +817,8 @@ async function initPicksPage() {
       const parts = groupIdToParts(groupId);
       const err = await deletePick(player, parts.gameId, parts.betType);
       if (err) {
-        saveBtnTop.disabled = false;
-        saveBtnBottom.disabled = false;
-        const msg = "Couldn't save — a removed pick's game may have already kicked off. Refresh and try again.";
-        statusTop.textContent = msg;
-        statusBottom.textContent = msg;
+        saveBtn.disabled = false;
+        saveStatus.textContent = "Couldn't save — a removed pick's game may have already kicked off. Refresh and try again.";
         console.error("deletePick failed:", err);
         return;
       }
@@ -833,13 +841,10 @@ async function initPicksPage() {
       });
     const { error } = await upsertPicks(player, rows);
 
-    saveBtnTop.disabled = false;
-    saveBtnBottom.disabled = false;
+    saveBtn.disabled = false;
 
     if (error) {
-      const msg = "Couldn't save — one of these games may have already kicked off. Refresh and try again.";
-      statusTop.textContent = msg;
-      statusBottom.textContent = msg;
+      saveStatus.textContent = "Couldn't save — one of these games may have already kicked off. Refresh and try again.";
       console.error("savePicks failed:", error);
       return;
     }
@@ -855,13 +860,10 @@ async function initPicksPage() {
     // visible/editable together (no more NFL/NCAA toggle).
     const { perSport } = computeProgress(currentPicks, sportWeeks, gamesBySport);
     const weekTag = regaliaWeeks[selectedRegaliaIndex] ? `, ${regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex]).replace(/^👑 /, "").replace(/ Picks ·.*$/, "")}` : "";
-    const msg = `Saved for ${titleCase(player)}${weekTag} — NFL ${perSport.nfl.filled}/4 · College ${perSport.cfb.filled}/4.`;
-    statusTop.textContent = msg;
-    statusBottom.textContent = msg;
+    saveStatus.textContent = `Saved for ${titleCase(player)}${weekTag} — NFL ${perSport.nfl.filled}/4 · NCAA ${perSport.cfb.filled}/4.`;
   }
 
-  saveBtnTop.addEventListener("click", doSave);
-  saveBtnBottom.addEventListener("click", doSave);
+  saveBtn.addEventListener("click", doSave);
 
   // "Who's picked" lives as its own collapsible card, not a separate tab —
   // stays visible where people already are, without permanently pushing the

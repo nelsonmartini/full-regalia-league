@@ -174,7 +174,7 @@ function renderGameCard(g) {
   return `
     <div class="pick-game">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase">${g.sport === "nfl" ? "NFL" : "College"}</span>
+        <span style="font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase">${g.sport === "nfl" ? "NFL" : "NCAA"}</span>
         ${statusHtml}
       </div>
       ${scoreHtml}
