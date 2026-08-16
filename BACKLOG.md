@@ -4,6 +4,45 @@
 
 ## Status
 
+- **DONE (2026-08-16): Team + player trends built into `analytics.html`**
+  (was a "coming soon" stub; now a real page, still linked from the Home hub
+  card, copy updated from "Coming soon"/"Preview →" to reflect that).
+  - **New `js/team-stats.js`**: `computeTeamRecord(games, teamAbbr)` derives
+    a team's Minus/Plus Spread cover record and Over/Under split purely from
+    data `fetchScoreboard()` already returns for every game (final score +
+    closing lines) — reuses `gradeSpread()`/`gradeTotal()` from
+    `js/grading.js` against the team's own line instead of a saved pick.
+    `teamsWithFinishedGames(games)` builds the team list dynamically (no
+    hardcoded roster) from whichever teams have actually played a finished,
+    real-season (non-preseason) game with a posted line.
+  - **Team trends section**: NFL/NCAA sport toggle + a team `<select>`
+    (populated only with teams that have finished games), then a detail card
+    with 3 stat rows (Minus Spread, Plus Spread, Over/Under). Supports a
+    `?team=ABBR&sport=nfl|cfb` deep link so team names elsewhere in the app
+    can eventually link straight in (not wired up yet — see backlog note
+    below).
+  - **Player trends section**: one card per roster player (reusing
+    `LEAGUE_PLAYERS`, `loadSeasonPicks()`/`gradeSeasonPicks()` from
+    `js/season-data.js`), 4 stat rows (Minus/Plus/Over/Under), grouped via
+    the same `pickCategory()` used everywhere else. Avatar/name links to
+    `player.html?name=X`.
+  - **Placeholder-safe by design**: since there's no season data yet, both
+    sections show a single clean empty-state card ("No completed games yet…"
+    / "No graded picks yet…") instead of rendering empty rows per team/
+    player — verified this actually renders correctly, not just coded to.
+  - New shared CSS: `.stat-row`/`.stat-row-bar`/`.stat-split-bar` (cover-%
+    bars + the Over/Under split bar), alongside the existing `.progress-bar`
+    pattern. `js/team-stats.js` added to `sw.js`'s `SHELL` cache list.
+  - **Not done yet, left for a follow-up**: wiring actual `<a>` links from
+    team names (Picks category chips, Live game cards, Standings) into
+    `analytics.html?team=X&sport=Y` — the deep-link support is there, just
+    not called from anywhere yet.
+  - Verified via Playwright (16/16): empty-state math with 0 games/picks,
+    then a populated scenario with hand-computed KC/ALA records and two
+    players' category splits, cross-checked against the actual formula by
+    hand (KC: favored-and-covered → Minus 1-0-0/100%; underdog-and-missed →
+    Plus 0-1-0/0%; one game over its total, one under → 1O–1U split).
+
 - **DONE (2026-08-16): Picks reorder + conference filter chips + Live page redesign.**
   - **Picks page reordered**: the week picker (`#week-picker`) now sits at the
     very top of `<main>`, right after "How this works." "League status" lost
@@ -927,38 +966,10 @@
 6. **NEEDS ACTION FROM NEIL:** run the `players` table SQL near the top of
    Status — the new Admin page and the roster picker on every page are
    non-functional until that's run.
-7. **New backlog, not started — stats/trends pages** (Neil's idea, sourced
-   from teamrankings.com):
-   - **Team ATS trends per betting category — corrected 2026-08-16, NO
-     external source needed.** Originally assumed this needed scraping
-     teamrankings.com or manual data entry (wrong — flagged by Neil). It's
-     actually fully derivable from data this site already pulls: every
-     `fetchScoreboard()` call (`js/live-scores.js`) already returns each
-     game's final score AND its closing spread/over-under in the same
-     response — that's the exact input `js/grading.js`'s `gradeSpread()` /
-     `gradeTotal()` already consume to grade a player's pick. A "team ATS
-     trend" is the same math run against the team's own side of its games'
-     closing lines instead of a saved player pick — no new integration,
-     just a new aggregation: for each team, pull its games for the season
-     (`fetchScoreboard` with a wide `daysBack`), build a synthetic
-     `{type:"spread", team, line: <that game's closing line for them>}` for
-     each, run it through `gradeSpread`, and tally hit/miss/push. Over/Under
-     works the same way via `gradeTotal` (shared by both teams in a game,
-     so it's really "games this team played went Over/Under," not a
-     team-specific split). Favorite/dog splits fall out of the sign of the
-     line. Comparable scope to the player-trends item just below — worth
-     picking up together. Team names (Picks chips, Live game cards,
-     Standings) should link into this view once built, same idea as
-     `player.html`'s "Full season history →" link.
-   - **Player (league member) performance history per betting category.**
-     E.g. "Neil hits 68% on Unders but only 40% on Plus Spread this season."
-     Unlike the team-trends idea, this needs NO external source — it's
-     fully derivable from data already in Supabase: every saved pick already
-     records its category (via `pickCategory()` in `js/pick-utils.js`) and
-     gets graded (`js/grading.js`). Just needs a new aggregation (group
-     graded picks by player + category, compute hit rate) and a place to
-     show it — natural fit for `player.html`, next to the existing points
-     trend.
+7. **Done (2026-08-16):** stats/trends pages — see Status above ("Team +
+   player trends built into `analytics.html`"). Both bullets that used to
+   live here (team ATS trends, player category performance) are built; only
+   the nav-placement idea below is still undecided.
    - **Nav idea from Neil (2026-08-14), not decided/built:** replace the
      "Live" tab in the bottom nav with an "Analytics" tab housing both stats
      features above, instead of adding a 7th nav item. Open questions to

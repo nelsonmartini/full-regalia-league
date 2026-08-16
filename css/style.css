@@ -687,6 +687,55 @@ a { color: inherit; text-decoration: none; }
   background: linear-gradient(90deg, var(--positive), #22c55e);
 }
 
+/* ---------- Analytics: category stat rows (Team + Player trends) ---------- */
+/* Same visual language as .progress-bar, repurposed for a cover-% / hit-rate
+ * bar instead of a completion bar. .stat-split-bar is the one exception —
+ * team over/under isn't a hit/miss (that's about a player's pick, not the
+ * team), so it renders as a two-color split instead of a single fill. */
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.stat-row:last-child { margin-bottom: 0; }
+
+.stat-row-label {
+  width: 92px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.stat-row-bar,
+.stat-split-bar {
+  flex: 1;
+  background: var(--bg-elev-2);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 10px;
+  display: flex;
+}
+
+.stat-row-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.stat-split-over { height: 100%; background: var(--accent); }
+.stat-split-under { height: 100%; background: var(--accent-2); }
+
+.stat-row-value {
+  width: 92px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
 /* ---------- Avatars ---------- */
 
 .avatar {

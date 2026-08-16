@@ -34,25 +34,30 @@
 <main class="app">
   <p class="page-sub" style="margin-bottom:0"><a class="link" href="index.html">← Back home</a></p>
   <h1 class="page-title">Analytics</h1>
-  <p class="page-sub">Deeper stats and trends, coming once there's a real season of data to chew on.</p>
+  <p class="page-sub">Team and player trends against the same 4 betting categories used for picks — computed live from this season's results, no separate data entry.</p>
 
-  <div class="card">
-    <div class="empty-state">
-      📊 Not built yet — check back once the season's underway.
+  <div class="section-label">Team trends</div>
+  <div id="team-trends-empty" class="card" style="display:none">
+    <div class="empty-state">📊 No completed games yet this season — team trends will populate automatically once games start finishing.</div>
+  </div>
+  <div id="team-trends-content" style="display:none">
+    <div class="card" style="padding:14px 16px">
+      <div class="chip-row" id="team-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+        <div class="chip selected" data-sport="nfl">🏈 NFL</div>
+        <div class="chip" data-sport="cfb">🎓 NCAA</div>
+      </div>
+      <select id="team-select" class="chip" style="width:100%;box-sizing:border-box;appearance:none;text-align:left;padding:12px;cursor:pointer">
+        <option value="">Select a team…</option>
+      </select>
     </div>
+    <div id="team-detail"></div>
   </div>
 
-  <div class="card">
-    <div class="card-title">What's planned</div>
-    <div class="prose">
-      <p><strong>Team trends</strong> — how each team performs against the spread,
-      over/under, as favorite vs. underdog, mapped onto the same 4 betting categories
-      used for picks.</p>
-      <p><strong>Player trends</strong> — how each of you performs per category (e.g.
-      "68% on Unders, 40% on Plus Spread this season") — fully computable from picks
-      already saved this season, no external data needed.</p>
-    </div>
+  <div class="section-label" style="margin-top:20px">Player trends</div>
+  <div id="player-trends-empty" class="card" style="display:none">
+    <div class="empty-state">🏈 No graded picks yet — check back once the season's underway.</div>
   </div>
+  <div id="player-trends-list"></div>
 </main>
 
 <nav class="bottom-nav">
@@ -67,5 +72,160 @@
 </nav>
 
 <script src="js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/pick-utils.js"></script>
+<script src="js/players.js"></script>
+<script src="js/live-scores.js"></script>
+<script src="js/grading.js"></script>
+<script src="js/season-data.js"></script>
+<script src="js/team-stats.js"></script>
+<script>
+  /** One category's hit/miss/push as a labeled bar — shared by team
+   * Minus/Plus Spread and all 4 player categories (all the same shape). */
+  function statRowHtml(label, bucket) {
+    const pct = coverPct(bucket);
+    const total = bucket.hit + bucket.miss + bucket.push;
+    const valueText = total ? `${bucket.hit}-${bucket.miss}-${bucket.push} · ${pct}%` : "No data yet";
+    return `
+      <div class="stat-row">
+        <div class="stat-row-label">${label}</div>
+        <div class="stat-row-bar"><div class="stat-row-bar-fill" style="width:${pct ?? 0}%"></div></div>
+        <div class="stat-row-value">${valueText}</div>
+      </div>`;
+  }
+
+  /** Team over/under isn't a hit/miss — it's about the game, not one side of
+   * a bet — so it renders as an Over-vs-Under split instead of a cover %. */
+  function teamOuSplitHtml(record) {
+    const total = record.over + record.under + record.ouPush;
+    if (!total) {
+      return `
+        <div class="stat-row">
+          <div class="stat-row-label">Over/Under</div>
+          <div style="flex:1;font-size:11.5px;color:var(--text-faint)">No data yet</div>
+        </div>`;
+    }
+    const overPct = Math.round((record.over / total) * 100);
+    const underPct = Math.round((record.under / total) * 100);
+    return `
+      <div class="stat-row">
+        <div class="stat-row-label">Over/Under</div>
+        <div class="stat-split-bar">
+          <div class="stat-split-over" style="width:${overPct}%"></div>
+          <div class="stat-split-under" style="width:${underPct}%"></div>
+        </div>
+        <div class="stat-row-value">${record.over}O–${record.under}U${record.ouPush ? `–${record.ouPush}P` : ""}</div>
+      </div>`;
+  }
+
+  function computePlayerCategoryRecord(name, gradedPicks) {
+    const record = {
+      minus: { hit: 0, miss: 0, push: 0 },
+      plus: { hit: 0, miss: 0, push: 0 },
+      over: { hit: 0, miss: 0, push: 0 },
+      under: { hit: 0, miss: 0, push: 0 },
+    };
+    for (const gp of gradedPicks) {
+      if (gp.player_name !== name || !gp.result) continue;
+      const cat = pickCategory(gp.pick);
+      if (cat) record[cat][gp.result]++;
+    }
+    return record;
+  }
+
+  (async function () {
+    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
+    const graded = gradeSeasonPicks(picksRows, games);
+
+    // ---------- Team trends ----------
+    const allTeams = teamsWithFinishedGames(games);
+    const teamTrendsEmpty = document.getElementById("team-trends-empty");
+    const teamTrendsContent = document.getElementById("team-trends-content");
+    const teamSelect = document.getElementById("team-select");
+    const teamDetail = document.getElementById("team-detail");
+    const teamSportToggle = document.getElementById("team-sport-toggle");
+
+    const params = new URLSearchParams(location.search);
+    let teamSport = params.get("sport") === "cfb" ? "cfb" : "nfl";
+
+    if (allTeams.length === 0) {
+      teamTrendsEmpty.style.display = "block";
+    } else {
+      teamTrendsContent.style.display = "block";
+
+      function renderTeamOptions() {
+        const opts = allTeams.filter((t) => t.sport === teamSport);
+        teamSelect.innerHTML = '<option value="">Select a team…</option>' + opts.map((t) => `<option value="${t.abbr}">${t.abbr} — ${t.name}</option>`).join("");
+      }
+
+      function renderTeamDetail(abbr) {
+        if (!abbr) {
+          teamDetail.innerHTML = "";
+          return;
+        }
+        const record = computeTeamRecord(games, abbr);
+        teamDetail.innerHTML = `
+          <div class="card">
+            <div class="card-title">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
+            ${statRowHtml("Minus Spread", record.minus)}
+            ${statRowHtml("Plus Spread", record.plus)}
+            ${teamOuSplitHtml(record)}
+          </div>`;
+      }
+
+      teamSportToggle.addEventListener("click", (e) => {
+        const chip = e.target.closest("[data-sport]");
+        if (!chip) return;
+        teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
+        chip.classList.add("selected");
+        teamSport = chip.getAttribute("data-sport");
+        renderTeamOptions();
+        teamSelect.value = "";
+        renderTeamDetail("");
+      });
+
+      teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value));
+
+      renderTeamOptions();
+
+      // Deep-link support: ?team=ABBR&sport=nfl|cfb — lets team names
+      // elsewhere in the app (Picks chips, Live cards) link straight here
+      // once that wiring gets picked up.
+      const deepLinkTeam = (params.get("team") || "").toUpperCase();
+      if (deepLinkTeam && allTeams.some((t) => t.abbr === deepLinkTeam && t.sport === teamSport)) {
+        teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c.getAttribute("data-sport") === teamSport));
+        renderTeamOptions();
+        teamSelect.value = deepLinkTeam;
+        renderTeamDetail(deepLinkTeam);
+      }
+    }
+
+    // ---------- Player trends ----------
+    const anyGraded = graded.some((gp) => gp.result);
+    const playerTrendsEmpty = document.getElementById("player-trends-empty");
+    const playerTrendsList = document.getElementById("player-trends-list");
+
+    if (!anyGraded) {
+      playerTrendsEmpty.style.display = "block";
+    } else {
+      playerTrendsList.innerHTML = LEAGUE_PLAYERS.map((p) => {
+        const record = computePlayerCategoryRecord(p.name, graded);
+        return `
+          <div class="card">
+            <div class="card-title">
+              <a class="link" href="player.html?name=${encodeURIComponent(p.name)}" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;font-weight:800;color:var(--text)">
+                ${avatarHtml(p.name, 24)}${titleCase(p.name)}
+              </a>
+            </div>
+            ${statRowHtml("Minus Spread", record.minus)}
+            ${statRowHtml("Plus Spread", record.plus)}
+            ${statRowHtml("Over", record.over)}
+            ${statRowHtml("Under", record.under)}
+          </div>`;
+      }).join("");
+    }
+  })();
+</script>
 </body>
 </html>

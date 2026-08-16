@@ -1,6 +1,6 @@
 // Minimal service worker — exists so the site is installable ("Add to Home Screen")
 // and shell pages still open if the connection drops. Not caching live data.
-const CACHE = "full-regalia-shell-v32";
+const CACHE = "full-regalia-shell-v33";
 const SHELL = [
   "./",
   "./index.html",
@@ -23,6 +23,7 @@ const SHELL = [
   "./js/picks.js",
   "./js/live-scores.js",
   "./js/grading.js",
+  "./js/team-stats.js",
   "./js/supabase-client.js",
   "./manifest.json",
   "./icons/icon-192.png",
