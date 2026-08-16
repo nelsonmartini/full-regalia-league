@@ -71,7 +71,14 @@
 
   <div class="section-label">Make picks</div>
 
-  <div class="chip-row" id="conference-filter" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr));margin-bottom:12px">
+  <div id="games-list"></div>
+
+  <hr class="divider" />
+
+  <div class="section-label">Find a team or a game</div>
+  <input type="text" id="team-search" placeholder="🔎 Search for a team…" autocomplete="off"
+         style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
+  <div class="chip-row" id="conference-filter" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr))">
     <div class="chip selected" data-conference="">All</div>
     <div class="chip" data-conference="AFC">AFC</div>
     <div class="chip" data-conference="NFC">NFC</div>
@@ -81,14 +88,6 @@
     <div class="chip" data-conference="SEC">SEC</div>
     <div class="chip" data-conference="Other">Other</div>
   </div>
-
-  <div id="games-list"></div>
-
-  <hr class="divider" />
-
-  <div class="section-label">Find a team or a game</div>
-  <input type="text" id="team-search" placeholder="🔎 Search for a team…" autocomplete="off"
-         style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
 </main>
 
 <div class="sticky-save-bar" id="sticky-save-bar">
