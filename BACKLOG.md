@@ -929,22 +929,27 @@
    non-functional until that's run.
 7. **New backlog, not started — stats/trends pages** (Neil's idea, sourced
    from teamrankings.com):
-   - **Team ATS trends per betting category.** teamrankings.com/nfl/trends/ats-trends
-     (and the college-football equivalent) publishes exactly this: how each
-     team performs against the spread, over/under, as favorite/underdog —
-     maps closely onto our own 4 categories. No public API — would need
-     either scraping (fragile, same "fails soft" caution as the ESPN
-     integration, more so since it's not CORS-open like ESPN's endpoint, so
-     it can't be fetched client-side and would need a small server-side
-     fetcher) or manual/periodic data entry. Needs its own research pass
-     before committing to an approach.
-     **Refinement (2026-08-16, Neil):** once this exists, team names
-     wherever they show up (Picks chips, Live game cards, Standings) should
-     be clickable/linkable straight into that team's ATS-history view —
-     same idea as `player.html`'s "Full season history →" link, but for
-     teams instead of league members. Purely a UI wiring detail on top of
-     the still-unsolved data-sourcing problem above; nothing to build until
-     that's resolved.
+   - **Team ATS trends per betting category — corrected 2026-08-16, NO
+     external source needed.** Originally assumed this needed scraping
+     teamrankings.com or manual data entry (wrong — flagged by Neil). It's
+     actually fully derivable from data this site already pulls: every
+     `fetchScoreboard()` call (`js/live-scores.js`) already returns each
+     game's final score AND its closing spread/over-under in the same
+     response — that's the exact input `js/grading.js`'s `gradeSpread()` /
+     `gradeTotal()` already consume to grade a player's pick. A "team ATS
+     trend" is the same math run against the team's own side of its games'
+     closing lines instead of a saved player pick — no new integration,
+     just a new aggregation: for each team, pull its games for the season
+     (`fetchScoreboard` with a wide `daysBack`), build a synthetic
+     `{type:"spread", team, line: <that game's closing line for them>}` for
+     each, run it through `gradeSpread`, and tally hit/miss/push. Over/Under
+     works the same way via `gradeTotal` (shared by both teams in a game,
+     so it's really "games this team played went Over/Under," not a
+     team-specific split). Favorite/dog splits fall out of the sign of the
+     line. Comparable scope to the player-trends item just below — worth
+     picking up together. Team names (Picks chips, Live game cards,
+     Standings) should link into this view once built, same idea as
+     `player.html`'s "Full season history →" link.
    - **Player (league member) performance history per betting category.**
      E.g. "Neil hits 68% on Unders but only 40% on Plus Spread this season."
      Unlike the team-trends idea, this needs NO external source — it's
@@ -1048,8 +1053,9 @@
       (2026-08-14)
 - [ ] Championship/Bowl Picks page — needs its own scoping for prop bets, lower
       urgency (months out)
-- [ ] **Stats/trends pages (new backlog, 2026-08-14):** team ATS trends
-      (possibly sourced from teamrankings.com) and per-player category
+- [ ] **Stats/trends pages (new backlog, 2026-08-14; team-trends data
+      question resolved 2026-08-16 — no external source needed, see Status →
+      "corrected 2026-08-16"):** team ATS trends and per-player category
       performance history, possibly surfaced via a new "Analytics" tab
       replacing "Live" in the bottom nav. Deferred until after the season
       starts and there's real data — see Status → "New backlog" for detail.
