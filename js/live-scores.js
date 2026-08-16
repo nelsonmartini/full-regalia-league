@@ -147,37 +147,54 @@ function formatFullDate(iso) {
   }
 }
 
+/** One team row within a game card — abbreviation (bold), full name (muted,
+ * truncates rather than wraps), and score (right-aligned, only shown once
+ * the game has actually started). The winning side (once final) is brought
+ * up to full text color so the result reads at a glance without needing to
+ * compare two numbers. */
+function gameCardTeamRow(team, showScore, isWinner, isHome) {
+  const homeMark = isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : "";
+  return `
+    <div class="game-card-team${isWinner ? " is-winner" : ""}">
+      <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
+      <span class="game-card-team-name">${homeMark}${team?.name || ""}</span>
+      ${showScore ? `<span class="game-card-team-score">${team?.score ?? "-"}</span>` : ""}
+    </div>`;
+}
+
 function renderGameCard(g) {
   const isLive = g.status.state === "in";
   const isFinal = g.status.state === "post";
+  const showScore = isLive || isFinal;
+
   const statusHtml = isLive
     ? `<span class="badge live"><span class="dot"></span>${g.status.detail || "Live"}</span>`
     : isFinal
-    ? `<span style="color:var(--text-faint);font-size:11.5px;font-weight:700">Final</span>`
-    : `<span style="color:var(--text-faint);font-size:11.5px;font-weight:700">${formatKickoff(g.date)}</span>`;
+    ? `<span class="game-card-final">Final</span>`
+    : `<span class="game-card-kickoff">${formatKickoff(g.date)}</span>`;
 
-  const scoreHtml =
-    isLive || isFinal
-      ? `<div style="display:flex;justify-content:space-between;font-weight:800;font-size:16px">
-          <span>${g.away?.abbr || "?"} ${g.away?.score ?? ""}</span>
-          <span>${g.home?.abbr || "?"} ${g.home?.score ?? ""}</span>
-        </div>`
-      : `<div style="font-weight:800;font-size:15px">${g.away?.abbr || g.away?.name} @ ${g.home?.abbr || g.home?.name}</div>`;
+  const awayScore = g.away?.score != null ? Number(g.away.score) : null;
+  const homeScore = g.home?.score != null ? Number(g.home.score) : null;
+  const awayWins = isFinal && awayScore != null && homeScore != null && awayScore > homeScore;
+  const homeWins = isFinal && awayScore != null && homeScore != null && homeScore > awayScore;
 
   const oddsHtml = g.odds
-    ? `<div style="margin-top:6px;font-size:12px;color:var(--text-dim)">
-        ${g.odds.spread ? `Spread: <strong style="color:var(--text)">${g.odds.spread}</strong>` : ""}
-        ${g.odds.overUnder ? ` &nbsp;·&nbsp; O/U: <strong style="color:var(--text)">${g.odds.overUnder}</strong>` : ""}
+    ? `<div class="game-card-odds">
+        ${g.odds.spread ? `<span>Spread <strong>${g.odds.spread}</strong></span>` : ""}
+        ${g.odds.overUnder ? `<span>O/U <strong>${g.odds.overUnder}</strong></span>` : ""}
       </div>`
     : "";
 
   return `
-    <div class="pick-game">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase">${g.sport === "nfl" ? "NFL" : "NCAA"}</span>
+    <div class="game-card${isLive ? " game-card--live" : ""}${isFinal ? " game-card--final" : ""}">
+      <div class="game-card-top">
+        <span class="game-card-sport">${g.sport === "nfl" ? "NFL" : "NCAA"}</span>
         ${statusHtml}
       </div>
-      ${scoreHtml}
+      <div class="game-card-teams">
+        ${gameCardTeamRow(g.away, showScore, awayWins, false)}
+        ${gameCardTeamRow(g.home, showScore, homeWins, true)}
+      </div>
       ${oddsHtml}
     </div>`;
 }

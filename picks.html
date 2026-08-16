@@ -40,6 +40,21 @@
     even for late edits.</p>
   </details>
 
+  <div class="week-picker week-picker-prominent" id="week-picker">
+    <div class="week-picker-header" id="week-picker-header">
+      <span id="week-picker-current">Loading week…</span>
+      <span id="week-picker-chevron">▼</span>
+    </div>
+    <div class="week-picker-list" id="week-picker-list" style="display:none"></div>
+  </div>
+
+  <div class="league-status-blurb" id="status-card">
+    <div id="status-summary">
+      <span>Loading who's picked…</span>
+    </div>
+    <div id="week-status-list" style="display:none"></div>
+  </div>
+
   <div class="section-label">Who's picking?</div>
   <div class="card picker-card" style="padding:16px">
     <div style="display:flex;align-items:center;gap:14px">
@@ -49,28 +64,23 @@
     <a class="link" id="full-history-link" href="player.html" style="display:block;text-align:center;font-size:12.5px;margin-top:10px">Full season history →</a>
   </div>
 
-  <div class="week-picker week-picker-prominent" id="week-picker">
-    <div class="week-picker-header" id="week-picker-header">
-      <span id="week-picker-current">Loading week…</span>
-      <span id="week-picker-chevron">▼</span>
-    </div>
-    <div class="week-picker-list" id="week-picker-list" style="display:none"></div>
-  </div>
-
-  <div class="section-label">League status</div>
-  <div class="card" id="status-card" style="padding:12px 16px">
-    <div id="status-summary" style="font-size:13px;font-weight:700;text-align:center;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer">
-      <span>Loading who's picked…</span>
-    </div>
-    <div id="week-status-list" style="display:none;margin-top:10px"></div>
-  </div>
-
   <div class="section-label">My picks this week</div>
   <div class="card" style="padding:12px 16px">
     <div id="picks-progress">Loading…</div>
   </div>
 
   <div class="section-label">Make picks</div>
+
+  <div class="chip-row" id="conference-filter" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr));margin-bottom:12px">
+    <div class="chip selected" data-conference="">All</div>
+    <div class="chip" data-conference="AFC">AFC</div>
+    <div class="chip" data-conference="NFC">NFC</div>
+    <div class="chip" data-conference="ACC">ACC</div>
+    <div class="chip" data-conference="Big 12">Big 12</div>
+    <div class="chip" data-conference="Big Ten">Big Ten</div>
+    <div class="chip" data-conference="SEC">SEC</div>
+    <div class="chip" data-conference="Other">Other</div>
+  </div>
 
   <div id="games-list"></div>
 

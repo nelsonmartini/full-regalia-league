@@ -23,44 +23,11 @@
  */
 
 // CATEGORIES/CATEGORY_LABEL/SPORTS/SEASON_PHASE_PREFIX/fmtLine/sportLabel/
-// pickCategory/pickLabel/weekBucketKeyFromSnapshot/weekGroupLabel/statusBadge
-// now live in js/pick-utils.js (loaded before this file), shared with the
-// Standings/History/Player pages so they can format picks the same way.
+// pickCategory/pickLabel/weekBucketKeyFromSnapshot/weekGroupLabel/statusBadge/
+// NCAA_CONFERENCES/teamGroupLabel now live in js/pick-utils.js (loaded before
+// this file), shared with the Standings/History/Player pages and live.html.
 const PLAYER_KEY = "fr_selected_player";
 const CATEGORY_ICON = { minus: "−", plus: "+", over: "▲", under: "▼" };
-
-/**
- * NCAA conference groupings, for browsability within each pick category —
- * unlike NFL (which has a live ESPN endpoint with the full conference/division
- * hierarchy, fetched dynamically, see fetchNflDivisions() in live-scores.js),
- * college football has no equivalently clean single source, so this is
- * hardcoded: Power 4 conferences explicitly (covers the vast majority of games
- * people will actually pick), everyone else falls into "Other". Verified
- * against ESPN's team list where possible (2026 season, post-2024
- * realignment); a few entries are best-known-convention rather than
- * individually confirmed — if a team ever shows up in "Other" when it
- * shouldn't, that's just this map needing a one-line fix, not a deeper bug.
- */
-const NCAA_CONFERENCES = {
-  SEC: ["ALA", "ARK", "AUB", "FLA", "UGA", "UK", "LSU", "MSST", "MIZ", "MISS", "OU", "SC", "TENN", "TEX", "TA&M", "VAN"],
-  "Big Ten": ["ILL", "IU", "IOWA", "MD", "MICH", "MSU", "MINN", "NEB", "NU", "OSU", "ORE", "PSU", "PUR", "RUTG", "UCLA", "USC", "WASH", "WIS"],
-  ACC: ["BC", "CAL", "CLEM", "DUKE", "FSU", "GT", "LOU", "MIA", "NCSU", "UNC", "PITT", "SMU", "STAN", "SYR", "UVA", "VT", "WAKE"],
-  "Big 12": ["ARIZ", "ASU", "BAY", "BYU", "CIN", "COLO", "HOU", "ISU", "KU", "KSU", "OKST", "TCU", "TTU", "UCF", "UTAH", "WVU"],
-};
-const NCAA_TEAM_TO_CONF = new Map();
-for (const [conf, teams] of Object.entries(NCAA_CONFERENCES)) {
-  for (const abbr of teams) NCAA_TEAM_TO_CONF.set(abbr, conf);
-}
-
-/** Sub-group label for a team within a category's chip list — "AFC East" for
- * NFL (live data), a Power 4 conference or "Other" for NCAA (hardcoded above). */
-function teamGroupLabel(sport, teamAbbr, nflDivisions) {
-  // NFL groups by CONFERENCE only (not division) — games within a conference
-  // sort chronologically instead (per Neil, easier to scan than division
-  // clusters). nflDivisions values look like "AFC East"; take the first word.
-  if (sport === "nfl") return nflDivisions.get(teamAbbr)?.split(" ")[0] || "Other";
-  return NCAA_TEAM_TO_CONF.get(teamAbbr) || "Other";
-}
 
 /** groupId is "<gameId>_spread" | "<gameId>_ml" | "<gameId>_total" — the DB
  * stores game_id and bet_type as separate columns, so convert both ways.
@@ -412,7 +379,7 @@ function sortGroupKeys(sport, keys) {
  * toggled between). Each category/chip element carries data-sport so the
  * click handler in initPicksPage can tell which sport a click belongs to
  * without a single global "selected sport" to fall back on. */
-function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query) {
+function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter) {
   if (games.length === 0) {
     return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
   }
@@ -422,6 +389,10 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
 
   const categoriesHtml = CATEGORIES.map((cat) => {
     let options = pools[cat];
+    if (conferenceFilter) {
+      options = options.filter((o) => o.group === conferenceFilter);
+      if (options.length === 0) return ""; // hide the whole category — nothing in this conference for it
+    }
     if (query) {
       options = options.filter((o) => o.search.includes(query));
       if (options.length === 0) return ""; // hide the whole category rather than show an empty one while searching
@@ -504,21 +475,22 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
  * expanded up front. Search now spans both sports — a sport section
  * auto-expands (or hides entirely if nothing in it matches) the same way
  * categories already did within one sport. */
-function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery) {
+function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter) {
   const query = searchQuery.trim().toLowerCase();
+  const filtering = !!query || !!conferenceFilter;
   let anySportMatched = false;
 
   const sectionsHtml = SPORTS.map((sport) => {
     const weekKey = sportWeeks[sport];
     const games = gamesBySport[sport].filter((g) => weekBucketKey(g) === weekKey);
     const slots = slotsForSportWeek(picks, sport, weekKey);
-    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query);
+    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter);
 
-    if (query && !anyMatched) return ""; // hide the whole sport section if nothing in it matches the search
+    if (filtering && !anyMatched) return ""; // hide the whole sport section if nothing in it matches
 
     anySportMatched = true;
     const filled = CATEGORIES.filter((c) => slots[c]).length;
-    const expanded = query ? true : !!sportExpanded[sport];
+    const expanded = filtering ? true : !!sportExpanded[sport];
     const icon = sport === "nfl" ? "🏈" : "🎓";
 
     return `
@@ -535,9 +507,14 @@ function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivi
       </div>`;
   }).join("");
 
-  container.innerHTML = anySportMatched
-    ? sectionsHtml
-    : `<div class="empty-state">No games match "${escapeHtml(searchQuery.trim())}" this week.</div>`;
+  if (anySportMatched) {
+    container.innerHTML = sectionsHtml;
+    return;
+  }
+  const parts = [];
+  if (conferenceFilter) parts.push(conferenceFilter);
+  if (searchQuery.trim()) parts.push(`"${escapeHtml(searchQuery.trim())}"`);
+  container.innerHTML = `<div class="empty-state">No games match ${parts.join(" + ")} this week.</div>`;
 }
 
 // statusBadge/pickLabel/weekGroupLabel live in js/pick-utils.js.
@@ -643,6 +620,7 @@ async function initPicksPage() {
     cfb: { minus: false, plus: false, over: false, under: false },
   };
   let searchQuery = "";
+  let conferenceFilter = "";
 
   function renderWeekPicker() {
     if (regaliaWeeks.length === 0) {
@@ -663,7 +641,7 @@ async function initPicksPage() {
   }
 
   function renderAll() {
-    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery);
+    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter);
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
   }
 
@@ -671,6 +649,18 @@ async function initPicksPage() {
     searchQuery = teamSearch.value;
     renderAll();
   });
+
+  const conferenceFilterRow = document.getElementById("conference-filter");
+  if (conferenceFilterRow) {
+    conferenceFilterRow.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-conference]");
+      if (!chip) return;
+      conferenceFilterRow.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
+      chip.classList.add("selected");
+      conferenceFilter = chip.getAttribute("data-conference");
+      renderAll();
+    });
+  }
 
   function updateHistoryLink() {
     fullHistoryLink.href = `player.html?name=${encodeURIComponent(select.value)}`;

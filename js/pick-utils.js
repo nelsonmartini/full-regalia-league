@@ -10,6 +10,39 @@ const CATEGORY_LABEL = { minus: "Minus Spread", plus: "Plus Spread", over: "Over
 const SPORTS = ["nfl", "cfb"];
 const SEASON_PHASE_PREFIX = { 1: "Preseason ", 2: "", 3: "Postseason " };
 
+/**
+ * NCAA conference groupings, for browsability/filtering within a sport —
+ * unlike NFL (which has a live ESPN endpoint with the full conference/division
+ * hierarchy, fetched dynamically, see fetchNflDivisions() in live-scores.js),
+ * college football has no equivalently clean single source, so this is
+ * hardcoded: Power 4 conferences explicitly (covers the vast majority of games
+ * people will actually pick), everyone else falls into "Other". Verified
+ * against ESPN's team list where possible (2026 season, post-2024
+ * realignment); a few entries are best-known-convention rather than
+ * individually confirmed — if a team ever shows up in "Other" when it
+ * shouldn't, that's just this map needing a one-line fix, not a deeper bug.
+ * Shared by js/picks.js (category chip grouping) and live.html (game filter).
+ */
+const NCAA_CONFERENCES = {
+  SEC: ["ALA", "ARK", "AUB", "FLA", "UGA", "UK", "LSU", "MSST", "MIZ", "MISS", "OU", "SC", "TENN", "TEX", "TA&M", "VAN"],
+  "Big Ten": ["ILL", "IU", "IOWA", "MD", "MICH", "MSU", "MINN", "NEB", "NU", "OSU", "ORE", "PSU", "PUR", "RUTG", "UCLA", "USC", "WASH", "WIS"],
+  ACC: ["BC", "CAL", "CLEM", "DUKE", "FSU", "GT", "LOU", "MIA", "NCSU", "UNC", "PITT", "SMU", "STAN", "SYR", "UVA", "VT", "WAKE"],
+  "Big 12": ["ARIZ", "ASU", "BAY", "BYU", "CIN", "COLO", "HOU", "ISU", "KU", "KSU", "OKST", "TCU", "TTU", "UCF", "UTAH", "WVU"],
+};
+const NCAA_TEAM_TO_CONF = new Map();
+for (const [conf, teams] of Object.entries(NCAA_CONFERENCES)) {
+  for (const abbr of teams) NCAA_TEAM_TO_CONF.set(abbr, conf);
+}
+
+/** Sub-group label for a team — "AFC"/"NFC" for NFL (live data, conference
+ * only, not division), a Power 4 conference or "Other" for NCAA (hardcoded
+ * above). Used both for category chip grouping (picks.js) and the
+ * conference filter chips (picks.js + live.html). */
+function teamGroupLabel(sport, teamAbbr, nflDivisions) {
+  if (sport === "nfl") return nflDivisions.get(teamAbbr)?.split(" ")[0] || "Other";
+  return NCAA_TEAM_TO_CONF.get(teamAbbr) || "Other";
+}
+
 function fmtLine(n) {
   return n > 0 ? `+${n}` : `${n}`;
 }

@@ -4,6 +4,43 @@
 
 ## Status
 
+- **DONE (2026-08-16): Picks reorder + conference filter chips + Live page redesign.**
+  - **Picks page reordered**: the week picker (`#week-picker`) now sits at the
+    very top of `<main>`, right after "How this works." "League status" lost
+    its own `.section-label`/`.card` and is now a small condensed blurb
+    (new `.league-status-blurb` in `css/style.css`) directly beneath the week
+    picker — still clickable/expandable (same `#status-summary`/
+    `#week-status-list` IDs, just restyled), just no longer reads as its own
+    competing section. "Who's picking?" now comes after both.
+  - **Conference filter chips**, built as the lighter alternative floated (and
+    declined at the time) in the previous entry below — Neil came back and
+    asked for it. Chip row (All/AFC/NFC/ACC/Big 12/Big Ten/SEC/Other) added
+    above `#games-list` on the Picks page, coexisting with — not replacing —
+    the free-text search; both filters combine (AND logic). Extracted
+    `NCAA_CONFERENCES`/`NCAA_TEAM_TO_CONF`/`teamGroupLabel()` out of
+    `js/picks.js` into `js/pick-utils.js` so the same grouping logic could be
+    shared with the Live page (previously Picks-only).
+  - **Same conference filter added to `live.html`**, combining with the
+    existing status filter (All/Live now/Results). Needed `js/pick-utils.js`
+    and a `fetchNflDivisions()` call added to that page (wasn't previously
+    loaded there).
+  - **Live page game cards redesigned** for readability — new `.game-card`
+    family in `css/style.css` (was reusing `.pick-game`, the Picks category
+    chip styling, which didn't fit a read-only result display). Team
+    abbreviation (bold) + full name (muted, truncates) + right-aligned score;
+    a colored left border cues state at a glance (green = live, muted = final,
+    default = upcoming); the winning team is brought to full text color once
+    a game is final; a small 🏠 marks the home team; odds moved below a
+    divider line instead of crammed into one small text row.
+  - **Analytics team-click idea logged**, not built: see "New backlog —
+    stats/trends pages" below — team names linking to ATS history depends on
+    the still-unsolved data-sourcing problem there, so it's a note on that
+    entry, not new work.
+  - Verified via Playwright (31/31): DOM order, condensed status-card styling,
+    conference filter narrowing correctly (including combined with the
+    existing Live status filter), new game-card classes/winner-highlighting/
+    home-icon, zero console errors across all 8 pages. `sw.js` bumped to v31.
+
 - **DONE (2026-08-16): nav reorder + search bar sectioning.**
   - **Picks moved to the 2nd nav slot** (was 3rd) — bottom nav order across
     all 8 pages that have it (`index.html`, `picks.html`, `standings.html`,
@@ -901,6 +938,13 @@
      it can't be fetched client-side and would need a small server-side
      fetcher) or manual/periodic data entry. Needs its own research pass
      before committing to an approach.
+     **Refinement (2026-08-16, Neil):** once this exists, team names
+     wherever they show up (Picks chips, Live game cards, Standings) should
+     be clickable/linkable straight into that team's ATS-history view —
+     same idea as `player.html`'s "Full season history →" link, but for
+     teams instead of league members. Purely a UI wiring detail on top of
+     the still-unsolved data-sourcing problem above; nothing to build until
+     that's resolved.
    - **Player (league member) performance history per betting category.**
      E.g. "Neil hits 68% on Unders but only 40% on Plus Spread this season."
      Unlike the team-trends idea, this needs NO external source — it's

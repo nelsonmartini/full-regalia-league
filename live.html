@@ -35,10 +35,21 @@
   <h1 class="page-title">Scores, Odds &amp; Results</h1>
   <p class="page-sub">Pulled live from ESPN — no manual score lookups. Refreshes every 30s while this page is open.</p>
 
-  <div class="chip-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
+  <div class="chip-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">
     <div class="chip selected" id="filter-all" data-filter="all">All</div>
     <div class="chip" id="filter-live" data-filter="in">Live now</div>
     <div class="chip" id="filter-final" data-filter="post">Results</div>
+  </div>
+
+  <div class="chip-row" id="conference-filter" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr));margin-bottom:14px">
+    <div class="chip selected" data-conference="">All</div>
+    <div class="chip" data-conference="AFC">AFC</div>
+    <div class="chip" data-conference="NFC">NFC</div>
+    <div class="chip" data-conference="ACC">ACC</div>
+    <div class="chip" data-conference="Big 12">Big 12</div>
+    <div class="chip" data-conference="Big Ten">Big Ten</div>
+    <div class="chip" data-conference="SEC">SEC</div>
+    <div class="chip" data-conference="Other">Other</div>
   </div>
 
   <div id="games-loading" class="empty-state">Loading games…</div>
@@ -64,9 +75,19 @@
 
 <script src="js/app.js"></script>
 <script src="js/live-scores.js"></script>
+<script src="js/pick-utils.js"></script>
 <script>
   let allGames = [];
   let filter = "all";
+  let conferenceFilter = "";
+  let nflDivisions = new Map();
+
+  function gameMatchesConference(g) {
+    if (!conferenceFilter) return true;
+    const awayGroup = g.away ? teamGroupLabel(g.sport, g.away.abbr, nflDivisions) : null;
+    const homeGroup = g.home ? teamGroupLabel(g.sport, g.home.abbr, nflDivisions) : null;
+    return awayGroup === conferenceFilter || homeGroup === conferenceFilter;
+  }
 
   function render() {
     const loading = document.getElementById("games-loading");
@@ -74,7 +95,8 @@
     const empty = document.getElementById("games-empty");
     loading.style.display = "none";
 
-    const filtered = filter === "all" ? allGames : allGames.filter((g) => g.status.state === filter);
+    let filtered = filter === "all" ? allGames : allGames.filter((g) => g.status.state === filter);
+    filtered = filtered.filter(gameMatchesConference);
     if (filter === "post") {
       // Results view: most recently finished first.
       filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -97,8 +119,17 @@
     });
   });
 
+  document.getElementById("conference-filter").addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-conference]");
+    if (!chip) return;
+    document.querySelectorAll("#conference-filter .chip").forEach((c) => c.classList.remove("selected"));
+    chip.classList.add("selected");
+    conferenceFilter = chip.getAttribute("data-conference");
+    render();
+  });
+
   async function load() {
-    allGames = await loadAllGames();
+    [allGames, nflDivisions] = await Promise.all([loadAllGames(), fetchNflDivisions()]);
     render();
   }
 
