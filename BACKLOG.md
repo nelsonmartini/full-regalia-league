@@ -4,6 +4,26 @@
 
 ## Status
 
+- **DONE (2026-08-16): nav reorder + search bar sectioning.**
+  - **Picks moved to the 2nd nav slot** (was 3rd) — bottom nav order across
+    all 8 pages that have it (`index.html`, `picks.html`, `standings.html`,
+    `history.html`, `player.html`, `live.html`, `betting-guide.html`,
+    `analytics.html`; `admin.html` deliberately has no bottom nav, unchanged)
+    is now Home → Picks → Standings → History → Live → Guide.
+  - **Team search given its own section** on the Picks page — a
+    `<hr class="divider">` plus a new "Find a team or a game" section-label
+    now separates it from "Make picks"/`#games-list` above, instead of
+    sitting directly underneath with no visual break.
+  - **Considered and declined (for now): replacing free-text search with a
+    structured Sport → Conference → Division → Team filter.** Neil raised
+    it, we talked through the tradeoff — recommended keeping free-text
+    search (faster for anyone who already knows the team, no extra taps)
+    since the conference/division *browsing* need is already covered by the
+    existing sub-group headers inside each expanded category. Floated a
+    lighter alternative (tappable AFC/NFC/conference filter chips above the
+    search box) if browsing still feels hard — not requested/built, revisit
+    if it comes up again.
+
 - **DONE (2026-08-16): batch of Home + Picks polish requests.**
   - **Home** (`index.html`): moved the 💰 emoji to after "Bags" in the brand
     quote ("We do the Bags 💰 right..."). Added a small instructional line
