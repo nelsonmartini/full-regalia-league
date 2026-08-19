@@ -59,7 +59,10 @@
   <div class="card picker-card" style="padding:16px">
     <div style="display:flex;align-items:center;gap:14px">
       <span id="player-avatar-preview"></span>
-      <select id="player-select" class="chip" style="flex:1;appearance:none;text-align:left;padding:14px;cursor:pointer"></select>
+      <label for="player-select" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer">
+        <select id="player-select" class="chip" style="flex:1;min-width:0;appearance:none;text-align:left;padding:14px;cursor:pointer"></select>
+        <span style="flex-shrink:0;font-size:11.5px;font-weight:800;color:var(--accent);white-space:nowrap">Change ▾</span>
+      </label>
     </div>
     <a class="link" id="full-history-link" href="player.html" style="display:block;text-align:center;font-size:12.5px;margin-top:10px">Full season history →</a>
   </div>
