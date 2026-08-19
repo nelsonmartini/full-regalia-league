@@ -303,6 +303,25 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
 }
 
+/* Icon-only "change player" affordance — recolors with --picker-color (set
+ * per selected player, same variable the card's own background/border use)
+ * so it reads as part of the themed card rather than a generic control. */
+.picker-change-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--picker-color);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  transition: background 0.2s;
+}
+
 /* Sticky "who am I picking as" reminder — stays visible while scrolling
  * through the categories, pinned above the sticky save bar (which sits
  * directly above the bottom nav — see .sticky-save-bar). Purely
