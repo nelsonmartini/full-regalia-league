@@ -4,6 +4,31 @@
 
 ## Status
 
+- **FIXED (2026-08-19): "Save my picks" button hidden behind the bottom nav
+  on notched/gesture-nav phones (real bug, reported by Neil).**
+  - Root cause: `.bottom-nav` pads itself by `env(safe-area-inset-bottom)`
+    (the iPhone home-indicator / Android gesture-bar inset), so its true
+    on-screen height is `--nav-height` (64px) **plus** that inset — often
+    ~34px more on a modern iPhone. But `.sticky-save-bar` and
+    `.picker-badge` were positioned using only `var(--nav-height)`, with no
+    idea that inset existed. On any phone with a nonzero inset, both fixed
+    elements sat exactly that amount too low, so the nav bar (higher
+    z-index) visually covered the bottom of the Save button. Invisible on
+    desktop/non-notched testing, which is why it shipped unnoticed.
+  - Fix: new `--safe-bottom: env(safe-area-inset-bottom, 0px)` custom
+    property in `:root`, threaded into every calc that previously assumed
+    the nav was exactly `--nav-height` tall — `.sticky-save-bar`'s `bottom`,
+    `.picker-badge`'s `bottom`, and both `body`/`body.has-sticky-save`'s
+    scroll-clearance `padding-bottom`. `.bottom-nav`'s own padding now
+    reads from the same variable instead of repeating `env()` inline.
+  - Verified via Playwright: since headless Chromium doesn't get a real
+    nonzero `env(safe-area-inset-bottom)` value, simulated a notched phone
+    by overriding `--safe-bottom: 34px` directly (exercises the identical
+    calc() chain a real device would) — confirmed the save bar's bottom
+    edge meets the nav's top edge with no overlap, in both the 0px and 34px
+    cases, and the Save button itself sits fully above the nav. Plus the
+    full 31/31 site regression suite.
+
 - **DONE (2026-08-19): New app icon (cursive "FR" monogram) + passphrase
   changed to "reg".**
   - Old icon was a generic crown clipart on a rounded-square badge sitting
