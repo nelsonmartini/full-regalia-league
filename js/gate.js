@@ -12,7 +12,7 @@
  *     .then(b => console.log(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,"0")).join("")))
  * and paste the result below.
  */
-const GATE_PASSPHRASE_HASH = "f7a97689f723d320fdb9339399a089f93a29d01cb36aced1eaf4dfba9ec298ee"; // "regalia2026"
+const GATE_PASSPHRASE_HASH = "748d8735530048af931c59b9a6566dfc6d39276fa049c6050f1e75d324aad8da"; // "reg"
 const GATE_KEY = "fr_gate_unlocked";
 
 async function sha256Hex(text) {

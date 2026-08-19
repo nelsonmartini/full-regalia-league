@@ -4,6 +4,30 @@
 
 ## Status
 
+- **DONE (2026-08-19): New app icon (cursive "FR" monogram) + passphrase
+  changed to "reg".**
+  - Old icon was a generic crown clipart on a rounded-square badge sitting
+    inside a navy border — wasted space on the actual 512/192/180px canvas
+    and didn't reflect the site's own established brand voice (the Pacifico
+    cursive + Anton bold-impact combo already used in the Home page's brand
+    quote). Explored 4 directions with Neil (cursive "F", crown + cursive
+    "Regalia" wordmark, crown full-bleed, cursive "FR") — landed on a bold
+    Pacifico "FR" monogram, full-bleed diagonal gradient (`#4a90d9` →
+    `#9cc4ec`, same colors/angle as `.picker-card`'s existing gradient),
+    kept within a safe-zone margin for maskable-icon cropping. Checked
+    legibility at real home-screen sizes (60/44/32px with rounded-corner
+    masking simulated) before committing — held up fine.
+    `icons/icon-192.png`, `icons/icon-512.png`, `icons/apple-touch-icon.png`
+    overwritten in place (same filenames/dimensions — no HTML/manifest
+    changes needed). **Note for Neil**: an icon already added to a phone's
+    home screen won't auto-update — remove and re-add it to see the new one.
+  - **Passphrase changed to "reg"** (was "regalia2026") — updated
+    `GATE_PASSPHRASE_HASH` in `js/gate.js` per the file's own documented
+    "how to change this" instructions. Case-insensitive, same as before.
+    Verified via Playwright (5/5): wrong passphrase stays locked, correct
+    passphrase (any case) unlocks and persists to localStorage.
+  - `sw.js` bumped since `icon-192.png` is cached in `SHELL`.
+
 - **DONE (2026-08-19): Analytics reworked into a real players-vs-players
   comparison table (was one card per player).**
   - Per Neil: Analytics should be "players against players against the 4
