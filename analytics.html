@@ -34,9 +34,28 @@
 <main class="app">
   <p class="page-sub" style="margin-bottom:0"><a class="link" href="index.html">← Back home</a></p>
   <h1 class="page-title">Analytics</h1>
-  <p class="page-sub">Team and player trends against the same 4 betting categories used for picks — computed live from this season's results, no separate data entry.</p>
+  <p class="page-sub">Players against players, and teams against their own lines — the same 4 betting categories used for picks, computed live from this season's results.</p>
 
-  <div class="section-label">Team trends</div>
+  <div class="section-label">Player comparison</div>
+  <div id="player-trends-empty" class="card" style="display:none">
+    <div class="empty-state">🏈 No graded picks yet — check back once the season's underway.</div>
+  </div>
+  <div class="card" id="player-compare-wrap" style="display:none;overflow-x:auto;padding:8px 4px">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th title="Minus Spread">−</th>
+          <th title="Plus Spread">+</th>
+          <th title="Over">▲</th>
+          <th title="Under">▼</th>
+        </tr>
+      </thead>
+      <tbody id="player-compare-body"></tbody>
+    </table>
+  </div>
+
+  <div class="section-label" style="margin-top:20px">Team trends</div>
   <div id="team-trends-picker" style="display:none">
     <div class="card" style="padding:14px 16px">
       <div class="chip-row" id="team-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
@@ -49,12 +68,6 @@
     </div>
   </div>
   <div id="team-detail"></div>
-
-  <div class="section-label" style="margin-top:20px">Player trends</div>
-  <div id="player-trends-empty" class="card" style="display:none">
-    <div class="empty-state">🏈 No graded picks yet — check back once the season's underway.</div>
-  </div>
-  <div id="player-trends-list"></div>
 </main>
 
 <nav class="bottom-nav">
@@ -204,28 +217,37 @@
       teamDetail.innerHTML = `<div class="card"><div class="empty-state">📊 No completed games yet this season — team trends will populate automatically once games start finishing.</div></div>`;
     }
 
-    // ---------- Player trends ----------
+    // ---------- Player comparison ----------
+    // A true players-vs-players table (not one card per player) — the point
+    // is scanning across a row/column to compare, e.g. "who's actually good
+    // at Unders." Each player's own full history/points trend still lives
+    // on player.html, linked from the name cell — this table is purely the
+    // category-comparison view.
     const anyGraded = graded.some((gp) => gp.result);
     const playerTrendsEmpty = document.getElementById("player-trends-empty");
-    const playerTrendsList = document.getElementById("player-trends-list");
+    const playerCompareWrap = document.getElementById("player-compare-wrap");
+    const playerCompareBody = document.getElementById("player-compare-body");
 
     if (!anyGraded) {
       playerTrendsEmpty.style.display = "block";
     } else {
-      playerTrendsList.innerHTML = LEAGUE_PLAYERS.map((p) => {
+      playerCompareWrap.style.display = "block";
+      const compareCell = (bucket) => {
+        const pct = coverPct(bucket);
+        return `<td>${pct == null ? "–" : pct + "%"}</td>`;
+      };
+      playerCompareBody.innerHTML = LEAGUE_PLAYERS.map((p) => {
         const record = computePlayerCategoryRecord(p.name, graded);
         return `
-          <div class="card">
-            <div class="card-title">
-              <a class="link" href="player.html?name=${encodeURIComponent(p.name)}" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;font-weight:800;color:var(--text)">
-                ${avatarHtml(p.name, 24)}${titleCase(p.name)}
-              </a>
-            </div>
-            ${statRowHtml("Minus Spread", record.minus)}
-            ${statRowHtml("Plus Spread", record.plus)}
-            ${statRowHtml("Over", record.over)}
-            ${statRowHtml("Under", record.under)}
-          </div>`;
+          <tr>
+            <td class="compare-table-player">
+              <a href="player.html?name=${encodeURIComponent(p.name)}">${avatarHtml(p.name, 22)}<span>${titleCase(p.name)}</span></a>
+            </td>
+            ${compareCell(record.minus)}
+            ${compareCell(record.plus)}
+            ${compareCell(record.over)}
+            ${compareCell(record.under)}
+          </tr>`;
       }).join("");
     }
   })();

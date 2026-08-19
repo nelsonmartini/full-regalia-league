@@ -4,6 +4,26 @@
 
 ## Status
 
+- **DONE (2026-08-19): Analytics reworked into a real players-vs-players
+  comparison table (was one card per player).**
+  - Per Neil: Analytics should be "players against players against the 4
+    categories, then teams against the betting categories" — a player's own
+    history/points trend stays on `player.html` only ("their own card and
+    scores"); Analytics is purely the cross-entity comparison view.
+  - **Player comparison** is now a real `<table>` (new `.compare-table` CSS)
+    — one row per roster player, one column per category (using the same
+    −/+/▲/▼ icons as the Picks page's `CATEGORY_ICON`), so you can scan
+    across and compare, e.g., who's actually good at Unders — the thing a
+    stack of individual cards couldn't do at a glance. Missing data renders
+    as "–", not "0%" (same care as elsewhere — no data isn't the same as
+    "always misses"). Name cell links to `player.html?name=X`.
+    Section reordered above Team trends to match "players... then teams."
+  - Team trends section itself is unchanged (sport toggle → team select →
+    detail card) — that was already "teams vs. the betting categories."
+  - Verified via Playwright, 21/21 (updated from the prior 22 — the
+    per-player-card assertions were replaced with table-row/cell
+    assertions) + the full 31/31 site regression suite.
+
 - **DONE (2026-08-19): "Live" renamed to "Games" + team names now link to
   Analytics + picker "Change" hint.**
   - **Nav rename**: the bottom-nav tab (all 8 pages), the Home hub-grid card,
