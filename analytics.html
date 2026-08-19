@@ -37,10 +37,7 @@
   <p class="page-sub">Team and player trends against the same 4 betting categories used for picks — computed live from this season's results, no separate data entry.</p>
 
   <div class="section-label">Team trends</div>
-  <div id="team-trends-empty" class="card" style="display:none">
-    <div class="empty-state">📊 No completed games yet this season — team trends will populate automatically once games start finishing.</div>
-  </div>
-  <div id="team-trends-content" style="display:none">
+  <div id="team-trends-picker" style="display:none">
     <div class="card" style="padding:14px 16px">
       <div class="chip-row" id="team-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
         <div class="chip selected" data-sport="nfl">🏈 NFL</div>
@@ -50,8 +47,8 @@
         <option value="">Select a team…</option>
       </select>
     </div>
-    <div id="team-detail"></div>
   </div>
+  <div id="team-detail"></div>
 
   <div class="section-label" style="margin-top:20px">Player trends</div>
   <div id="player-trends-empty" class="card" style="display:none">
@@ -66,7 +63,7 @@
     <a class="nav-item" data-page="picks.html" href="picks.html"><span class="icon">📝</span>Picks</a>
     <a class="nav-item" data-page="standings.html" href="standings.html"><span class="icon">🏆</span>Standings</a>
     <a class="nav-item" data-page="history.html" href="history.html"><span class="icon">📜</span>History</a>
-    <a class="nav-item" data-page="live.html" href="live.html"><span class="icon">📡</span>Live</a>
+    <a class="nav-item" data-page="live.html" href="live.html"><span class="icon">📡</span>Games</a>
     <a class="nav-item" data-page="betting-guide.html" href="betting-guide.html"><span class="icon">📘</span>Guide</a>
   </div>
 </nav>
@@ -140,39 +137,48 @@
 
     // ---------- Team trends ----------
     const allTeams = teamsWithFinishedGames(games);
-    const teamTrendsEmpty = document.getElementById("team-trends-empty");
-    const teamTrendsContent = document.getElementById("team-trends-content");
+    const teamTrendsPicker = document.getElementById("team-trends-picker");
     const teamSelect = document.getElementById("team-select");
     const teamDetail = document.getElementById("team-detail");
     const teamSportToggle = document.getElementById("team-sport-toggle");
 
     const params = new URLSearchParams(location.search);
-    let teamSport = params.get("sport") === "cfb" ? "cfb" : "nfl";
+    const deepLinkTeam = (params.get("team") || "").toUpperCase();
+    const deepLinkSport = params.get("sport") === "cfb" ? "cfb" : params.get("sport") === "nfl" ? "nfl" : null;
+    let teamSport = deepLinkSport || "nfl";
 
-    if (allTeams.length === 0) {
-      teamTrendsEmpty.style.display = "block";
-    } else {
-      teamTrendsContent.style.display = "block";
+    function renderTeamOptions() {
+      const opts = allTeams.filter((t) => t.sport === teamSport);
+      teamSelect.innerHTML = '<option value="">Select a team…</option>' + opts.map((t) => `<option value="${t.abbr}">${t.abbr} — ${t.name}</option>`).join("");
+    }
 
-      function renderTeamOptions() {
-        const opts = allTeams.filter((t) => t.sport === teamSport);
-        teamSelect.innerHTML = '<option value="">Select a team…</option>' + opts.map((t) => `<option value="${t.abbr}">${t.abbr} — ${t.name}</option>`).join("");
+    // Always resolves to something meaningful — including "no finished games
+    // for THIS team yet" — rather than only working once at least one team
+    // somewhere has played. A team link tapped in week 1 should say that,
+    // not silently do nothing just because allTeams is still empty.
+    function renderTeamDetail(abbr) {
+      if (!abbr) {
+        teamDetail.innerHTML = "";
+        return;
       }
-
-      function renderTeamDetail(abbr) {
-        if (!abbr) {
-          teamDetail.innerHTML = "";
-          return;
-        }
-        const record = computeTeamRecord(games, abbr);
-        teamDetail.innerHTML = `
-          <div class="card">
-            <div class="card-title">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
-            ${statRowHtml("Minus Spread", record.minus)}
-            ${statRowHtml("Plus Spread", record.plus)}
-            ${teamOuSplitHtml(record)}
-          </div>`;
+      const record = computeTeamRecord(games, abbr);
+      if (record.gamesCounted === 0) {
+        teamDetail.innerHTML = `<div class="card"><div class="empty-state">No finished games yet for ${abbr} this season — check back once they've played.</div></div>`;
+        return;
       }
+      teamDetail.innerHTML = `
+        <div class="card">
+          <div class="card-title">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
+          ${statRowHtml("Minus Spread", record.minus)}
+          ${statRowHtml("Plus Spread", record.plus)}
+          ${teamOuSplitHtml(record)}
+        </div>`;
+    }
+
+    if (allTeams.length > 0) {
+      teamTrendsPicker.style.display = "block";
+      renderTeamOptions();
+      teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c.getAttribute("data-sport") === teamSport));
 
       teamSportToggle.addEventListener("click", (e) => {
         const chip = e.target.closest("[data-sport]");
@@ -186,19 +192,16 @@
       });
 
       teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value));
+    }
 
-      renderTeamOptions();
-
-      // Deep-link support: ?team=ABBR&sport=nfl|cfb — lets team names
-      // elsewhere in the app (Picks chips, Live cards) link straight here
-      // once that wiring gets picked up.
-      const deepLinkTeam = (params.get("team") || "").toUpperCase();
-      if (deepLinkTeam && allTeams.some((t) => t.abbr === deepLinkTeam && t.sport === teamSport)) {
-        teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c.getAttribute("data-sport") === teamSport));
-        renderTeamOptions();
-        teamSelect.value = deepLinkTeam;
-        renderTeamDetail(deepLinkTeam);
-      }
+    // Deep-link support: ?team=ABBR&sport=nfl|cfb — the Games page's team
+    // rows link here. Resolved independently of the picker above so it
+    // works even before any team anywhere has a finished game.
+    if (deepLinkTeam) {
+      if (allTeams.length > 0) teamSelect.value = deepLinkTeam;
+      renderTeamDetail(deepLinkTeam);
+    } else if (allTeams.length === 0) {
+      teamDetail.innerHTML = `<div class="card"><div class="empty-state">📊 No completed games yet this season — team trends will populate automatically once games start finishing.</div></div>`;
     }
 
     // ---------- Player trends ----------

@@ -469,6 +469,19 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-faint);
 }
 
+/* Team rows link into that team's Analytics trends — reset the anchor
+ * defaults so a linked row looks identical to the "?" placeholder (still a
+ * plain div when a team's abbr is missing), plus a light tap affordance. */
+a.game-card-team {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+a.game-card-team:active {
+  opacity: 0.65;
+}
+
 .game-card-team-abbr {
   font-size: 14.5px;
   font-weight: 800;

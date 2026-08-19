@@ -4,6 +4,45 @@
 
 ## Status
 
+- **DONE (2026-08-19): "Live" renamed to "Games" + team names now link to
+  Analytics + picker "Change" hint.**
+  - **Nav rename**: the bottom-nav tab (all 8 pages), the Home hub-grid card,
+    the "Home scores & odds" card copy on Home, and the betting-guide's
+    per-tab explainer all now say "Games" instead of "Live" — filename/URL
+    (`live.html`) and `data-page="live.html"` unchanged (active-nav
+    highlighting keys off that, not the label — verified before renaming),
+    so nothing else needed to change. `<title>` updated too.
+  - **Team names on the Games page now link into Analytics** —
+    `gameCardTeamRow()` (`js/live-scores.js`) wraps each team's abbr+name+
+    score in an `<a href="analytics.html?team=ABBR&sport=nfl|cfb">` (whole
+    row is one tap target, matching how `.standings-row` already works for
+    players). New `css/style.css` rule (`a.game-card-team`) resets anchor
+    defaults so it's visually identical to before, just tappable.
+    **Deliberately not done on the Picks page's category chips** — a chip
+    there is already the tap target for making a pick; a second meaning on
+    the same tap would be confusing (Neil's call).
+  - **Analytics deep-link handling made more robust**: previously a
+    `?team=X` link only resolved if `allTeams` (teams with ANY finished game
+    this season) was non-empty — meaning every team link would silently do
+    nothing until the first game of the season finished. Refactored so
+    `renderTeamDetail()` always resolves independently of the picker UI: a
+    team with 0 finished games now shows "No finished games yet for X this
+    season" by name, instead of just falling through to the generic
+    "no completed games yet" card or doing nothing. Also removed the
+    now-redundant static `#team-trends-empty` block — both the generic and
+    per-team empty messages render dynamically into `#team-detail`.
+  - **Picker "Change" hint** (Picks page): the player name/avatar picker
+    didn't read as clickable. Wrapped the `<select>` in a
+    `<label for="player-select">` alongside a small accent-colored
+    "Change ▾" hint at the far right of the row — tapping the hint also
+    opens the dropdown (native label-for-select behavior), no JS needed.
+  - Verified via Playwright: 31/31 (full-site regression) + 22/22
+    (Analytics-specific, including a hand-hit port-collision hang in the
+    test harness itself — fixed by giving each scenario its own port and
+    handling the server's `error` event instead of only `listen`'s
+    callback, which had been silently deadlocking two sequential scenarios
+    that reused one port).
+
 - **DONE (2026-08-16): Team + player trends built into `analytics.html`**
   (was a "coming soon" stub; now a real page, still linked from the Home hub
   card, copy updated from "Coming soon"/"Preview →" to reflect that).

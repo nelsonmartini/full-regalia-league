@@ -151,15 +151,23 @@ function formatFullDate(iso) {
  * truncates rather than wraps), and score (right-aligned, only shown once
  * the game has actually started). The winning side (once final) is brought
  * up to full text color so the result reads at a glance without needing to
- * compare two numbers. */
-function gameCardTeamRow(team, showScore, isWinner, isHome) {
+ * compare two numbers.
+ *
+ * The whole row links into that team's Analytics trends
+ * (analytics.html?team=X&sport=Y) — deliberately only wired up here (not on
+ * the Picks page's category chips), since a chip there is already a tap
+ * target for making a pick and a second meaning on the same tap would be
+ * confusing. Games/Live has no such conflict — nothing here is clickable
+ * for any other reason. */
+function gameCardTeamRow(team, sport, showScore, isWinner, isHome) {
   const homeMark = isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : "";
-  return `
-    <div class="game-card-team${isWinner ? " is-winner" : ""}">
-      <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
-      <span class="game-card-team-name">${homeMark}${team?.name || ""}</span>
-      ${showScore ? `<span class="game-card-team-score">${team?.score ?? "-"}</span>` : ""}
-    </div>`;
+  const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
+  const inner = `
+    <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
+    <span class="game-card-team-name">${homeMark}${team?.name || ""}</span>
+    ${showScore ? `<span class="game-card-team-score">${team?.score ?? "-"}</span>` : ""}`;
+  if (!team?.abbr) return `<div class="${classes}">${inner}</div>`;
+  return `<a class="${classes}" href="analytics.html?team=${encodeURIComponent(team.abbr)}&sport=${sport}">${inner}</a>`;
 }
 
 function renderGameCard(g) {
@@ -192,8 +200,8 @@ function renderGameCard(g) {
         ${statusHtml}
       </div>
       <div class="game-card-teams">
-        ${gameCardTeamRow(g.away, showScore, awayWins, false)}
-        ${gameCardTeamRow(g.home, showScore, homeWins, true)}
+        ${gameCardTeamRow(g.away, g.sport, showScore, awayWins, false)}
+        ${gameCardTeamRow(g.home, g.sport, showScore, homeWins, true)}
       </div>
       ${oddsHtml}
     </div>`;
