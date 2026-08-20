@@ -4,6 +4,27 @@
 
 ## Status
 
+- **DONE (2026-08-19): "Crown Week" sequential numbering + week-picker
+  header layout cleanup, per Neil.**
+  - Regalia Week numbering is now purely positional (1, 2, 3, ... in
+    chronological order across the merged NFL+NCAA-only list), not derived
+    from either sport's own week number. Previously an NFL-paired week
+    showed the NFL's number and an NCAA-only week (see the fix just above)
+    showed the NCAA's — both could independently read "Week 1" and looked
+    like a duplicate/typo. Title text simplified to just "👑 Crown Week N"
+    (dropped the "NCAA Week N" special-case and the "Picks" suffix).
+  - **Header layout fixed**: the date range used to be baked into the same
+    title string as "Crown Week N" + the Current/Next badge, all one line —
+    overflowing/wrapping badly on narrow phones. Now a separate smaller
+    line beneath the title, both in the collapsed header
+    (`.week-picker-current-title` / `.week-picker-current-sub`, new CSS)
+    and in each expanded row (date range moved into the existing
+    `.week-picker-row-sub` line alongside the NFL/NCAA breakdown).
+  - Verified via Playwright (12/12): sequential numbering across a CFB-only
+    week + an NFL-paired week, title/date genuinely on separate DOM
+    elements (not just visually wrapped), plus the full 31/31 site
+    regression suite.
+
 - **FIXED (2026-08-19): most of NCAA's Week 1 games were invisible on the
   Picks page (real bug, reported by Neil, confirmed against live ESPN
   data).**

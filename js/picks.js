@@ -212,7 +212,6 @@ function buildRegaliaWeeks(gamesBySport) {
   const nflEntries = nflWeeks.map((nfl) => {
     const cfbMatch = linkedCfbByNflKey.get(nfl.key) ?? null;
     return {
-      regaliaWeekNumber: nfl.weekNumber,
       nflWeekKey: nfl.key,
       nflWeekNumber: nfl.weekNumber,
       nflSeasonType: nfl.seasonType,
@@ -235,7 +234,6 @@ function buildRegaliaWeeks(gamesBySport) {
   const cfbOnlyEntries = cfbWeeks
     .filter((cfb) => !usedCfbKeys.has(cfb.key))
     .map((cfb) => ({
-      regaliaWeekNumber: cfb.weekNumber,
       nflWeekKey: null,
       nflWeekNumber: null,
       nflSeasonType: null,
@@ -245,7 +243,17 @@ function buildRegaliaWeeks(gamesBySport) {
       endDate: cfb.endDate,
     }));
 
-  return [...nflEntries, ...cfbOnlyEntries].sort((a, b) => a.startDate - b.startDate);
+  // "Crown Week" numbering is purely positional (1, 2, 3, ... in chronological
+  // order) — deliberately NOT either sport's own week number. Before this,
+  // an NFL-paired week showed the NFL's number and a CFB-only week showed
+  // the NCAA's, which could both land on "Week 1" independently and read as
+  // a duplicate/typo (confirmed confusing, per Neil). One continuous
+  // sequence sidesteps that entirely — the NFL/NCAA-specific numbers still
+  // show in the row's subline (see renderWeekPickerList), just not in the
+  // headline number.
+  return [...nflEntries, ...cfbOnlyEntries]
+    .sort((a, b) => a.startDate - b.startDate)
+    .map((week, i) => ({ ...week, regaliaWeekNumber: i + 1 }));
 }
 
 function regaliaWeekDateRange(week) {
@@ -253,19 +261,16 @@ function regaliaWeekDateRange(week) {
   return fmt(week.startDate) === fmt(week.endDate) ? fmt(week.startDate) : `${fmt(week.startDate)}–${fmt(week.endDate)}`;
 }
 
-/** The 👑 is deliberate — it's the site's own existing crown mark, reused
- * here as a quick visual cue that "Week N" means OUR unified week, not
- * either sport's own native week number (which can, and often does, differ
- * from this one — see buildRegaliaWeeks above). */
+/** "Crown Week N" — deliberately just one short line with no date range
+ * baked in (that's a separate sub-line now, see renderWeekPicker/
+ * renderWeekPickerList — cramming both into one line was overflowing on
+ * narrow phones, confirmed by Neil). The 👑 + "Crown Week" naming is the
+ * quick visual cue that this number is OUR unified sequence, not either
+ * sport's own native week number (which can, and often does, differ from
+ * this one — see buildRegaliaWeeks above, where the NFL/NCAA-specific
+ * numbers still show in the row subline). */
 function regaliaWeekTitle(week) {
-  // NFL-less week (see buildRegaliaWeeks) — label it by its NCAA week number
-  // instead of "Week N", which would collide with a later NFL-numbered week
-  // sharing the same number and read as a duplicate/typo.
-  if (week.nflWeekKey == null) {
-    return `👑 NCAA Week ${week.cfbWeekNumber} Picks · ${regaliaWeekDateRange(week)}`;
-  }
-  const prefix = SEASON_PHASE_PREFIX[week.nflSeasonType] ?? "";
-  return `👑 ${prefix}Week ${week.regaliaWeekNumber} Picks · ${regaliaWeekDateRange(week)}`;
+  return `👑 Crown Week ${week.regaliaWeekNumber}`;
 }
 
 /** Build the 4 category pools (one option per eligible game) for a set of
@@ -567,7 +572,7 @@ function renderWeekPickerList(container, regaliaWeeks, selectedIndex, currentInd
       return `
         <div class="week-picker-row${i === selectedIndex ? " selected" : ""}" data-week-index="${i}">
           <div class="week-picker-row-title">${regaliaWeekTitle(week)} ${badge}</div>
-          <div class="week-picker-row-sub">${nflText} &nbsp;·&nbsp; ${cfbText}</div>
+          <div class="week-picker-row-sub">${regaliaWeekDateRange(week)} &nbsp;·&nbsp; ${nflText} &nbsp;·&nbsp; ${cfbText}</div>
         </div>`;
     })
     .join("");
@@ -666,7 +671,13 @@ async function initPicksPage() {
           : selectedRegaliaIndex === currentRegaliaIndex + 1
           ? `<span class="badge next">Next</span>`
           : "";
-      weekPickerCurrent.innerHTML = `${regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex])} ${badge}`;
+      const selectedWeek = regaliaWeeks[selectedRegaliaIndex];
+      // Title and date range are separate lines — cramming both plus the
+      // badge into one line was overflowing/wrapping badly on narrow phones
+      // (confirmed by Neil).
+      weekPickerCurrent.innerHTML = `
+        <span class="week-picker-current-title">${regaliaWeekTitle(selectedWeek)} ${badge}</span>
+        <span class="week-picker-current-sub">${regaliaWeekDateRange(selectedWeek)}</span>`;
     }
     renderWeekPickerList(weekPickerList, regaliaWeeks, selectedRegaliaIndex, currentRegaliaIndex);
   }

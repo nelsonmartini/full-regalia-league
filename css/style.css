@@ -585,6 +585,29 @@ a.game-card-team:active {
   font-size: 14px;
 }
 
+/* Title ("Crown Week N" + badge) and the date range are separate lines —
+ * both crammed onto one line was overflowing on narrow phones. min-width: 0
+ * lets this shrink inside the header's flex row instead of forcing it wide. */
+#week-picker-current {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.week-picker-current-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.week-picker-current-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
 /* Given extra visual weight — this is the single most important control on
  * the page for knowing what to pick, so it needs to read as more important
  * than an ordinary card, similar treatment to .picker-card's accent tint. */
