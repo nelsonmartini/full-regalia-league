@@ -4,6 +4,21 @@
 
 ## Status
 
+- **CORRECTED (2026-08-20): reverted "Crown Week N" wording, restored
+  single-line header.** Neil's earlier ask ("should just be Crown Week 1")
+  meant the crown *emoji* — spelling out the word "Crown" too, alongside the
+  emoji, read as redundant ("can't have both"). Title text is back to
+  "👑 Week N" (emoji only). Also reverted the two-line collapsed-header
+  split from the same session — the actual fix for the original overflow
+  complaint was making the date range visually smaller
+  (`.week-picker-current-date`, 12px/faint vs. the week number's larger
+  bold), not moving it to its own line; it's back on the same line as the
+  week number + Current/Next badge, sized down so it fits. The sequential
+  positional numbering (1, 2, 3... instead of either sport's own week
+  number) is unchanged — that part wasn't what Neil was objecting to.
+  Verified via Playwright (12/12, updated assertions) + full 31/31 site
+  regression suite; confirmed header renders as a single ~23px-tall line.
+
 - **DONE (2026-08-19): "Crown Week" sequential numbering + week-picker
   header layout cleanup, per Neil.**
   - Regalia Week numbering is now purely positional (1, 2, 3, ... in

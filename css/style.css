@@ -585,24 +585,20 @@ a.game-card-team:active {
   font-size: 14px;
 }
 
-/* Title ("Crown Week N" + badge) and the date range are separate lines —
- * both crammed onto one line was overflowing on narrow phones. min-width: 0
- * lets this shrink inside the header's flex row instead of forcing it wide. */
+/* Week number, date range, and badge all stay on one line — the date range
+ * is deliberately a smaller/lighter weight than the week number so the
+ * whole thing fits without wrapping on narrow phones (that was the actual
+ * overflow problem, not needing two lines). min-width: 0 lets this shrink
+ * inside the header's flex row instead of forcing it wide. */
 #week-picker-current {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.week-picker-current-title {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
-.week-picker-current-sub {
+.week-picker-current-date {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-faint);

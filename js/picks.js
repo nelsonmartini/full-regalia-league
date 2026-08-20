@@ -261,16 +261,16 @@ function regaliaWeekDateRange(week) {
   return fmt(week.startDate) === fmt(week.endDate) ? fmt(week.startDate) : `${fmt(week.startDate)}–${fmt(week.endDate)}`;
 }
 
-/** "Crown Week N" — deliberately just one short line with no date range
- * baked in (that's a separate sub-line now, see renderWeekPicker/
- * renderWeekPickerList — cramming both into one line was overflowing on
- * narrow phones, confirmed by Neil). The 👑 + "Crown Week" naming is the
- * quick visual cue that this number is OUR unified sequence, not either
- * sport's own native week number (which can, and often does, differ from
- * this one — see buildRegaliaWeeks above, where the NFL/NCAA-specific
+/** "👑 Week N" — the crown emoji itself IS the "Crown Week" branding
+ * (spelling out the word too read as redundant, per Neil — one or the
+ * other, not both). Date range is appended separately by callers in a
+ * smaller font rather than baked in here, so it stays on the same line
+ * without dominating it. The number itself is OUR unified sequence, not
+ * either sport's own native week number (which can, and often does, differ
+ * from this one — see buildRegaliaWeeks above, where the NFL/NCAA-specific
  * numbers still show in the row subline). */
 function regaliaWeekTitle(week) {
-  return `👑 Crown Week ${week.regaliaWeekNumber}`;
+  return `👑 Week ${week.regaliaWeekNumber}`;
 }
 
 /** Build the 4 category pools (one option per eligible game) for a set of
@@ -672,12 +672,13 @@ async function initPicksPage() {
           ? `<span class="badge next">Next</span>`
           : "";
       const selectedWeek = regaliaWeeks[selectedRegaliaIndex];
-      // Title and date range are separate lines — cramming both plus the
-      // badge into one line was overflowing/wrapping badly on narrow phones
-      // (confirmed by Neil).
+      // One line: crown + week number, then the date range in a smaller
+      // font (not the same size as the week number — that's what was
+      // overflowing narrow phones before), then the badge.
       weekPickerCurrent.innerHTML = `
-        <span class="week-picker-current-title">${regaliaWeekTitle(selectedWeek)} ${badge}</span>
-        <span class="week-picker-current-sub">${regaliaWeekDateRange(selectedWeek)}</span>`;
+        ${regaliaWeekTitle(selectedWeek)}
+        <span class="week-picker-current-date">${regaliaWeekDateRange(selectedWeek)}</span>
+        ${badge}`;
     }
     renderWeekPickerList(weekPickerList, regaliaWeeks, selectedRegaliaIndex, currentRegaliaIndex);
   }
