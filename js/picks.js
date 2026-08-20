@@ -209,7 +209,7 @@ function buildRegaliaWeeks(gamesBySport) {
     usedCfbKeys.add(pair.cfb.key);
   }
 
-  return nflWeeks.map((nfl) => {
+  const nflEntries = nflWeeks.map((nfl) => {
     const cfbMatch = linkedCfbByNflKey.get(nfl.key) ?? null;
     return {
       regaliaWeekNumber: nfl.weekNumber,
@@ -222,6 +222,30 @@ function buildRegaliaWeeks(gamesBySport) {
       endDate: nfl.endDate,
     };
   });
+
+  // College football's season starts ~2 weeks before the NFL's, so its
+  // season-opening week (or two) has no NFL week close enough to pair with
+  // (real case, confirmed 2026-08-19: NFL's only pickable week was Week 1
+  // starting Sep 10, which paired with CFB Week 2 — the nearer of the two —
+  // leaving CFB Week 1 (98 games, nearly full odds coverage) completely
+  // unlinked and therefore invisible in this list, even though it's the
+  // most complete, most pickable week available). Surface those orphaned
+  // CFB weeks as their own NCAA-only Regalia Week entries instead of
+  // silently dropping them.
+  const cfbOnlyEntries = cfbWeeks
+    .filter((cfb) => !usedCfbKeys.has(cfb.key))
+    .map((cfb) => ({
+      regaliaWeekNumber: cfb.weekNumber,
+      nflWeekKey: null,
+      nflWeekNumber: null,
+      nflSeasonType: null,
+      cfbWeekKey: cfb.key,
+      cfbWeekNumber: cfb.weekNumber,
+      startDate: cfb.startDate,
+      endDate: cfb.endDate,
+    }));
+
+  return [...nflEntries, ...cfbOnlyEntries].sort((a, b) => a.startDate - b.startDate);
 }
 
 function regaliaWeekDateRange(week) {
@@ -234,6 +258,12 @@ function regaliaWeekDateRange(week) {
  * either sport's own native week number (which can, and often does, differ
  * from this one — see buildRegaliaWeeks above). */
 function regaliaWeekTitle(week) {
+  // NFL-less week (see buildRegaliaWeeks) — label it by its NCAA week number
+  // instead of "Week N", which would collide with a later NFL-numbered week
+  // sharing the same number and read as a duplicate/typo.
+  if (week.nflWeekKey == null) {
+    return `👑 NCAA Week ${week.cfbWeekNumber} Picks · ${regaliaWeekDateRange(week)}`;
+  }
   const prefix = SEASON_PHASE_PREFIX[week.nflSeasonType] ?? "";
   return `👑 ${prefix}Week ${week.regaliaWeekNumber} Picks · ${regaliaWeekDateRange(week)}`;
 }
@@ -532,11 +562,12 @@ function renderWeekPickerList(container, regaliaWeeks, selectedIndex, currentInd
   container.innerHTML = regaliaWeeks
     .map((week, i) => {
       const badge = i === currentIndex ? `<span class="badge live">Current</span>` : i === currentIndex + 1 ? `<span class="badge next">Next</span>` : "";
+      const nflText = week.nflWeekNumber != null ? `NFL: Week ${week.nflWeekNumber}` : `NFL: not posted yet`;
       const cfbText = week.cfbWeekNumber != null ? `NCAA: Week ${week.cfbWeekNumber}` : `NCAA: not posted yet`;
       return `
         <div class="week-picker-row${i === selectedIndex ? " selected" : ""}" data-week-index="${i}">
           <div class="week-picker-row-title">${regaliaWeekTitle(week)} ${badge}</div>
-          <div class="week-picker-row-sub">NFL: Week ${week.nflWeekNumber} &nbsp;·&nbsp; ${cfbText}</div>
+          <div class="week-picker-row-sub">${nflText} &nbsp;·&nbsp; ${cfbText}</div>
         </div>`;
     })
     .join("");

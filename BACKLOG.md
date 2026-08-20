@@ -4,6 +4,56 @@
 
 ## Status
 
+- **FIXED (2026-08-19): most of NCAA's Week 1 games were invisible on the
+  Picks page (real bug, reported by Neil, confirmed against live ESPN
+  data).**
+  - Root cause: college football's season starts about 2 weeks before the
+    NFL's. Checked live data the same day — CFB Week 1 (Aug 29–Sep 7) had
+    98/99 games with odds already posted (essentially complete coverage);
+    CFB Week 2 (Sep 11–13) had only 7/86. But the NFL's only pickable week
+    right then was Week 1, starting Sep 10 — and `buildRegaliaWeeks()`'s
+    nearest-date pairing correctly matched that to CFB Week 2 (Sep 12, the
+    closer of the two), not CFB Week 1 (Aug 29, ~12 days off). Since the old
+    code only ever iterated `nflWeeks.map(...)`, any CFB week that lost its
+    pairing — here, the one with the *most* pickable games — was silently
+    dropped from `regaliaWeeks` entirely, not just deprioritized. The
+    "current" week ended up pointing at the 7-game CFB week while the
+    98-game week was completely unreachable through the UI. This is what
+    Neil saw as "a very large amount of the [NCAA] games are missing."
+  - Fix: `buildRegaliaWeeks()` (`js/picks.js`) now also surfaces any CFB
+    week that didn't win an NFL pairing as its own NCAA-only Regalia Week
+    entry (`nflWeekKey: null`), merged into the same chronologically-sorted
+    list instead of being dropped. `regaliaWeekTitle()` labels these "NCAA
+    Week N" (not "Week N", which would collide with a later NFL-numbered
+    week sharing the same number) and the week-picker row's subline now
+    shows "NFL: not posted yet" — mirroring the fallback text that already
+    existed for the reverse case (NFL week with no CFB match yet).
+  - Verified against live ESPN data reproduced in a Playwright test (9/9):
+    the CFB-only week now appears as "Current" with all 3 (of the real 98)
+    sample games reachable as pick options, the NFL-Week-1/CFB-Week-2
+    pairing still appears correctly as "Next," and the NFL section for the
+    CFB-only week shows its own honest "no games posted yet" rather than
+    crashing or bleeding in the wrong week's games. Plus the full 31/31 site
+    regression suite.
+
+- **New backlog (2026-08-19): Analytics discoverability follow-ups**, not
+  built yet:
+  - `player.html` has no link back into the Analytics comparison table —
+    currently the link only goes one direction (Analytics' player rows link
+    to `player.html`, nothing links back). Cheap, obviously-good fix: a
+    small "See how everyone compares →" link on `player.html` pointing to
+    `analytics.html`.
+  - Analytics is still only reachable via the Home hub card and the Games
+    page's team links — it's not in the bottom nav on any page, and isn't
+    even in its *own* nav bar (visiting `analytics.html` shows the standard
+    6 tabs with nothing highlighted active, since it's not in any page's
+    `data-page` list). Whether it deserves its own bottom-nav tab now that
+    it actually does something is a real layout decision (7th tab vs.
+    swapping one out) — **genuinely Neil's call, not decided**. Related to
+    the older "replace Live tab with Analytics" idea below, which was
+    explicitly deferred until the season's underway; worth revisiting
+    together rather than as two separate decisions.
+
 - **FIXED (2026-08-19): "Save my picks" button hidden behind the bottom nav
   on notched/gesture-nav phones (real bug, reported by Neil).**
   - Root cause: `.bottom-nav` pads itself by `env(safe-area-inset-bottom)`
