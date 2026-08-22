@@ -4,6 +4,63 @@
 
 ## Status
 
+- **NEEDS ACTION FROM NEIL: `anon` role still can't DELETE from `picks` —
+  confirmed broken via a live test today (2026-08-21), and it left a stray
+  test row in the production table that I can't remove myself.** This is
+  the same gap flagged (but never confirmed either way) back when the
+  category-swap feature was built — now definitively confirmed still
+  missing. Practical impact: swapping a category pick to a *different*
+  game doesn't work (picking a fresh, empty category is unaffected — that's
+  a plain insert). Run this in the Supabase SQL Editor (bypasses `anon`'s
+  RLS, so it'll work regardless of the grant status):
+  ```sql
+  grant delete on public.picks to anon;
+  create policy "Anyone can delete picks before kickoff"
+    on picks for delete using (kickoff_at > now());
+  delete from picks where player_name = 'CLAUDE_LOCK_TEST';
+  ```
+  The last line removes the stray test row (`game_id`
+  `lock-test-future-9999`, harmless fake data, kickoff year 2099 so it'll
+  never surface as a real pick — but should still be cleaned up).
+
+- **VERIFIED (2026-08-21): kickoff auto-lock is real and working today —
+  tested live, not just re-read from old notes.** Neil asked directly
+  whether picks actually lock once a game starts. Tested against the live
+  Supabase table: a raw insert with a kickoff time in the past was rejected
+  with a genuine RLS policy violation (HTTP 401, `new row violates
+  row-level security policy`); the identical insert with a future kickoff
+  succeeded (HTTP 201). Confirms `js/supabase-client.js`'s documented claim
+  — enforced at the database level, not just hidden in the UI — is
+  currently true in production, not just true as of whenever it was last
+  checked.
+
+- **DONE (2026-08-21): "Submitted" status now uses the actual pick count
+  for the week, not a hardcoded 8.** Neil caught that Week 1 (NCAA-only,
+  see the "Crown Week" entries above) could never show a player as
+  "Submitted" even after they'd completed all 4 available NCAA picks —
+  `renderWeekStatus`/`loadAndRenderStatus` required `total === 8` no matter
+  what, and with no NFL week linked yet, 8 was structurally impossible.
+  New `expectedPickTotal(sportWeeks)` returns 4 per sport that's actually
+  linked this week (4 for an NCAA-only week, 8 once both are linked) — used
+  for both the "✓ Submitted" badge and the "X of Y submitted this week"
+  summary count. Also stopped showing "NFL 0/4" on a week where NFL has
+  nothing posted yet (looked like someone forgot, not like there was
+  nothing to pick) — the per-player row now only lists the sport(s)
+  actually in play that week.
+
+- **DONE (2026-08-21): removed the "couple" label from every player
+  display**, per Neil ("just the user name is fine") — Standings rows,
+  `player.html`'s subtitle (now always "Season history"), and the admin
+  roster list. `findCouple()` removed as dead code once both its callers
+  were gone. Left the `players` table's `couple` column and admin.html's
+  optional "Couple label" input alone — not displayed anywhere now, but
+  not deleted either, in case it's wanted again later.
+  - Verified via Playwright (8/8): a fully-picked NCAA-only week correctly
+    shows "Submitted" (not stuck on "In progress"), the row omits the NFL
+    count entirely, and the couple label is confirmed absent from Picks,
+    Standings, and `player.html`. Plus the full 31/31 site regression
+    suite.
+
 - **CORRECTED (2026-08-20): reverted "Crown Week N" wording, restored
   single-line header.** Neil's earlier ask ("should just be Crown Week 1")
   meant the crown *emoji* — spelling out the word "Crown" too, alongside the

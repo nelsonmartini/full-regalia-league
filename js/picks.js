@@ -90,19 +90,37 @@ function computeWeekStatus(allPicksRows, sportWeeks) {
   }).sort((a, b) => a.total - b.total || a.name.localeCompare(b.name));
 }
 
-function renderWeekStatus(container, statusList) {
+/** How many total picks actually count as "done" this week — 4 per sport
+ * that's actually pickable right now, not a hardcoded 8. NCAA's season
+ * starting ~2 weeks before the NFL's means some weeks only have one sport
+ * linked (see buildRegaliaWeeks); requiring all 8 in that case made it
+ * impossible for anyone to ever show as "Submitted" for those weeks, even
+ * after completing every pick actually available (real gap, caught by
+ * Neil). */
+function expectedPickTotal(sportWeeks) {
+  return (sportWeeks.nfl != null ? 4 : 0) + (sportWeeks.cfb != null ? 4 : 0);
+}
+
+function renderWeekStatus(container, statusList, sportWeeks) {
+  const expectedTotal = expectedPickTotal(sportWeeks);
   container.innerHTML = statusList
     .map((s) => {
       const badge =
-        s.total === 8
+        expectedTotal > 0 && s.total === expectedTotal
           ? `<span style="color:var(--positive);font-weight:800;font-size:12.5px">✓ Submitted</span>`
           : s.total === 0
           ? `<span style="color:var(--text-faint);font-weight:700;font-size:12.5px">Not started</span>`
           : `<span style="color:var(--accent);font-weight:700;font-size:12.5px">In progress</span>`;
+      // Only show a sport's x/4 count when that sport actually has games to
+      // pick this week — showing "NFL 0/4" when NFL has nothing posted yet
+      // reads like a player forgot, not like there's nothing to pick.
+      const parts = [];
+      if (sportWeeks.nfl != null) parts.push(`NFL ${s.nfl}/4`);
+      if (sportWeeks.cfb != null) parts.push(`NCAA ${s.cfb}/4`);
       return `
         <a class="standings-row" href="player.html?name=${encodeURIComponent(s.name)}" style="grid-template-columns:32px 1fr auto;cursor:pointer">
           ${avatarHtml(s.name, 28)}
-          <div class="standings-name">${titleCase(s.name)}<span class="couple">NFL ${s.nfl}/4 · NCAA ${s.cfb}/4</span></div>
+          <div class="standings-name">${titleCase(s.name)}<span class="couple">${parts.join(" · ")}</span></div>
           <div>${badge}</div>
         </a>`;
     })
@@ -907,9 +925,9 @@ async function initPicksPage() {
     statusSummary.innerHTML = "<span>Loading who's picked…</span>";
     const allPicksRows = await loadAllPicks();
     const statusList = computeWeekStatus(allPicksRows, sportWeeks);
-    const submittedCount = statusList.filter((s) => s.total === 8).length;
+    const submittedCount = statusList.filter((s) => s.total === expectedPickTotal(sportWeeks)).length;
     statusSummary.innerHTML = `<span>${submittedCount} of ${statusList.length} submitted this week</span><span style="color:var(--accent)">${statusExpanded ? "▲ Hide" : "▼ Who's in?"}</span>`;
-    renderWeekStatus(weekStatusList, statusList);
+    renderWeekStatus(weekStatusList, statusList, sportWeeks);
   }
 
   // Bound to the summary header only, not the whole card — otherwise a click on a

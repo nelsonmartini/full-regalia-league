@@ -105,10 +105,9 @@
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows.filter((r) => r.player_name === name), games);
     const rows = computeHistoryEntries(graded).sort((a, b) => new Date(a.date) - new Date(b.date));
-    const couple = findCouple(name);
 
     document.getElementById("player-title").textContent = titleCase(name);
-    document.getElementById("player-sub").textContent = couple ? couple : "Season history";
+    document.getElementById("player-sub").textContent = "Season history";
     document.getElementById("player-avatar").innerHTML = avatarHtml(name, 56);
 
     if (rows.length === 0) {

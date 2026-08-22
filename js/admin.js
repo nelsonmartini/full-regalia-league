@@ -69,7 +69,7 @@ function renderRoster() {
         (p) => `
       <div class="standings-row" style="grid-template-columns:32px 1fr auto;cursor:default">
         ${avatarHtml(p.name, 28)}
-        <div class="standings-name">${titleCase(p.name)}${p.couple ? `<span class="couple">${p.couple}</span>` : ""}</div>
+        <div class="standings-name">${titleCase(p.name)}</div>
         <button class="btn btn-ghost" data-delete="${p.name}" style="padding:6px 12px;font-size:12.5px">Remove</button>
       </div>`
       ).join("")

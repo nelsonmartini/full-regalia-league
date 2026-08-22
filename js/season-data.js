@@ -7,24 +7,18 @@
  * this season is the first one tracked live in Supabase).
  *
  * Every page using this file must `await loadPlayers()` (js/players.js)
- * before calling findCouple()/renderStandingsRow(), and load js/pick-utils.js,
+ * before calling renderStandingsRow(), and load js/pick-utils.js,
  * js/live-scores.js and js/grading.js first.
  */
 
-function findCouple(name) {
-  const p = LEAGUE_PLAYERS.find((x) => x.name === name);
-  return p ? p.couple : null;
-}
-
 function renderStandingsRow(player, rank) {
-  const couple = findCouple(player.name);
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
   const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
   return `
     <a class="standings-row${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank">${medal}</div>
       ${avatarHtml(player.name, 32)}
-      <div class="standings-name">${titleCase(player.name)}${couple ? `<span class="couple">${couple}</span>` : ""}</div>
+      <div class="standings-name">${titleCase(player.name)}</div>
       <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
       <div class="standings-points">${player.points}</div>
     </a>`;
