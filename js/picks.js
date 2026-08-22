@@ -107,7 +107,7 @@ function renderWeekStatus(container, statusList, sportWeeks) {
     .map((s) => {
       const badge =
         expectedTotal > 0 && s.total === expectedTotal
-          ? `<span style="color:var(--positive);font-weight:800;font-size:12.5px">✓ Submitted</span>`
+          ? `<span style="color:var(--positive);font-weight:800;font-size:12.5px">✅ All set</span>`
           : s.total === 0
           ? `<span style="color:var(--text-faint);font-weight:700;font-size:12.5px">Not started</span>`
           : `<span style="color:var(--accent);font-weight:700;font-size:12.5px">In progress</span>`;

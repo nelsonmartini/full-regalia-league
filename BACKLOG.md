@@ -4,6 +4,23 @@
 
 ## Status
 
+- **DONE (2026-08-21): "Who's in" badge relabeled "✅ All set"** (was
+  "✓ Submitted"), matching the wording already used by the "My picks this
+  week" per-sport progress card (`renderProgress`) — same green checkmark
+  treatment, now consistent across both places on the page that say
+  "you're done." Confirmed (re-verified, not just re-asserted) that the
+  underlying Week 1 fix from the entry above is doing exactly what Neil
+  described: the badge and the NFL/NCAA breakdown only count the sport(s)
+  actually linked that week, so Week 1 (NCAA-only) correctly shows "NCAA
+  4/4" with no NFL figure at all, not "NFL 0/4." Verified via Playwright
+  (8/8) + full 31/31 site regression suite.
+- **RESOLVED (2026-08-21): `anon` DELETE grant applied, stray test row
+  cleaned up** — Neil ran the SQL from the entry above in the Supabase SQL
+  Editor. Category-pick swapping (changing a pick to a *different* game,
+  not just filling an empty category) should now actually work — worth a
+  real end-to-end test next time picks are being made, since this path was
+  never empirically confirmed working before today.
+
 - **NEEDS ACTION FROM NEIL: `anon` role still can't DELETE from `picks` —
   confirmed broken via a live test today (2026-08-21), and it left a stray
   test row in the production table that I can't remove myself.** This is
