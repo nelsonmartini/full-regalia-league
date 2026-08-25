@@ -4,6 +4,32 @@
 
 ## Status
 
+- **New backlog (2026-08-21): odds movement tracking / alerting**, Neil's
+  idea — not scoped for a build yet, splits into two genuinely different
+  pieces:
+  - **Trend tracking (feasible within the current architecture).** ESPN's
+    scoreboard response is only ever a snapshot of the *current* line — no
+    history is available from them. Would need a new Supabase table (e.g.
+    `odds_history`: game_id, captured_at, spread, over_under) written to
+    opportunistically whenever the app is already fetching odds (Games/
+    Picks pages already poll ESPN every 30s while open) — no new scheduled
+    infra needed, just record-on-change instead of only reading. Coverage
+    would be imperfect (only captures movement while someone happens to
+    have a tab open), but cheap and fits the existing all-client,
+    no-backend design. Display idea: a small "↓3 since Tue" indicator next
+    to a line on Analytics' team detail or the Games page.
+  - **Real alerting (push notification the moment a line moves) — a much
+    bigger lift, genuinely new infrastructure.** This is a static site with
+    no server of its own, so reliable polling (not dependent on someone
+    having the app open) needs a scheduled job — e.g. a GitHub Action on a
+    cron, hitting ESPN and writing to Supabase on a fixed interval — plus
+    Web Push subscription handling (VAPID keys, per-device subscriptions,
+    a way to actually trigger delivery), none of which exists today.
+  - **Recommendation discussed with Neil:** build trend tracking first
+    (cheap, fits what exists) and treat push alerting as a separate,
+    larger project to reconsider only if the trend data turns out to be
+    something people want surfaced faster than "check the app."
+
 - **DONE (2026-08-21): "Who's in" badge relabeled "✅ All set"** (was
   "✓ Submitted"), matching the wording already used by the "My picks this
   week" per-sport progress card (`renderProgress`) — same green checkmark
