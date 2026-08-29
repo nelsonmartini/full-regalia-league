@@ -4,6 +4,36 @@
 
 ## Status
 
+- **DONE (2026-08-29): Picks page now shows Hit/Miss/Push directly on a
+  locked category, instead of just "Locked" — closes the loop Neil asked
+  about ("how does a player know if they won?").**
+  - Previously the only place to see a graded result was History or a
+    player's own page — the Picks page itself just said "🔒 Locked" forever,
+    even after the game finished. Now, once a locked category's game is
+    actually final, that same header slot shows the real result instead —
+    same `gradePick()`/`statusBadge()` History and player.html already use,
+    just computed inline where the pick lives.
+  - Needed `js/grading.js` added to `picks.html` (wasn't loaded there
+    before) and the page's already-fetched-but-previously-discarded
+    unfiltered game list (`allGames` — includes recently-finished games
+    within the existing ~10-day lookback, not just still-pickable ones)
+    threaded through `renderSportSections` → `categoriesHtmlForSport` so a
+    locked pick's game can actually be looked up and graded.
+  - A locked-but-not-yet-finished game still shows "🔒 Locked" exactly as
+    before — this only replaces that text once ESPN reports the game
+    final, automatically, no extra step.
+  - Verified via Playwright (6/6 new + 8/8 lock regression, hand-checked
+    math): a covered spread pick shows "Hit," a total pick shows "Hit,"
+    zero chips remain (still can't be changed once graded), and an
+    in-progress-but-unfinished game still correctly shows "Locked" rather
+    than a premature result. Plus the 9-page smoke suite.
+  - **Note**: this session's test scratchpad got cleared between sessions
+    (not a code issue) — rebuilt a `test-smoke.js` covering console errors
+    across all 9 pages as the new baseline regression check; the fuller
+    `test-batch2.js` suite from earlier sessions no longer exists and would
+    need rebuilding if deeper Picks/Live regression coverage is wanted
+    again.
+
 - **URGENT FIX (2026-08-29): players reported being able to "change picks
   after the game started" — root cause found, was a client-side UX gap,
   not an actual data-integrity hole.**

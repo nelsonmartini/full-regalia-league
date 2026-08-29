@@ -432,7 +432,7 @@ function sortGroupKeys(sport, keys) {
  * toggled between). Each category/chip element carries data-sport so the
  * click handler in initPicksPage can tell which sport a click belongs to
  * without a single global "selected sport" to fall back on. */
-function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter) {
+function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames) {
   if (games.length === 0) {
     return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
   }
@@ -466,6 +466,14 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     // that enforcement visible: no chips are rendered at all for a locked
     // category, so there's nothing left to tap, not just a warning label.
     const isLocked = !!(slot && slot.entry.snapshot?.date && new Date(slot.entry.snapshot.date) <= new Date());
+    // Once locked, check whether the game's actually finished yet — if so,
+    // grade it right here using the same pure gradePick() History/player.html
+    // already use, so the result shows up the moment ESPN reports the game
+    // final, without waiting for a separate page. allGames (unlike `games`,
+    // which only holds still-pickable games) is the unfiltered fetch, so a
+    // finished game can still be found in it.
+    const lockedGame = isLocked ? allGames.find((g) => g.id === currentGameId) : null;
+    const result = lockedGame ? gradePick(slot.entry.value, lockedGame) : null;
     // While a search is active, force every matching category open so results
     // are visible without also having to tap through the collapse state.
     const expanded = isLocked ? false : query ? true : !!categoryExpanded[cat];
@@ -475,9 +483,11 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     const summaryHtml = currentGameId
       ? `<span class="pick-game-summary is-set">${isLocked ? "🔒 " : ""}${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}</span>`
       : `<span class="pick-game-summary">Tap to pick a game</span>`;
-    const chevronHtml = isLocked
-      ? `<span class="pick-game-lock" title="Locked — the game already started">🔒 Locked</span>`
-      : `<span class="pick-game-chevron">${expanded ? "▲" : "▼"}</span>`;
+    const chevronHtml = !isLocked
+      ? `<span class="pick-game-chevron">${expanded ? "▲" : "▼"}</span>`
+      : result
+      ? statusBadge(result)
+      : `<span class="pick-game-lock" title="Locked — the game already started">🔒 Locked</span>`;
     const headerHtml = `
       <div class="pick-game-header${isLocked ? " is-locked" : ""}" data-category-header="${cat}" data-sport="${sport}"${isLocked ? ' data-locked="true"' : ""}>
         <span class="pick-game-icon">${CATEGORY_ICON[cat]}</span>
@@ -550,7 +560,7 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
  * expanded up front. Search now spans both sports — a sport section
  * auto-expands (or hides entirely if nothing in it matches) the same way
  * categories already did within one sport. */
-function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter) {
+function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames) {
   const query = searchQuery.trim().toLowerCase();
   const filtering = !!query || !!conferenceFilter;
   let anySportMatched = false;
@@ -559,7 +569,7 @@ function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivi
     const weekKey = sportWeeks[sport];
     const games = gamesBySport[sport].filter((g) => weekBucketKey(g) === weekKey);
     const slots = slotsForSportWeek(picks, sport, weekKey);
-    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter);
+    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter, allGames);
 
     if (filtering && !anyMatched) return ""; // hide the whole sport section if nothing in it matches
 
@@ -724,7 +734,7 @@ async function initPicksPage() {
   }
 
   function renderAll() {
-    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter);
+    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames);
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
   }
 
