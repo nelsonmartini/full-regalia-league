@@ -992,6 +992,22 @@ a.game-card-team:active {
 
 .pick-game-summary.is-set {
   color: var(--cat-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  white-space: normal;
+}
+
+.pick-game-summary-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pick-game-summary-date {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
 }
 
 .pick-game-chevron {

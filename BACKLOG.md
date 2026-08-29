@@ -4,6 +4,28 @@
 
 ## Status
 
+- **DONE (2026-08-29): small day/time line under an upcoming (not-yet-
+  locked) pick's summary**, per Neil's ask.
+  - Only shown for picks whose game hasn't started yet — once locked, the
+    full game card (added just above) already shows richer live/final
+    status, so a static kickoff-time readout there would be redundant.
+  - **Caught and fixed a real bug while building this**: the first version
+    unconditionally read the pick's stored value while computing the
+    summary line, even for categories with *no* pick at all — crashed the
+    entire category render (an uncaught exception, not just a display
+    glitch) for any sport section containing an empty category, which is
+    the normal case for basically every category until all 4 are filled.
+    Would have broken the Picks page for real users. Caught immediately by
+    a new test that (unlike the previous two, which happened to only
+    exercise already-filled categories) specifically checked a category
+    with no pick — worth remembering: test the *empty* state, not just the
+    happy path, especially right after touching code that runs inside a
+    `.map()` over all 4 categories.
+  - Verified via Playwright (5/5 new + full 9/9 lock + 6/6 result + 9-page
+    smoke, all re-run after the fix) — upcoming picks show the date line,
+    locked ones don't (game card covers it instead), zero console errors
+    anywhere.
+
 - **DONE (2026-08-29): locked picks now show the full game card (real
   score, team names, live/final state), not just the pick's own line —
   Neil asked to see "the full game... with the icons."**

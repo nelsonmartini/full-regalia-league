@@ -480,8 +480,13 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     // Collapsed-state summary: show what's already picked (so the pick is
     // visible without expanding), or a prompt to pick one, so scanning the
     // 4 collapsed headers alone tells you what's left to do this week.
+    // Still-upcoming picks get a tiny day/time line underneath — once
+    // locked, the game card below already shows richer live/final status,
+    // so the plain kickoff-time readout would just be redundant there.
+    const summaryMainHtml = currentGameId ? `${isLocked ? "🔒 " : ""}${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}` : "";
+    const summaryDateHtml = currentGameId && !isLocked && slot.entry.snapshot?.date ? `<span class="pick-game-summary-date">${formatKickoff(slot.entry.snapshot.date)}</span>` : "";
     const summaryHtml = currentGameId
-      ? `<span class="pick-game-summary is-set">${isLocked ? "🔒 " : ""}${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}</span>`
+      ? `<span class="pick-game-summary is-set"><span class="pick-game-summary-main">${summaryMainHtml}</span>${summaryDateHtml}</span>`
       : `<span class="pick-game-summary">Tap to pick a game</span>`;
     const chevronHtml = !isLocked
       ? `<span class="pick-game-chevron">${expanded ? "▲" : "▼"}</span>`
