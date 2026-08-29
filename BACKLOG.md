@@ -4,6 +4,43 @@
 
 ## Status
 
+- **URGENT FIX (2026-08-29): players reported being able to "change picks
+  after the game started" — root cause found, was a client-side UX gap,
+  not an actual data-integrity hole.**
+  - Re-tested the database lock directly, both write paths the app actually
+    uses: a raw insert with a past kickoff (blocked, as before) AND the
+    exact `upsert`-with-`merge-duplicates` call `js/picks.js` uses for
+    saving (also correctly blocked — confirmed via a live test against
+    production). **No pick has ever actually been changed in the database
+    after its game started** — the writes were always rejected.
+  - The real problem: once a picked game starts, it silently drops out of
+    the live-fetched pickable pool (correct), but the category's collapsed
+    summary still showed the OLD pick with no lock indicator, and expanding
+    it showed a chip grid of *other* games with nothing marked "selected" —
+    reading as "nothing picked yet, go ahead," not "this is locked." A
+    player could tap a different chip (a real, allowed pick for a *different*
+    still-open game) and reasonably believe they'd "changed" their original
+    pick, when saving that swap would actually fail cleanly server-side
+    (checked `doSave()`'s delete-then-upsert sequence — a failed delete
+    correctly aborts before the upsert runs, so no partial/orphaned state
+    is possible either).
+  - **Fix**: `categoriesHtmlForSport` (`js/picks.js`) now checks whether a
+    category's existing pick's own game has already kicked off (compared
+    against the *stored snapshot's* date, not the live-fetched game list —
+    accurate even if the tab's been open across a kickoff, unlike
+    `gamesBySport` which is only fetched once at page load). A locked
+    category renders **only its header** — "🔒 [your pick] · 🔒 Locked"
+    replacing the chevron, zero chips, no body at all — nothing left to
+    tap, not just a warning. Clicking a locked header is a no-op (checked
+    via a new `data-locked` attribute in the click handler). Unrelated
+    categories on still-open games are completely unaffected.
+  - Verified via Playwright (8/8): a pick on an already-finished game shows
+    the lock + original value with zero chips rendered, clicking the locked
+    header produces no chips, and a different category with no existing
+    pick on a still-open game remains fully editable. Plus a 9-page
+    console-error smoke check (full regression suite needed rebuilding —
+    the scratchpad session that held it was cleared between sessions).
+
 - **New backlog (2026-08-21): odds movement tracking / alerting**, Neil's
   idea — not scoped for a build yet, splits into two genuinely different
   pieces:

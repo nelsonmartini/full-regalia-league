@@ -1000,6 +1000,26 @@ a.game-card-team:active {
   color: var(--text-faint);
 }
 
+/* A category whose picked game already kicked off — no body/chips render
+ * for it at all (see categoriesHtmlForSport in js/picks.js), so the muted
+ * left border + disabled cursor are the only visual difference, on top of
+ * the explicit "🔒 Locked" text replacing the chevron. */
+.pick-game.is-locked {
+  border-left-color: var(--border-strong);
+}
+
+.pick-game-header.is-locked {
+  cursor: default;
+}
+
+.pick-game-lock {
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
 .pick-game-body {
   padding: 0 12px 12px;
 }

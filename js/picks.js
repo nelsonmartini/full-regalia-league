@@ -457,22 +457,44 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     // was marking every game with that line as selected (confirmed bug).
     const slot = slots[cat];
     const currentGameId = slot?.entry.snapshot?.gameId ?? null;
+    // A pick is locked once its OWN game's kickoff has passed — checked
+    // against the snapshot's stored date (always accurate, unlike
+    // gamesBySport which is only fetched once at page load and can go
+    // stale if the tab's left open across a kickoff). The database already
+    // rejects any actual write past kickoff (verified directly, including
+    // the exact upsert/delete calls this page uses) — this is what makes
+    // that enforcement visible: no chips are rendered at all for a locked
+    // category, so there's nothing left to tap, not just a warning label.
+    const isLocked = !!(slot && slot.entry.snapshot?.date && new Date(slot.entry.snapshot.date) <= new Date());
     // While a search is active, force every matching category open so results
     // are visible without also having to tap through the collapse state.
-    const expanded = query ? true : !!categoryExpanded[cat];
+    const expanded = isLocked ? false : query ? true : !!categoryExpanded[cat];
     // Collapsed-state summary: show what's already picked (so the pick is
     // visible without expanding), or a prompt to pick one, so scanning the
     // 4 collapsed headers alone tells you what's left to do this week.
     const summaryHtml = currentGameId
-      ? `<span class="pick-game-summary is-set">${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}</span>`
+      ? `<span class="pick-game-summary is-set">${isLocked ? "🔒 " : ""}${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}</span>`
       : `<span class="pick-game-summary">Tap to pick a game</span>`;
+    const chevronHtml = isLocked
+      ? `<span class="pick-game-lock" title="Locked — the game already started">🔒 Locked</span>`
+      : `<span class="pick-game-chevron">${expanded ? "▲" : "▼"}</span>`;
     const headerHtml = `
-      <div class="pick-game-header" data-category-header="${cat}" data-sport="${sport}">
+      <div class="pick-game-header${isLocked ? " is-locked" : ""}" data-category-header="${cat}" data-sport="${sport}"${isLocked ? ' data-locked="true"' : ""}>
         <span class="pick-game-icon">${CATEGORY_ICON[cat]}</span>
         <span class="pick-game-label">${CATEGORY_LABEL[cat]}</span>
         ${summaryHtml}
-        <span class="pick-game-chevron">${expanded ? "▲" : "▼"}</span>
+        ${chevronHtml}
       </div>`;
+
+    // Locked categories render only the header — no body, no chips, nothing
+    // to tap. This is the whole fix: previously an already-started game's
+    // chip simply vanished from the pool with nothing marked "selected,"
+    // which read as "nothing picked, go ahead and pick something" even
+    // though a save attempt would (correctly) fail server-side. Now it's
+    // unambiguous and nothing is interactive to begin with.
+    if (isLocked) {
+      return `<div class="pick-game is-locked" data-category="${cat}" data-sport="${sport}">${headerHtml}</div>`;
+    }
 
     if (options.length === 0) {
       return `
@@ -810,6 +832,7 @@ async function initPicksPage() {
     // conflict, unlike the earlier "Who's Picked" row-click bug.
     const header = e.target.closest("[data-category-header]");
     if (header) {
+      if (header.getAttribute("data-locked") === "true") return; // locked — nothing to expand into
       const sport = header.getAttribute("data-sport");
       const cat = header.getAttribute("data-category-header");
       categoryExpanded[sport][cat] = !categoryExpanded[sport][cat];
