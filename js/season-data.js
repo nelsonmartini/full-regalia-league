@@ -98,6 +98,8 @@ function computeHistoryEntries(gradedPicks) {
     ...g,
     points: g.picks.reduce((s, p) => s + (p.result ? p.points : 0), 0),
     graded: g.picks.some((p) => p.result != null),
+    hits: g.picks.filter((p) => p.result === "hit").length,
+    total: g.picks.length,
   }));
 }
 
@@ -112,6 +114,7 @@ function historyEntryRow(pick) {
 
 function renderHistoryEntry(entry) {
   const rows = entry.picks.map(historyEntryRow).join("");
+  const statsText = entry.graded ? `${entry.hits}/${entry.total} · ${entry.points} pts` : "";
   return `
     <div class="card">
       <div class="card-title">
@@ -120,7 +123,7 @@ function renderHistoryEntry(entry) {
             ${avatarHtml(entry.name, 20)}${titleCase(entry.name)}
           </a>
         </span>
-        <span>${entry.graded ? entry.points + " pts" : ""}</span>
+        <span>${statsText}</span>
       </div>
       ${rows || '<div style="color:var(--text-faint);font-size:13px">No picks recorded.</div>'}
     </div>`;

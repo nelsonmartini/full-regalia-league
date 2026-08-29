@@ -97,14 +97,44 @@
     function render() {
       const p = playerFilter.value;
       const w = weekFilter.value;
-      let rows = entries.filter((e) => (!p || e.name === p) && (!w || e.weekKey === w));
-      rows = rows.sort((a, b) => new Date(b.date) - new Date(a.date) || a.name.localeCompare(b.name));
+      const rows = entries.filter((e) => (!p || e.name === p) && (!w || e.weekKey === w));
+
+      // Grouped by week (sport+week, same label the filter dropdown already
+      // uses) so results read as "here's how everyone did in Week N," with a
+      // combined hit-rate/points total right at the top of each group —
+      // rather than a flat, ungrouped list of individual cards.
+      const groups = new Map();
+      for (const e of rows) {
+        if (!groups.has(e.weekKey)) groups.set(e.weekKey, { label: e.label, entries: [], maxDate: e.date });
+        const g = groups.get(e.weekKey);
+        g.entries.push(e);
+        if (new Date(e.date) > new Date(g.maxDate)) g.maxDate = e.date;
+      }
+      const groupList = [...groups.values()].sort((a, b) => new Date(b.maxDate) - new Date(a.maxDate));
+      groupList.forEach((g) => g.entries.sort((a, b) => a.name.localeCompare(b.name)));
+
       // Cap render to keep this snappy on a phone — most useful case is one player or one week.
-      const capped = rows.slice(0, 60);
-      list.innerHTML = capped.map(renderHistoryEntry).join("");
+      const CAP = 60;
+      let shown = 0;
+      const htmlParts = [];
+      for (const g of groupList) {
+        if (shown >= CAP) break;
+        const take = g.entries.slice(0, CAP - shown);
+        shown += take.length;
+        const totalHits = g.entries.reduce((s, e) => s + e.hits, 0);
+        const totalPicks = g.entries.reduce((s, e) => s + e.total, 0);
+        const totalPoints = g.entries.reduce((s, e) => s + e.points, 0);
+        htmlParts.push(`
+          <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;margin-top:18px">
+            <span>${g.label}</span>
+            <span style="color:var(--text-dim);font-weight:700">${totalHits}/${totalPicks} hit · ${totalPoints.toFixed(1)} pts</span>
+          </div>`);
+        htmlParts.push(take.map(renderHistoryEntry).join(""));
+      }
+      list.innerHTML = htmlParts.join("");
       empty.style.display = rows.length === 0 ? "block" : "none";
-      if (rows.length > capped.length) {
-        list.innerHTML += `<div class="footer-note">Showing ${capped.length} of ${rows.length} — narrow the filter to see more.</div>`;
+      if (shown < rows.length) {
+        list.innerHTML += `<div class="footer-note">Showing ${shown} of ${rows.length} — narrow the filter to see more.</div>`;
       }
     }
 

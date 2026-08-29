@@ -4,6 +4,45 @@
 
 ## Status
 
+- **RESOLVED (2026-08-29): "Alex shows Miss on Picks but Pending on
+  History" — not a data or logic bug.** Traced it all the way to ESPN
+  directly: fetched the real game (SJSU @ USC, 401864494) via both the
+  per-event summary endpoint and the same scoreboard endpoint
+  `loadSeasonGames()` uses — both agree it's `STATUS_FINAL`/`completed`,
+  final score 42–26 (total 68, over Alex's Under 59.5 → a genuine Miss,
+  matching what Picks showed). Both pages call the exact same `gradePick()`
+  against the exact same live-fetched data — there's no second calculation
+  that could disagree. The service worker doesn't cache ESPN responses
+  either (only the local shell files, and it never writes cross-origin
+  responses into its cache — checked `sw.js` directly). Most likely
+  explanation: History computes once per page load and doesn't auto-poll
+  like the Games page does (30s interval) — if that tab was open before
+  the game finished, it'll show stale "Pending" until reloaded. Not fixed
+  in code since there's nothing to fix; noted here in case the same report
+  recurs and a "History doesn't stay fresh" pattern becomes worth solving
+  properly (e.g. adding the same polling Games already has, or an explicit
+  "as of [time] — refresh" note).
+
+- **DONE (2026-08-29): History grouped by week, with a combined hit-rate/
+  points summary atop each week** — Neil asked for this directly after the
+  above investigation ("group History results by week... show what hit,
+  what miss, how many of the 4... how many points won").
+  - `computeHistoryEntries()` (`js/season-data.js`) now also returns
+    `hits`/`total` per entry (previously only `points`/`graded`).
+  - `renderHistoryEntry()` shows "`hits/total · points pts`" next to each
+    player's own card (also benefits `player.html`, which shares this
+    function — no changes needed there, just a bonus).
+  - `history.html`'s `render()` now groups filtered entries by week (same
+    label the week filter dropdown already uses), sorted most-recent-first,
+    with a `.section-label` header per group showing the **combined**
+    hit-rate and points across everyone who picked that week — separate
+    from, and in addition to, each individual player's own card underneath
+    it. The existing player-name link into `player.html` is unchanged.
+  - Verified via Playwright (6/6, hand-checked math: 2 players, one 1-hit-
+    1-miss and one 1-hit, correctly rolling up to a 2/3 · 2.0 pts group
+    total) + confirmed `player.html` still renders correctly with the
+    shared function change + the 9-page smoke suite.
+
 - **DONE (2026-08-29): small day/time line under an upcoming (not-yet-
   locked) pick's summary**, per Neil's ask.
   - Only shown for picks whose game hasn't started yet — once locked, the
