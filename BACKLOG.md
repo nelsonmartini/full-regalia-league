@@ -4,6 +4,23 @@
 
 ## Status
 
+- **DONE (2026-08-29): locked picks now show the full game card (real
+  score, team names, live/final state), not just the pick's own line —
+  Neil asked to see "the full game... with the icons."**
+  - Reused `renderGameCard()` as-is (`js/live-scores.js`, the exact
+    component the Games page already uses) rather than building a second
+    one — same team abbr/name, home marker, colored Live/Final left border,
+    and the Spread/O-U line, now also inserted directly into a locked
+    category's body on the Picks page. Updates live while the game's still
+    in progress (same 🏠/team-name treatment, not a static snapshot).
+  - Confirmed (in response to Neil's question) that this required no
+    changes to how points/results reach Standings or History — the new
+    Picks-page display calls the same `gradePick()` everything else
+    already uses; it's an additional view, not a second calculation that
+    could drift out of sync.
+  - Verified via Playwright (9/9 lock + 6/6 result, both updated for the
+    new body content) + the 9-page smoke suite.
+
 - **DONE (2026-08-29): Picks page now shows Hit/Miss/Push directly on a
   locked category, instead of just "Locked" — closes the loop Neil asked
   about ("how does a player know if they won?").**

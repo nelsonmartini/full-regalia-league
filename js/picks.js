@@ -496,14 +496,21 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
         ${chevronHtml}
       </div>`;
 
-    // Locked categories render only the header — no body, no chips, nothing
-    // to tap. This is the whole fix: previously an already-started game's
-    // chip simply vanished from the pool with nothing marked "selected,"
-    // which read as "nothing picked, go ahead and pick something" even
-    // though a save attempt would (correctly) fail server-side. Now it's
-    // unambiguous and nothing is interactive to begin with.
+    // Locked categories render the header plus a read-only game card — no
+    // chips, nothing to tap (that's still the fix from before: no
+    // interactive options survive once a game's started). The card itself
+    // is the exact same renderGameCard() component the Games page uses
+    // (js/live-scores.js, already loaded here) — same team names, scores,
+    // home marker, and colored Live/Final border — so a locked pick shows
+    // the real game, not just its own line score, and updates live while
+    // the game's still in progress.
     if (isLocked) {
-      return `<div class="pick-game is-locked" data-category="${cat}" data-sport="${sport}">${headerHtml}</div>`;
+      const gameCardHtml = lockedGame ? renderGameCard(lockedGame) : "";
+      return `
+        <div class="pick-game is-locked" data-category="${cat}" data-sport="${sport}">
+          ${headerHtml}
+          ${gameCardHtml ? `<div class="pick-game-body">${gameCardHtml}</div>` : ""}
+        </div>`;
     }
 
     if (options.length === 0) {
