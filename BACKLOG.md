@@ -4,6 +4,56 @@
 
 ## Status
 
+- **ROOT CAUSE FOUND AND FIXED (2026-08-30): Standings/History/Player showed
+  everyone at 0 points / "Pending" forever — ESPN's scoreboard endpoint
+  silently rejects date ranges over roughly 360 days, and `loadSeasonGames()`
+  was requesting 400.** This is what the whole day's investigation was
+  chasing (the malformed-event theory earlier today was a false lead and
+  was already retracted).
+  - Confirmed directly against the live endpoint: a request spanning ~360
+    days returns 200 OK; the same request spanning 400 days returns HTTP
+    400 `{"code":400,"message":"Failed to get events endpoint."}`. Every
+    single call `loadSeasonGames()` (`js/season-data.js`) ever made used
+    `daysBack: 200, daysForward: 200` — a 400-day span — so it was rejected
+    outright, every time, for every visitor. `fetchScoreboard()`'s own
+    try/catch (existing, unrelated to today's other changes) turned that
+    rejection into a silently-empty game list, which is why this produced
+    "0 points for everyone" instead of a visible error — until today's
+    earlier fix added the "couldn't load" warning, which is what finally
+    made this diagnosable at all.
+  - **This explains a detail that had been confusing all day**: the Picks
+    page never showed this problem, because it calls `fetchScoreboard`
+    with only `daysForward: 200` (default `daysBack: 10` → ~210 days
+    total) — comfortably under ESPN's limit. Only pages using
+    `loadSeasonGames()` (Standings, History, Player) were ever affected.
+  - **Not a device or network issue** — Neil's phone doing everything right
+    (full Safari data clear, testing both WiFi and cellular) never could
+    have fixed this, because the request was being rejected by ESPN's
+    server itself before it reached this app's own logic at all. That's
+    also why my own earlier "confirmed working" tests were misleading —
+    they fed pre-captured JSON through mocked routes and never actually
+    exercised the real 400-day URL, so they couldn't have caught this.
+  - Fix: reduced to `daysBack: 150, daysForward: 150` (300 days total) —
+    verified directly against the live endpoint using today's actual date,
+    with a solid safety margin under the ~360-400 boundary. Still covers
+    nearly a full season's history either direction. **Known tradeoff,
+    not urgent**: deep into a season (roughly 150+ days after a very early
+    week), that week's own games could roll back out of this window and
+    stop being gradable from "today" — worth revisiting if that's ever
+    actually hit, but not a concern this early in the season.
+  - **Not an ESPN-dependency problem** — Neil asked whether to drop ESPN
+    entirely; explained this was one misconfigured parameter, not a
+    reason to rearchitect. The site's core design (fetch ESPN + Supabase
+    directly from the browser) isn't what broke here.
+  - Verified via Playwright: full 9-page smoke suite + History grouping
+    (6/6) + NFL/CFB split (5/5) all still pass with the corrected range.
+    Directly confirmed (via curl, not just Playwright mocks) that the new
+    300-day range succeeds against the real live endpoint using today's
+    real date.
+  - The temporary diagnostics panel on Standings (added earlier today)
+    should be removed now that the actual cause is found and fixed —
+    tracked as a follow-up cleanup, not done in this entry.
+
 - **CORRECTION (2026-08-30): retracted the "malformed ESPN event" fix as
   the confirmed cause of the 0-points bug.** Re-verified more carefully:
   my first verification script didn't accurately replicate the real old

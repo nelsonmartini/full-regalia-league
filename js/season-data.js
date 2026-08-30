@@ -36,11 +36,27 @@ async function loadSeasonPicks() {
 
 /** Wide date window so every game any pick could reference (this season,
  * past or future) is covered — grading needs the FINAL score of past games,
- * not just the upcoming-games window the Picks page fetches. */
+ * not just the upcoming-games window the Picks page fetches.
+ *
+ * daysBack/daysForward of 200+200 (400 days total) used to silently make
+ * ESPN's scoreboard endpoint reject the request outright — confirmed
+ * directly (2026-08-30): a request spanning ~360 days succeeds, one
+ * spanning 400 does not (HTTP 400, "Failed to get events endpoint").
+ * ESPN enforces an undocumented max total date-range width. This is what
+ * caused every player to show 0 points on Standings/History/Player —
+ * NOT a bug in this app's own grading logic (verified separately, several
+ * times), and not specific to any one device/network — every fetch this
+ * function ever made was rejected before a single game came back. The
+ * Picks page never hit this because it only requests ~210 days
+ * (daysForward: 200, default daysBack: 10), comfortably under the limit —
+ * which is exactly why Picks kept working the whole time this was broken.
+ * 150+150 (300 days total) keeps a solid safety margin under the ~360-400
+ * boundary while still covering nearly a full season's history either
+ * direction from "today." */
 async function loadSeasonGames() {
   const [nfl, cfb] = await Promise.all([
-    fetchScoreboard("nfl", { daysBack: 200, daysForward: 200 }),
-    fetchScoreboard("cfb", { daysBack: 200, daysForward: 200 }),
+    fetchScoreboard("nfl", { daysBack: 150, daysForward: 150 }),
+    fetchScoreboard("cfb", { daysBack: 150, daysForward: 150 }),
   ]);
   return [...nfl, ...cfb];
 }
