@@ -24,6 +24,21 @@ function renderStandingsRow(player, rank) {
     </a>`;
 }
 
+/** Home page's "Top of the standings" preview — same row, minus the win %
+ * column (Neil: keep the mini preview to just points, full board still
+ * shows both). Grid drops to 4 columns since there's one fewer cell. */
+function renderStandingsRowCompact(player, rank) {
+  const rankClass = rank <= 3 ? ` rank-${rank}` : "";
+  const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
+  return `
+    <a class="standings-row standings-row-compact${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
+      <div class="standings-rank">${medal}</div>
+      ${avatarHtml(player.name, 32)}
+      <div class="standings-name">${titleCase(player.name)}</div>
+      <div class="standings-points">${player.points}</div>
+    </a>`;
+}
+
 /** Every saved pick, across every player/week. */
 async function loadSeasonPicks() {
   const { data, error } = await sb.from("picks").select("player_name, game_id, bet_type, pick, snapshot, updated_at");

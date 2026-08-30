@@ -151,7 +151,7 @@
 
     const top3 = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 3);
     document.getElementById("top-standings").innerHTML = top3.length
-      ? top3.map((p, i) => renderStandingsRow(p, i + 1)).join("")
+      ? top3.map((p, i) => renderStandingsRowCompact(p, i + 1)).join("")
       : '<div class="empty-state">No graded picks yet this season.</div>';
 
     const awards = computeWeeklyAwards(graded);

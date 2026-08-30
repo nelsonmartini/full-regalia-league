@@ -35,19 +35,18 @@
   <h1 class="page-title">Standings</h1>
   <p class="page-sub">Live, computed from every saved pick this season. Sorted by total points.</p>
 
-  <!-- Temporary diagnostics panel — helping track down a live-data loading
-       issue on one device. Safe to remove once resolved; doesn't affect
-       normal functionality below. -->
-  <div class="card" id="diagnostics-card" style="border-color:var(--accent)">
-    <div class="card-title"><span>🔍 Connection Check</span></div>
-    <div id="diagnostics-content" style="font-size:12.5px;line-height:1.9;font-family:monospace;word-break:break-word">Running checks…</div>
-  </div>
-
   <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
 
   <div class="card">
     <div class="card-title">
       <span>Full leaderboard</span>
+    </div>
+    <div class="standings-header-row">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div class="standings-header-label">Win %</div>
+      <div class="standings-header-label">Points</div>
     </div>
     <div id="standings-list"><div class="empty-state">Loading standings…</div></div>
   </div>
@@ -77,60 +76,6 @@
 <script src="js/grading.js"></script>
 <script src="js/season-data.js"></script>
 <script>
-  // Temporary diagnostics — runs independently of the normal load path
-  // below, using raw fetch() calls (not the app's own wrapped functions,
-  // which swallow errors on purpose) so a real failure's actual error
-  // message surfaces directly on screen. Meant to be read off a phone
-  // screen with no dev tools involved, then removed once resolved.
-  async function runDiagnostics() {
-    const lines = [];
-    async function checkFetch(name, url, opts) {
-      const start = Date.now();
-      try {
-        const res = await fetch(url, opts);
-        const ms = Date.now() - start;
-        if (!res.ok) {
-          lines.push(`❌ ${name}: HTTP ${res.status} ${res.statusText} (${ms}ms)`);
-          return;
-        }
-        const data = await res.json();
-        const count = Array.isArray(data) ? data.length : data.events ? data.events.length : "?";
-        lines.push(`✅ ${name}: OK, ${count} item(s) (${ms}ms)`);
-      } catch (err) {
-        const ms = Date.now() - start;
-        lines.push(`❌ ${name}: FAILED — ${err.name}: ${err.message} (${ms}ms)`);
-      }
-    }
-
-    // Matches the exact URL loadSeasonGames() actually builds (200 days
-    // back/forward, limit=300) -- a multi-megabyte response, very
-    // different from the tiny requests below. If the small ones succeed
-    // but these fail, the issue is about request SIZE (a slow/flaky
-    // connection dropping a large download, or the device running out of
-    // memory parsing it), not basic connectivity.
-    const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
-    const start200 = new Date(); start200.setDate(start200.getDate() - 200);
-    const end200 = new Date(); end200.setDate(end200.getDate() + 200);
-    const fullRange = `${fmt(start200)}-${fmt(end200)}`;
-
-    await Promise.all([
-      checkFetch("ESPN NFL (small test)", "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=20260212-20261231&limit=5"),
-      checkFetch("ESPN College (small test)", "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=20260212-20261231&limit=5"),
-      checkFetch("Supabase database", `${SUPABASE_URL}/rest/v1/players?select=name&limit=1`, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      }),
-      checkFetch("ESPN NFL (FULL real request)", `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${fullRange}&limit=300`),
-      checkFetch("ESPN College (FULL real request)", `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=${fullRange}&limit=300`),
-    ]);
-
-    lines.push(`Online: ${navigator.onLine}`);
-    lines.push(`Time: ${new Date().toString()}`);
-    lines.push(`Browser: ${navigator.userAgent}`);
-
-    document.getElementById("diagnostics-content").innerHTML = lines.map((l) => `<div>${l}</div>`).join("");
-  }
-  runDiagnostics();
-
   (async function () {
     await Promise.all([loadPlayers(), loadScoringConfig()]);
 

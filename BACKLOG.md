@@ -1950,3 +1950,29 @@
 - **Always check `git status` at the start of a session** before reporting on
   progress or assuming the last session's work made it live.
 - Remember to bump `sw.js`'s `CACHE` constant on any deploy touching a cached file.
+
+### 2026-08-30 — Root-cause fix confirmed live; cleanup pass
+- Neil confirmed the ESPN date-range fix worked: "its showing 1 point for Sean and
+  Jacob!" — the 0-points production bug (see above) is resolved and closed out.
+- Removed the temporary `#diagnostics-card` / `runDiagnostics()` panel from
+  `standings.html` now that the root cause is found and fixed — it was always meant
+  to come out once resolved.
+- Added a header row above the Standings leaderboard (`.standings-header-row` /
+  `.standings-header-label` in `css/style.css`, reusing the same grid columns as
+  `.standings-row` so "Win %" / "Points" line up exactly over their values) — there
+  was previously no labeling at all for what the two numbers meant.
+- Home page's "Top of the standings" preview now shows Points only, no Win % — new
+  `renderStandingsRowCompact()` in `js/season-data.js` (4-column grid via
+  `.standings-row-compact`), used only by `index.html`; the full Standings page
+  keeps both columns.
+- Fixed a real alignment inconsistency Neil flagged in the 4 pick categories
+  (Minus Spread / Plus Spread / Over / Under): the picked-game summary text
+  (`.pick-game-summary`) was left-aligned, so its starting X position shifted
+  row-to-row depending on the category label's width ("Minus Spread" vs "Over" are
+  very different lengths) — reads as "sometimes left, sometimes right" when
+  scanning down the list. Set `text-align:right` (plus `align-items:flex-end` on
+  the `.is-set` variant for the two-line picked state) so all 4 categories' game
+  text lines up on the same right edge regardless of label width. Verified via
+  Playwright: right edges match exactly (0px spread) across all 4 categories, for
+  both NFL and NCAA. Shared CSS, so no sport-specific code path to duplicate.
+- Bumped `sw.js` to `full-regalia-shell-v57`, committed, pushed, confirmed live.

@@ -867,6 +867,24 @@ a.game-card-team:active {
 
 .standings-row:last-child { border-bottom: none; }
 
+.standings-header-row {
+  display: grid;
+  grid-template-columns: 24px 32px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.standings-header-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-faint);
+  text-align: right;
+}
+
 .standings-rank {
   font-weight: 800;
   color: var(--text-faint);
@@ -901,6 +919,10 @@ a.game-card-team:active {
   color: var(--text-dim);
   text-align: right;
   min-width: 46px;
+}
+
+.standings-row-compact {
+  grid-template-columns: 24px 32px 1fr auto;
 }
 
 /* ---------- Buttons ---------- */
@@ -988,12 +1010,18 @@ a.game-card-team:active {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Right-aligned so the game info lines up on the same edge across all 4
+     categories — the label before it ("Over" vs "Minus Spread") varies
+     widely in width, so left-aligned text here started at a different X
+     position on every row. */
+  text-align: right;
 }
 
 .pick-game-summary.is-set {
   color: var(--cat-color);
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 1px;
   white-space: normal;
 }
@@ -1008,6 +1036,7 @@ a.game-card-team:active {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-faint);
+  text-align: right;
 }
 
 .pick-game-chevron {
