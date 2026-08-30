@@ -4,6 +4,56 @@
 
 ## Status
 
+- **DONE (2026-08-29): Standings/History/Player pages now auto-refresh every
+  30s, same cadence as the Games page.** Root cause of "results aren't
+  updating in real time": these three pages only ever fetched/computed once,
+  on initial load — no polling, unlike the Games page. If a tab was open
+  from before a game finished, it would show stale numbers indefinitely,
+  not because anything was wrong, just because nothing prompted a re-check.
+  `standings.html`, `history.html`, and `player.html` now each wrap their
+  render logic in a `load()` function, called once then on a
+  `setInterval(load, 30000)` — identical pattern to `live.html`. History
+  additionally preserves whatever the visitor has selected in the
+  player/week filters across each background refresh (`populateFilters()`
+  rebuilds the dropdown options but restores the prior selection), so a
+  poll firing mid-browse doesn't silently reset "just Neil's picks" back to
+  "All players." Verified live: a test confirmed Standings actually
+  re-fetches on its own after 30s with zero interaction (before=1 fetch,
+  after=2).
+
+- **FIXED (2026-08-29): real bug — NFL Week 1 and NCAA Week 1 shared the
+  same internal week key, found while verifying the above against real
+  production data.** `weekBucketKeyFromSnapshot()`/`weekBucketKey()`
+  (`js/pick-utils.js`) encode only season-type + week number, not sport —
+  fine everywhere else in the app because callers already operate on one
+  sport's games at a time, but `history.html`'s new week-grouping (see
+  entry below) grouped by that bare key directly, which would have merged
+  NFL Week 1 and NCAA Week 1's entries into one incorrectly-labeled
+  section. Fixed by grouping/filtering on `entry.label` instead (e.g. "NFL
+  · Week 1" vs "NCAA · Week 1" — already unique per sport+week, computed by
+  the existing `weekGroupLabel()`). Did **not** change the shared
+  `weekBucketKey` functions themselves, to avoid an unaudited ripple
+  through every other caller — this was a narrowly-scoped fix to
+  `history.html`'s own (new, not-yet-shipped) grouping logic.
+  - Caught this by feeding real, live-pulled production data (actual
+    `picks`/`players` rows and real ESPN scoreboard responses, not
+    synthetic mocks) through the actual unmodified page code — confirmed
+    both the bug and the fix against ground truth, not assumptions. Also
+    re-confirmed via this process that Alex's and Sean's real picks
+    (reported as a Picks-vs-History mismatch earlier) grade identically
+    and correctly on both pages — Alex: Miss, Sean: Hit — matching what
+    Picks already showed.
+  - Also added a clean synthetic regression test (`test-history-nfl-cfb-
+    split.js`, 5/5) so this stays covered without depending on live data.
+  - **Flagged separately, not fixed**: the live `picks` table has
+    accumulated real test-data pollution across multiple sessions —
+    player names like `TEST`, `TESTDEL`, `CLAUDE_UPDATE_TEST`, and several
+    fake game IDs (`test123`, `9990001`, `nfl-g1`, `501001`, etc.) that
+    show up in History as garbage entries (some rendering as "Week of
+    Invalid Date"). Includes at least one row I (Claude) left behind this
+    session (`CLAUDE_UPDATE_TEST` / `update-test-9999`) that never got
+    cleaned up. **Needs a cleanup pass in the Supabase SQL Editor.**
+
 - **RESOLVED (2026-08-29): "Alex shows Miss on Picks but Pending on
   History" — not a data or logic bug.** Traced it all the way to ESPN
   directly: fetched the real game (SJSU @ USC, 401864494) via both the

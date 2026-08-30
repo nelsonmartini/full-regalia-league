@@ -70,14 +70,25 @@
 <script src="js/season-data.js"></script>
 <script>
   (async function () {
-    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
-    const graded = gradeSeasonPicks(picksRows, games);
-    const standings = computeStandings(graded, LEAGUE_PLAYERS);
-    document.getElementById("standings-list").innerHTML = standings.length
-      ? standings.map((p, i) => renderStandingsRow(p, i + 1)).join("")
-      : '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
+    await Promise.all([loadPlayers(), loadScoringConfig()]);
 
-    document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
+    // Polled every 30s (same cadence as the Games page) so a game finishing
+    // while this tab is open updates the total without needing a manual
+    // reload — standings are computed fresh from live data on every call,
+    // there's no separate "refresh" step to trigger, just re-running this.
+    async function load() {
+      const [picksRows, games] = await Promise.all([loadSeasonPicks(), loadSeasonGames()]);
+      const graded = gradeSeasonPicks(picksRows, games);
+      const standings = computeStandings(graded, LEAGUE_PLAYERS);
+      document.getElementById("standings-list").innerHTML = standings.length
+        ? standings.map((p, i) => renderStandingsRow(p, i + 1)).join("")
+        : '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
+
+      document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
+    }
+
+    await load();
+    setInterval(load, 30000);
   })();
 </script>
 </body>

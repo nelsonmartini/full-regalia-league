@@ -78,26 +78,41 @@
     const empty = document.getElementById("history-empty");
     list.innerHTML = '<div class="empty-state">Loading history…</div>';
 
-    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
-    const graded = gradeSeasonPicks(picksRows, games);
-    let entries = computeHistoryEntries(graded);
+    await Promise.all([loadPlayers(), loadScoringConfig()]);
 
-    const players = [...new Set(entries.map((e) => e.name))].sort();
-    playerFilter.innerHTML += players.map((p) => `<option value="${p}">${titleCase(p)}</option>`).join("");
-    const weeks = [...new Map(entries.map((e) => [e.weekKey, e.label])).entries()].sort((a, b) => {
-      const da = entries.find((e) => e.weekKey === a[0])?.date || "";
-      const db = entries.find((e) => e.weekKey === b[0])?.date || "";
-      return new Date(db) - new Date(da);
-    });
-    weekFilter.innerHTML += weeks.map(([key, label]) => `<option value="${key}">${label}</option>`).join("");
+    let entries = [];
 
-    const params = new URLSearchParams(location.search);
-    if (params.get("player")) playerFilter.value = params.get("player").toUpperCase();
+    // Rebuilds the filter dropdowns from the latest data on every poll, but
+    // preserves whatever the visitor currently has selected — otherwise a
+    // background refresh would silently reset "just Neil's picks" back to
+    // "All players" out from under them.
+    //
+    // Filters/groups on entry.label ("NFL · Week 1", "NCAA · Week 1"), NOT
+    // entry.weekKey — weekBucketKeyFromSnapshot() only encodes seasonType+
+    // week number, not sport, so NFL Week 1 and NCAA Week 1 share the exact
+    // same weekKey. Grouping by weekKey silently merged both sports' entries
+    // into one section (real bug, caught before shipping by feeding actual
+    // production data through this exact page). label is already unique per
+    // sport+week, so it's both correct and simpler.
+    function populateFilters() {
+      const currentPlayer = playerFilter.value;
+      const currentWeek = weekFilter.value;
+      const players = [...new Set(entries.map((e) => e.name))].sort();
+      playerFilter.innerHTML = '<option value="">All players</option>' + players.map((p) => `<option value="${p}">${titleCase(p)}</option>`).join("");
+      const weeks = [...new Map(entries.map((e) => [e.label, e.label])).entries()].sort((a, b) => {
+        const da = entries.find((e) => e.label === a[0])?.date || "";
+        const db = entries.find((e) => e.label === b[0])?.date || "";
+        return new Date(db) - new Date(da);
+      });
+      weekFilter.innerHTML = '<option value="">All weeks</option>' + weeks.map(([key, label]) => `<option value="${key}">${label}</option>`).join("");
+      if ([...playerFilter.options].some((o) => o.value === currentPlayer)) playerFilter.value = currentPlayer;
+      if ([...weekFilter.options].some((o) => o.value === currentWeek)) weekFilter.value = currentWeek;
+    }
 
     function render() {
       const p = playerFilter.value;
       const w = weekFilter.value;
-      const rows = entries.filter((e) => (!p || e.name === p) && (!w || e.weekKey === w));
+      const rows = entries.filter((e) => (!p || e.name === p) && (!w || e.label === w));
 
       // Grouped by week (sport+week, same label the filter dropdown already
       // uses) so results read as "here's how everyone did in Week N," with a
@@ -105,8 +120,8 @@
       // rather than a flat, ungrouped list of individual cards.
       const groups = new Map();
       for (const e of rows) {
-        if (!groups.has(e.weekKey)) groups.set(e.weekKey, { label: e.label, entries: [], maxDate: e.date });
-        const g = groups.get(e.weekKey);
+        if (!groups.has(e.label)) groups.set(e.label, { label: e.label, entries: [], maxDate: e.date });
+        const g = groups.get(e.label);
         g.entries.push(e);
         if (new Date(e.date) > new Date(g.maxDate)) g.maxDate = e.date;
       }
@@ -138,9 +153,26 @@
       }
     }
 
+    // Polled every 30s (same cadence as the Games page) so a game finishing
+    // while this tab is open shows up without a manual reload.
+    let firstLoad = true;
+    async function load() {
+      const [picksRows, games] = await Promise.all([loadSeasonPicks(), loadSeasonGames()]);
+      const graded = gradeSeasonPicks(picksRows, games);
+      entries = computeHistoryEntries(graded);
+      populateFilters();
+      if (firstLoad) {
+        firstLoad = false;
+        const params = new URLSearchParams(location.search);
+        if (params.get("player")) playerFilter.value = params.get("player").toUpperCase();
+      }
+      render();
+    }
+
     playerFilter.addEventListener("change", render);
     weekFilter.addEventListener("change", render);
-    render();
+    await load();
+    setInterval(load, 30000);
   })();
 </script>
 </body>

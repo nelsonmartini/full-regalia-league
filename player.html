@@ -102,51 +102,62 @@
       return;
     }
 
-    const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
-    const graded = gradeSeasonPicks(picksRows.filter((r) => r.player_name === name), games);
-    const rows = computeHistoryEntries(graded).sort((a, b) => new Date(a.date) - new Date(b.date));
+    await Promise.all([loadPlayers(), loadScoringConfig()]);
 
     document.getElementById("player-title").textContent = titleCase(name);
     document.getElementById("player-sub").textContent = "Season history";
     document.getElementById("player-avatar").innerHTML = avatarHtml(name, 56);
 
-    if (rows.length === 0) {
-      document.getElementById("no-player").style.display = "block";
-      document.getElementById("no-player").querySelector(".empty-state").textContent =
-        `No picks found for ${titleCase(name)} yet.`;
-      return;
+    // Polled every 30s (same cadence as the Games page) so a game finishing
+    // while this tab is open updates the totals/trend without a manual reload.
+    async function load() {
+      const [picksRows, games] = await Promise.all([loadSeasonPicks(), loadSeasonGames()]);
+      const graded = gradeSeasonPicks(picksRows.filter((r) => r.player_name === name), games);
+      const rows = computeHistoryEntries(graded).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      if (rows.length === 0) {
+        document.getElementById("no-player").style.display = "block";
+        document.getElementById("no-player").querySelector(".empty-state").textContent =
+          `No picks found for ${titleCase(name)} yet.`;
+        document.getElementById("player-content").style.display = "none";
+        return;
+      }
+
+      document.getElementById("no-player").style.display = "none";
+      document.getElementById("player-content").style.display = "block";
+
+      // Only graded (finished) weeks count toward the averages — an in-progress
+      // week sitting at 0 pts because games haven't finished yet would otherwise
+      // drag the average down misleadingly.
+      const graded_ = rows.filter((r) => r.graded);
+      const total = graded_.reduce((s, r) => s + r.points, 0);
+      const avg = graded_.length ? total / graded_.length : 0;
+      const best = graded_.reduce((m, r) => (r.points > m.points ? r : m), graded_[0] || { points: 0, label: "–" });
+
+      document.getElementById("stat-total").textContent = total.toFixed(1);
+      document.getElementById("stat-avg").textContent = avg.toFixed(1);
+      document.getElementById("stat-best").textContent = graded_.length ? `${best.points} (${best.label})` : "–";
+
+      const maxPts = Math.max(1, ...graded_.map((r) => r.points));
+      document.getElementById("trend").innerHTML = graded_
+        .map((r) => {
+          const pct = Math.max(4, Math.round((r.points / maxPts) * 100));
+          return `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="width:80px;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.label}</div>
+              <div style="flex:1;background:var(--bg-elev-2);border-radius:6px;overflow:hidden;height:14px">
+                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>
+              </div>
+              <div style="width:32px;text-align:right;font-size:11.5px;font-weight:700;flex-shrink:0">${r.points}</div>
+            </div>`;
+        })
+        .join("");
+
+      document.getElementById("weeks-list").innerHTML = [...rows].reverse().map(renderHistoryEntry).join("");
     }
 
-    document.getElementById("player-content").style.display = "block";
-
-    // Only graded (finished) weeks count toward the averages — an in-progress
-    // week sitting at 0 pts because games haven't finished yet would otherwise
-    // drag the average down misleadingly.
-    const graded_ = rows.filter((r) => r.graded);
-    const total = graded_.reduce((s, r) => s + r.points, 0);
-    const avg = graded_.length ? total / graded_.length : 0;
-    const best = graded_.reduce((m, r) => (r.points > m.points ? r : m), graded_[0] || { points: 0, label: "–" });
-
-    document.getElementById("stat-total").textContent = total.toFixed(1);
-    document.getElementById("stat-avg").textContent = avg.toFixed(1);
-    document.getElementById("stat-best").textContent = graded_.length ? `${best.points} (${best.label})` : "–";
-
-    const maxPts = Math.max(1, ...graded_.map((r) => r.points));
-    document.getElementById("trend").innerHTML = graded_
-      .map((r) => {
-        const pct = Math.max(4, Math.round((r.points / maxPts) * 100));
-        return `
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <div style="width:80px;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.label}</div>
-            <div style="flex:1;background:var(--bg-elev-2);border-radius:6px;overflow:hidden;height:14px">
-              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>
-            </div>
-            <div style="width:32px;text-align:right;font-size:11.5px;font-weight:700;flex-shrink:0">${r.points}</div>
-          </div>`;
-      })
-      .join("");
-
-    document.getElementById("weeks-list").innerHTML = [...rows].reverse().map(renderHistoryEntry).join("");
+    await load();
+    setInterval(load, 30000);
   })();
 </script>
 </body>
