@@ -2164,3 +2164,28 @@
   Scores now come right after Standings/Awards, with the navigation hub
   grid last before Admin/footer.
 - Bumped `sw.js` to `full-regalia-shell-v63`, committed, pushed, confirmed live.
+- Neil weighed in on extending the cursive font further: asked whether it
+  should go on section headers too, or the whole site. Recommended against
+  extending it beyond the topbar/brand quote (script fonts hurt scannability
+  on anything you need to read quickly — standings, picks, points) and
+  suggested Anton (the bold condensed font already used for "FULL REGALIA")
+  as a middle-ground option for section headers instead, if he wants a
+  stronger unified feel without hurting legibility. Not implemented —
+  awaiting Neil's call on that option.
+- Asked which icons Neil meant by "make icons more in the same color and
+  style, looks out of place" (bottom nav vs hub cards vs card-title icons) —
+  answer: **bottom nav bar only**.
+  - Replaced the 6 bottom-nav emoji (🏠📝🏆📜📡📘, full-color, platform-
+    dependent glyphs that ignore CSS `color`) with minimal single-color SVG
+    line icons (`stroke="currentColor"`) across all 8 pages that have the
+    bottom nav (Admin deliberately has none, unchanged). Because they use
+    `currentColor`, they now inherit `.nav-item`'s text color automatically
+    — faint gray when inactive, `var(--accent)` blue when active — exactly
+    matching how the text label next to each icon already behaves, instead
+    of a fixed emoji color that never changed with tab state.
+  - `.nav-item .icon` CSS switched from `font-size` (emoji sizing) to an
+    explicit `svg { width/height: 21px }` rule.
+  - Hub-card icons and card-title icons (📊 Analytics, ⚙️ Admin, 🏅 Awards,
+    etc.) were NOT touched — Neil confirmed only the bottom nav looked out
+    of place, not those.
+- Bumped `sw.js` to `full-regalia-shell-v64`, committed, pushed, confirmed live.

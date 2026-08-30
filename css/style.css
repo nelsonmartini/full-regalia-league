@@ -289,8 +289,18 @@ a { color: inherit; text-decoration: none; }
 }
 
 .nav-item .icon {
-  font-size: 19px;
+  display: inline-flex;
   line-height: 1;
+}
+
+/* Single-color line icons (stroke="currentColor") instead of full-color
+ * emoji — they inherit .nav-item's text color exactly like the label below
+ * them, so the active tab goes accent blue and the rest stay faint gray,
+ * matching the site's controlled palette instead of clashing with it
+ * (confirmed out of place, Neil). */
+.nav-item .icon svg {
+  width: 21px;
+  height: 21px;
 }
 
 .nav-item.active {
