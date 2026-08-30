@@ -102,12 +102,25 @@
       }
     }
 
+    // Matches the exact URL loadSeasonGames() actually builds (200 days
+    // back/forward, limit=300) -- a multi-megabyte response, very
+    // different from the tiny requests below. If the small ones succeed
+    // but these fail, the issue is about request SIZE (a slow/flaky
+    // connection dropping a large download, or the device running out of
+    // memory parsing it), not basic connectivity.
+    const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
+    const start200 = new Date(); start200.setDate(start200.getDate() - 200);
+    const end200 = new Date(); end200.setDate(end200.getDate() + 200);
+    const fullRange = `${fmt(start200)}-${fmt(end200)}`;
+
     await Promise.all([
-      checkFetch("ESPN NFL scores", "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=20260212-20261231&limit=5"),
-      checkFetch("ESPN College scores", "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=20260212-20261231&limit=5"),
+      checkFetch("ESPN NFL (small test)", "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=20260212-20261231&limit=5"),
+      checkFetch("ESPN College (small test)", "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=20260212-20261231&limit=5"),
       checkFetch("Supabase database", `${SUPABASE_URL}/rest/v1/players?select=name&limit=1`, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       }),
+      checkFetch("ESPN NFL (FULL real request)", `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${fullRange}&limit=300`),
+      checkFetch("ESPN College (FULL real request)", `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=${fullRange}&limit=300`),
     ]);
 
     lines.push(`Online: ${navigator.onLine}`);
