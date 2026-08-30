@@ -106,6 +106,27 @@
       </div>`;
   }
 
+  /** Points scored/allowed per game — doesn't require a posted line, unlike
+   * every stat row below it, so it's the one thing that can always show even
+   * for a team whose only finished game had no odds at all (confirmed real,
+   * 2026-08-30: Hawaii @ Stanford). */
+  function pointsSummaryHtml(record) {
+    if (!record.scoringGamesCounted) return "";
+    const avgFor = (record.pointsFor / record.scoringGamesCounted).toFixed(1);
+    const avgAgainst = (record.pointsAgainst / record.scoringGamesCounted).toFixed(1);
+    return `
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;background:var(--bg-elev-2);border-radius:8px;padding:8px 6px">
+          <div style="font-size:17px;font-weight:800">${avgFor}</div>
+          <div style="font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em">Pts Scored/G</div>
+        </div>
+        <div style="flex:1;text-align:center;background:var(--bg-elev-2);border-radius:8px;padding:8px 6px">
+          <div style="font-size:17px;font-weight:800">${avgAgainst}</div>
+          <div style="font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em">Pts Allowed/G</div>
+        </div>
+      </div>`;
+  }
+
   /** Team over/under isn't a hit/miss — it's about the game, not one side of
    * a bet — so it renders as an Over-vs-Under split instead of a cover %. */
   function teamOuSplitHtml(record) {
@@ -178,6 +199,7 @@
       }
       return `
         <div class="section-label" style="margin-top:0">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
+        ${pointsSummaryHtml(record)}
         ${statRowHtml("Minus Spread", record.minus)}
         ${statRowHtml("Plus Spread", record.plus)}
         ${teamOuSplitHtml(record)}`;

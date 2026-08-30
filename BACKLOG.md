@@ -2095,3 +2095,26 @@
   instead of matching every other card's accent-colored trailing link. Added
   a scoped `.standings-preview-footer .link` rule matching that same look.
 - Bumped `sw.js` to `full-regalia-shell-v60`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 4) — Teams with no posted odds now show points scored/allowed
+- Neil reported Hawaii/Stanford's game was final but didn't show up in
+  Analytics' Team Trends. Confirmed via live ESPN data: that specific game
+  (HAW @ STAN, final 37-27) has NO `odds` field at all in ESPN's response —
+  no sportsbook line was ever posted/returned for it. `teamsWithFinishedGames()`
+  (`js/team-stats.js`) required a posted line just to appear in the team
+  picker at all, so neither team showed up, even though their final score is
+  perfectly good data on its own.
+  - Removed that requirement — a team now appears after any finished
+    real-season game, regardless of odds. The 4 betting categories still
+    correctly show "No data yet" per-category when there's no line to grade
+    against (unchanged, already handled).
+  - Added what Neil asked for: **points scored/allowed per game**, tallied
+    from every finished game (odds or not) — new `pointsFor`/`pointsAgainst`/
+    `scoringGamesCounted` fields on the team record, rendered as two stat
+    tiles (`pointsSummaryHtml()`, `analytics.html`) above the existing
+    Minus/Plus Spread and Over/Under rows.
+  - Verified via Playwright using the exact real event shape (final score,
+    no `odds` key): both teams now appear in the picker and show their
+    points-per-game tiles, while still correctly showing "No data yet" for
+    all 3 odds-dependent categories.
+- Bumped `sw.js` to `full-regalia-shell-v61`, committed, pushed, confirmed live.
