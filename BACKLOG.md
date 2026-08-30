@@ -4,6 +4,48 @@
 
 ## Status
 
+- **FIXED (2026-08-30): real production bug — every player stuck at 0
+  points, confirmed happening on a fresh (non-cached, non-PWA) load, not a
+  device-staleness issue.** Root cause: `fetchScoreboard()`
+  (`js/live-scores.js`) ran `.map(normalizeEvent)` for an entire ~300-game
+  ESPN response *inside* one try/catch. If even a single event anywhere in
+  that response was shaped unexpectedly — a bye week, a TBD/placeholder
+  matchup, anything `normalizeEvent` didn't expect — it threw, the catch
+  caught it, and the function returned an **empty array for the whole
+  sport**, not just the one bad event. Over a ~400-day fetch window that's
+  a real, non-theoretical risk. Every downstream page (Standings, History,
+  Player, Picks) depends on this data to grade anything, so one bad event
+  silently zeroed out every player's points at once — with no visible
+  error anywhere, which is exactly what made this so hard to pin down over
+  several rounds of back-and-forth today.
+  - Fix: each event is now normalized individually inside its own
+    try/catch; a failure drops just that one event (logged to console)
+    instead of the entire response.
+  - **Also fixed the silence itself**: `standings.html` and `history.html`
+    now show a visible "⚠️ Couldn't load live game data" message when the
+    games fetch comes back completely empty (realistically always a fetch
+    failure, never a real "no games" state) — previously this failed
+    completely silently as "everyone stuck at 0" / "everything Pending
+    forever," indistinguishable from a real data or logic bug.
+  - **Separately hardened `sw.js`** during the same investigation (ruled
+    out as the cause here, but a real latent risk found along the way):
+    the service worker previously served this site's own JS/CSS
+    *cache-first*, meaning a device whose service worker hadn't yet
+    noticed a new deploy (iOS home-screen PWAs are particularly unreliable
+    about checking) could keep running old cached code indefinitely
+    despite having a perfectly good connection. Now network-first for all
+    same-origin requests (cache is purely an offline fallback, refreshed
+    on every successful fetch); cross-origin (ESPN/Supabase) requests were
+    already never cached and remain untouched by the service worker
+    entirely.
+  - Verified via Playwright: a mix of malformed + valid events still grades
+    the valid ones correctly (3/3, confirms the actual fix); a total fetch
+    outage now shows the warning instead of silently rendering zeros (2/2);
+    the new network-first service worker still works fully online and
+    still falls back to cache offline (4/4). Plus full 9-page smoke +
+    pick-lock/result/history-grouping/visibility-refresh regression
+    (33/33 total across this investigation).
+
 - **DONE (2026-08-30): refresh immediately when returning to a backgrounded
   tab, not just on the 30s timer** — real gap surfaced by Neil testing on
   his phone, where the previous day's polling fix wasn't visibly helping.

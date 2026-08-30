@@ -1,6 +1,6 @@
 // Minimal service worker — exists so the site is installable ("Add to Home Screen")
 // and shell pages still open if the connection drops. Not caching live data.
-const CACHE = "full-regalia-shell-v51";
+const CACHE = "full-regalia-shell-v52";
 const SHELL = [
   "./",
   "./index.html",
@@ -55,19 +55,33 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
-  // Page navigations go network-first: some hosts (e.g. local dev servers) redirect
-  // "/page.html" to "/page", and serving a cached response for a navigation request
-  // in that situation fails in Chromium. Only fall back to cache when offline.
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).catch(
-        () => caches.match(event.request).then((cached) => cached || caches.match("./index.html"))
-      )
-    );
-    return;
-  }
+  // Cross-origin (ESPN, Supabase) — always straight to network, never
+  // cached or used as a fallback. Same intent as the file header: this app
+  // needs live data to mean anything, so a cached score/pick from an
+  // earlier visit is actively wrong, not a helpful fallback.
+  if (new URL(event.request.url).origin !== self.location.origin) return;
 
+  // Same-origin (this site's own shell files + page navigations):
+  // network-first, with the cache as an offline-only fallback that's kept
+  // fresh on every successful fetch. Previously this was cache-first for
+  // non-navigation requests (js/css files) — meaning a device whose
+  // service worker hadn't yet noticed a new deploy (iOS home-screen PWAs
+  // are especially unreliable about checking) could keep running OLD
+  // cached JS indefinitely despite having a perfectly good connection and
+  // a newer version sitting one fetch away. Confirmed real-world impact
+  // (2026-08-30): a phone running an old cached JS generation showed every
+  // player stuck at 0 points on Standings. Network-first removes that
+  // whole failure class — as long as there's connectivity, every device
+  // always gets the latest files, full stop.
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => cached))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        return response;
+      })
+      .catch(() =>
+        caches.match(event.request).then((cached) => cached || (event.request.mode === "navigate" ? caches.match("./index.html") : undefined))
+      )
   );
 });

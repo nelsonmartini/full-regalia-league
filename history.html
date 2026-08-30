@@ -158,6 +158,18 @@
     let firstLoad = true;
     async function load() {
       const [picksRows, games] = await Promise.all([loadSeasonPicks(), loadSeasonGames()]);
+
+      // Realistically there are always games somewhere in a ~400-day
+      // window — zero almost certainly means the live-scores fetch failed
+      // (network issue, ESPN hiccup), not that the season is empty. This
+      // used to fail silently: everything would just show "Pending"
+      // forever with no explanation.
+      if (games.length === 0) {
+        list.innerHTML = '<div class="empty-state">⚠️ Couldn\'t load live game data — check your connection and reload. Results won\'t show as Hit/Miss until this loads.</div>';
+        empty.style.display = "none";
+        return;
+      }
+
       const graded = gradeSeasonPicks(picksRows, games);
       entries = computeHistoryEntries(graded);
       populateFilters();

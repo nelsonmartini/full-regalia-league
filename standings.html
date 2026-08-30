@@ -78,6 +78,20 @@
     // there's no separate "refresh" step to trigger, just re-running this.
     async function load() {
       const [picksRows, games] = await Promise.all([loadSeasonPicks(), loadSeasonGames()]);
+
+      // Realistically there are always games somewhere in a ~400-day
+      // window — zero almost certainly means the live-scores fetch failed
+      // (network issue, ESPN hiccup, etc.), not that the season is empty.
+      // This used to fail completely silently: every player would just
+      // show 0 points with no explanation, which is exactly what made a
+      // real fetch/parsing bug (fixed 2026-08-30) so hard to diagnose.
+      if (games.length === 0) {
+        document.getElementById("standings-list").innerHTML =
+          '<div class="empty-state">⚠️ Couldn\'t load live game data — check your connection and reload. Points won\'t reflect finished games until this loads.</div>';
+        document.getElementById("standings-freshness").textContent = "";
+        return;
+      }
+
       const graded = gradeSeasonPicks(picksRows, games);
       const standings = computeStandings(graded, LEAGUE_PLAYERS);
       document.getElementById("standings-list").innerHTML = standings.length

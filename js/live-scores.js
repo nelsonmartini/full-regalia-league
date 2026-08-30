@@ -35,7 +35,25 @@ async function fetchScoreboard(sport, { daysBack = 10, daysForward = 35 } = {}) 
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.events || []).map((e) => normalizeEvent(e, sport));
+    // One malformed event anywhere in a ~300-event response (a bye week, a
+    // TBD matchup, a postponed game — anything shaped slightly differently
+    // than normalizeEvent expects) used to throw inside this .map(), which
+    // the try/catch above would catch and turn into an empty array for the
+    // ENTIRE sport — not just the one bad event. Real, confirmed-plausible
+    // cause of "every player stuck at 0 points" (2026-08-30): a single bad
+    // game silently wiping out every other game that week, so nothing could
+    // be graded at all. Normalizing per-event now means one bad game gets
+    // dropped, not the whole slate.
+    return (data.events || [])
+      .map((e) => {
+        try {
+          return normalizeEvent(e, sport);
+        } catch (err) {
+          console.error("normalizeEvent failed for one event, skipping it:", e?.id, err);
+          return null;
+        }
+      })
+      .filter(Boolean);
   } catch {
     return [];
   }
