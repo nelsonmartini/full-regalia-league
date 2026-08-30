@@ -60,23 +60,38 @@ function computeWeeklyAwards(gradedPicks) {
         if (gapMs < 0) return best; // saved after kickoff shouldn't happen (DB blocks it), skip defensively
         return !best || gapMs < best.gapMs ? { pick: p, gapMs } : best;
       }, null);
-    return { name, hits, misses, biggestDog, buzzer };
+    // Longest run of consecutive misses that week, in kickoff order — a
+    // separate stat from raw miss COUNT (Dumbass of the Week): 4 misses
+    // spread across the week reads differently than 4 in a row.
+    const byKickoff = [...picks].sort((a, b) => new Date(a.snapshot.date) - new Date(b.snapshot.date));
+    let longestMissStreak = 0;
+    let run = 0;
+    for (const p of byKickoff) {
+      run = p.result === "miss" ? run + 1 : 0;
+      longestMissStreak = Math.max(longestMissStreak, run);
+    }
+    return { name, hits, misses, biggestDog, buzzer, longestMissStreak };
   });
 
   const top = (key) => [...stats].sort((a, b) => b[key] - a[key])[0];
 
   const withDog = stats.filter((s) => s.biggestDog);
-  const highRoller = withDog.length ? withDog.sort((a, b) => b.biggestDog.pick.line - a.biggestDog.pick.line)[0] : null;
+  const bigDawg = withDog.length ? withDog.sort((a, b) => b.biggestDog.pick.line - a.biggestDog.pick.line)[0] : null;
 
   const withBuzzer = stats.filter((s) => s.buzzer);
   const buzzerBeater = withBuzzer.length ? withBuzzer.sort((a, b) => a.buzzer.gapMs - b.buzzer.gapMs)[0] : null;
+
+  // A single miss isn't a "streak" — require at least 2 in a row.
+  const withStreak = stats.filter((s) => s.longestMissStreak >= 2);
+  const iceCold = withStreak.length ? withStreak.sort((a, b) => b.longestMissStreak - a.longestMissStreak)[0] : null;
 
   return {
     weekLabel: calendarWeekLabel(latestWeek),
     dumbass: top("misses"),
     nostradamus: top("hits"),
-    highRoller,
+    bigDawg,
     buzzerBeater,
+    iceCold,
   };
 }
 
@@ -97,11 +112,14 @@ function renderWeeklyAwards(awards) {
     awards.nostradamus && awards.nostradamus.hits > 0
       ? ["🔮", "Nostradamus", "Most hits this week", awards.nostradamus.name, `${awards.nostradamus.hits} hit${awards.nostradamus.hits === 1 ? "" : "s"}`]
       : null,
-    awards.highRoller
-      ? ["🎰", "High Roller", "Biggest underdog taken", awards.highRoller.name, `took ${awards.highRoller.biggestDog.pick.team} +${awards.highRoller.biggestDog.pick.line}`]
+    awards.bigDawg
+      ? ["🎰", "Big Dawg", "Biggest underdog taken", awards.bigDawg.name, `took ${awards.bigDawg.biggestDog.pick.team} +${awards.bigDawg.biggestDog.pick.line}`]
       : null,
     awards.buzzerBeater
       ? ["⏰", "Buzzer Beater", "Picked closest to kickoff", awards.buzzerBeater.name, formatBuzzerGap(awards.buzzerBeater.buzzer.gapMs)]
+      : null,
+    awards.iceCold
+      ? ["🥶", "Ice Cold", "Longest miss streak this week", awards.iceCold.name, `${awards.iceCold.longestMissStreak} in a row`]
       : null,
   ].filter(Boolean);
 

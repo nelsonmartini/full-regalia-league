@@ -945,6 +945,22 @@ a.game-card-team:active {
   grid-template-columns: 24px 32px 1fr auto;
 }
 
+/* Matches .card-title .link's look (accent color, bold, small) — this link
+ * moved out of the card-title row to make room for the column header above
+ * it, but plain `.link` has no styling of its own outside that context, so
+ * without this it rendered as unstyled/muted text instead of looking like
+ * every other card's trailing action link. */
+.standings-preview-footer {
+  text-align: right;
+  margin-top: 10px;
+}
+
+.standings-preview-footer .link {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+}
+
 /* ---------- Player page: points-by-week chart ---------- */
 
 .week-chart {

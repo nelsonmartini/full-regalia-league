@@ -158,6 +158,7 @@
 
     const params = new URLSearchParams(location.search);
     const deepLinkTeam = (params.get("team") || "").toUpperCase();
+    const deepLinkOpp = (params.get("opp") || "").toUpperCase();
     const deepLinkSport = params.get("sport") === "cfb" ? "cfb" : params.get("sport") === "nfl" ? "nfl" : null;
     let teamSport = deepLinkSport || "nfl";
 
@@ -170,23 +171,39 @@
     // for THIS team yet" — rather than only working once at least one team
     // somewhere has played. A team link tapped in week 1 should say that,
     // not silently do nothing just because allTeams is still empty.
-    function renderTeamDetail(abbr) {
+    function teamBlockHtml(abbr) {
+      const record = computeTeamRecord(games, abbr);
+      if (record.gamesCounted === 0) {
+        return `<div class="empty-state">No finished games yet for ${abbr} this season — check back once they've played.</div>`;
+      }
+      return `
+        <div class="section-label" style="margin-top:0">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
+        ${statRowHtml("Minus Spread", record.minus)}
+        ${statRowHtml("Plus Spread", record.plus)}
+        ${teamOuSplitHtml(record)}`;
+    }
+
+    // A game is a matchup between two teams — showing just the one you
+    // happened to tap only tells half the betting-relevant story. When a
+    // game card link carries both teams (?team=X&opp=Y), render both teams'
+    // history against the 4 categories in one card so they're directly
+    // comparable, instead of only ever showing a single team in isolation.
+    function renderTeamDetail(abbr, oppAbbr) {
       if (!abbr) {
         teamDetail.innerHTML = "";
         return;
       }
-      const record = computeTeamRecord(games, abbr);
-      if (record.gamesCounted === 0) {
-        teamDetail.innerHTML = `<div class="card"><div class="empty-state">No finished games yet for ${abbr} this season — check back once they've played.</div></div>`;
+      if (oppAbbr) {
+        teamDetail.innerHTML = `
+          <div class="card">
+            <div class="card-title">${abbr} vs ${oppAbbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">This season</span></div>
+            ${teamBlockHtml(abbr)}
+            <div style="height:16px"></div>
+            ${teamBlockHtml(oppAbbr)}
+          </div>`;
         return;
       }
-      teamDetail.innerHTML = `
-        <div class="card">
-          <div class="card-title">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
-          ${statRowHtml("Minus Spread", record.minus)}
-          ${statRowHtml("Plus Spread", record.plus)}
-          ${teamOuSplitHtml(record)}
-        </div>`;
+      teamDetail.innerHTML = `<div class="card">${teamBlockHtml(abbr)}</div>`;
     }
 
     if (allTeams.length > 0) {
@@ -208,12 +225,12 @@
       teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value));
     }
 
-    // Deep-link support: ?team=ABBR&sport=nfl|cfb — the Games page's team
-    // rows link here. Resolved independently of the picker above so it
+    // Deep-link support: ?team=ABBR&opp=ABBR&sport=nfl|cfb — the Games page's
+    // team rows link here. Resolved independently of the picker above so it
     // works even before any team anywhere has a finished game.
     if (deepLinkTeam) {
       if (allTeams.length > 0) teamSelect.value = deepLinkTeam;
-      renderTeamDetail(deepLinkTeam);
+      renderTeamDetail(deepLinkTeam, deepLinkOpp || null);
     } else if (allTeams.length === 0) {
       teamDetail.innerHTML = `<div class="card"><div class="empty-state">📊 No completed games yet this season — team trends will populate automatically once games start finishing.</div></div>`;
     }
@@ -258,6 +275,16 @@
           </tr>`;
       }).join("");
     }
+
+    // Player Comparison (above) can render several rows tall, pushing Team
+    // Trends well below the fold — scrolling has to happen AFTER that table
+    // is done growing, not right after renderTeamDetail() above, or it jumps
+    // to where the target used to be before the table expanded underneath
+    // it. Deliberately last: a team link should land on "the 2 teams'
+    // history on the 4 bets," not the Player Comparison table above it
+    // (confirmed confusing, Neil — tapping a game read as "why did this
+    // take me to Analytics [and show me the wrong thing]").
+    if (deepLinkTeam) teamDetail.scrollIntoView({ block: "start" });
   })();
 </script>
 </body>

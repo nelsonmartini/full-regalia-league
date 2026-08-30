@@ -2058,3 +2058,40 @@
   small legend caption. Team Trends already had bar-style stat rows from
   earlier work, left unchanged.
 - Bumped `sw.js` to `full-regalia-shell-v59`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 3) — Ice Cold award, Big Dawg rename, game-click destination fix
+- **Ice Cold award added** (`js/awards.js`) — the other reserve idea from
+  2026-08-14 wasn't built yet: longest run of CONSECUTIVE misses within the
+  week (kickoff order), separate from Dumbass of the Week's raw miss COUNT
+  (4 misses spread across the week reads differently than 4 in a row).
+  Requires a streak of 2+ to show (a single miss isn't a "streak"). 🥶.
+- **High Roller renamed to Big Dawg** — same description ("Biggest underdog
+  taken") and computation, just the display name changed everywhere
+  (`computeWeeklyAwards`'s returned key renamed `highRoller` → `bigDawg` too).
+- **Fixed what clicking a game on the Games page actually leads to.** Neil:
+  "why when I click any game it takes to analytics tab... it should take us
+  to the 2 teams history on the 4 bets, not the historical picks of the
+  users." Two real problems, both fixed:
+  1. Each team row only ever linked to ITS OWN team's Analytics trends
+     (`?team=ABBR`) — you'd see one side of the matchup, never both.
+     `gameCardTeamRow()` (`js/live-scores.js`) now also passes the
+     opponent's abbr (`?team=X&opp=Y`), and `analytics.html`'s
+     `renderTeamDetail()` renders both teams' full 4-category history
+     stacked in one "X vs Y" card when `opp` is present.
+  2. Even fixed, landing on `analytics.html` puts you above the **Player
+     Comparison** table first (that's the "historical picks of the users"
+     Neil meant) — the team/matchup card is further down the page, easy to
+     miss. Added a `scrollIntoView()` on deep-link so the page jumps straight
+     to the team/matchup card. Had to move this call to run AFTER Player
+     Comparison finishes rendering (not right after the team card populates,
+     which happens earlier in the script) — otherwise it scrolled to where
+     the target used to be before that table grew underneath it and pushed
+     the target further down; caught via Playwright with a realistic
+     14-player roster, which a smaller test scenario didn't reproduce.
+- **Fixed "Full board →" link styling on Home** (regression from the last
+  session's change moving it out of the card-title row): `.link` has no
+  styling of its own outside a `.card-title` context (only `.card-title
+  .link` was ever defined), so the moved link rendered unstyled/muted
+  instead of matching every other card's accent-colored trailing link. Added
+  a scoped `.standings-preview-footer .link` rule matching that same look.
+- Bumped `sw.js` to `full-regalia-shell-v60`, committed, pushed, confirmed live.

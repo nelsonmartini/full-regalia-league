@@ -171,13 +171,18 @@ function formatFullDate(iso) {
  * up to full text color so the result reads at a glance without needing to
  * compare two numbers.
  *
- * The whole row links into that team's Analytics trends
- * (analytics.html?team=X&sport=Y) — deliberately only wired up here (not on
- * the Picks page's category chips), since a chip there is already a tap
- * target for making a pick and a second meaning on the same tap would be
- * confusing. Games/Live has no such conflict — nothing here is clickable
- * for any other reason. */
-function gameCardTeamRow(team, sport, showScore, isWinner, isHome) {
+ * The whole row links into Analytics' team trends for BOTH teams in this
+ * game (analytics.html?team=X&opp=Y&sport=Z), not just whichever side was
+ * tapped — a game is inherently a matchup between two teams, so "team A's
+ * history against the 4 bet categories" is only half the useful comparison
+ * (confirmed, Neil: clicking a game should show the 2 teams' history on the
+ * 4 bets, not one team in isolation, and definitely not the Player
+ * Comparison table above it — see analytics.html's scroll-into-view on
+ * deep-link for the other half of that fix). Deliberately only wired up
+ * here (not on the Picks page's category chips), since a chip there is
+ * already a tap target for making a pick and a second meaning on the same
+ * tap would be confusing. Games/Live has no such conflict. */
+function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome) {
   const homeMark = isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : "";
   const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
   const inner = `
@@ -185,7 +190,8 @@ function gameCardTeamRow(team, sport, showScore, isWinner, isHome) {
     <span class="game-card-team-name">${homeMark}${team?.name || ""}</span>
     ${showScore ? `<span class="game-card-team-score">${team?.score ?? "-"}</span>` : ""}`;
   if (!team?.abbr) return `<div class="${classes}">${inner}</div>`;
-  return `<a class="${classes}" href="analytics.html?team=${encodeURIComponent(team.abbr)}&sport=${sport}">${inner}</a>`;
+  const oppParam = opponentAbbr ? `&opp=${encodeURIComponent(opponentAbbr)}` : "";
+  return `<a class="${classes}" href="analytics.html?team=${encodeURIComponent(team.abbr)}${oppParam}&sport=${sport}">${inner}</a>`;
 }
 
 function renderGameCard(g) {
@@ -218,8 +224,8 @@ function renderGameCard(g) {
         ${statusHtml}
       </div>
       <div class="game-card-teams">
-        ${gameCardTeamRow(g.away, g.sport, showScore, awayWins, false)}
-        ${gameCardTeamRow(g.home, g.sport, showScore, homeWins, true)}
+        ${gameCardTeamRow(g.away, g.home?.abbr, g.sport, showScore, awayWins, false)}
+        ${gameCardTeamRow(g.home, g.away?.abbr, g.sport, showScore, homeWins, true)}
       </div>
       ${oddsHtml}
     </div>`;
