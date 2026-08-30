@@ -173,6 +173,12 @@
     weekFilter.addEventListener("change", render);
     await load();
     setInterval(load, 30000);
+    // Mobile browsers/PWAs pause timers while backgrounded (locked screen,
+    // app switched away from) — refresh immediately on return instead of
+    // waiting for the next scheduled tick, which can be stale by minutes.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") load();
+    });
   })();
 </script>
 </body>

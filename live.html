@@ -135,6 +135,15 @@
 
   load();
   setInterval(load, 30000);
+  // Mobile browsers/PWAs aggressively pause timers while a tab is
+  // backgrounded (screen locked, app switched away from) — setInterval
+  // alone can stall for minutes and only resume on its next scheduled
+  // tick. Refreshing immediately when the tab becomes visible again closes
+  // that gap instead of leaving stale data on screen until the timer
+  // happens to catch up.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") load();
+  });
 </script>
 </body>
 </html>

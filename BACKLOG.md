@@ -4,6 +4,21 @@
 
 ## Status
 
+- **DONE (2026-08-30): refresh immediately when returning to a backgrounded
+  tab, not just on the 30s timer** — real gap surfaced by Neil testing on
+  his phone, where the previous day's polling fix wasn't visibly helping.
+  Mobile browsers (and installed PWAs especially) aggressively pause
+  JS timers while a tab isn't in the foreground — screen locked, app
+  switched away from — so `setInterval(load, 30000)` alone can silently
+  stall for minutes and only resume on its next scheduled tick once the
+  phone comes back. Added a `visibilitychange` listener on `live.html`,
+  `standings.html`, `history.html`, and `player.html` that calls `load()`
+  immediately the moment the page becomes visible again, so reopening the
+  app (unlocking the phone, switching back from another app) triggers an
+  instant refresh instead of waiting on the timer. Verified via Playwright
+  (4/4) — confirmed a dispatched `visibilitychange` event triggers an
+  immediate re-fetch on all four pages, not just at the next 30s mark.
+
 - **New backlog (2026-08-29): quick "how many did I get right" tally on the
   Picks page** — Neil's ask, not built yet. The "My picks this week" card
   (`renderProgress` in `js/picks.js`) currently only shows *completion*
