@@ -4,6 +4,35 @@
 
 ## Status
 
+- **New backlog (2026-08-29): quick "how many did I get right" tally on the
+  Picks page** — Neil's ask, not built yet. The "My picks this week" card
+  (`renderProgress` in `js/picks.js`) currently only shows *completion*
+  ("NFL · Week 3 — 4/4 picks made" / "✅ All set") — it never shows the
+  *result* tally once those picks start getting graded partway through the
+  week. Idea: once at least one of the week's picks is locked and graded,
+  show something like "2/3 correct so far" above the individual category
+  list, same spot the completion count lives today — reusing the same
+  `gradePick()`/category-lookup plumbing the locked-category-card feature
+  (shipped 2026-08-29) already added to this exact page, not a new
+  calculation.
+- **New backlog (2026-08-29): further integrate Picks / History /
+  Standings** — Neil's ask, open-ended, not scoped yet. These three pages
+  already share the same underlying data and grading functions (confirmed
+  repeatedly this session — that's *why* Picks/History/Standings can never
+  actually disagree with each other), but they still feel like three
+  separate destinations rather than one connected story. Worth a real
+  design pass at some point on questions like: should a graded pick on
+  Picks link straight into its History entry (and vice versa)? Should
+  Standings surface anything at the individual-pick level, or stay
+  leaderboard-only? Does the new tally idea above become the connective
+  thread between all three (same "X/Y correct" language everywhere)? No
+  decisions made yet — flagging the direction, not a plan.
+- **Reminder: live `picks` table test-data cleanup still pending** (see
+  entry above from earlier today) — Neil said "can do next time." Includes
+  fake players (`TEST`, `TESTDEL`, `CLAUDE_UPDATE_TEST`) and junk game IDs
+  causing "Week of Invalid Date" garbage entries in History. Ask for the
+  cleanup SQL when ready.
+
 - **DONE (2026-08-29): Standings/History/Player pages now auto-refresh every
   30s, same cadence as the Games page.** Root cause of "results aren't
   updating in real time": these three pages only ever fetched/computed once,
