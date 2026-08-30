@@ -4,6 +4,23 @@
 
 ## Status
 
+- **DONE (2026-08-30): fixed uneven chip sizing/alignment within the 4 pick
+  categories** — Neil's ask ("text is bouncing left and right... doesn't
+  look professional"). Root cause: the pick-option chip grid used
+  `grid-template-columns: repeat(auto-fill, minmax(96px, 1fr))` — the `1fr`
+  max meant a conference sub-group with only ONE eligible team (common;
+  Power-4 conferences often have just one team playable in a given
+  category some weeks) stretched that single chip to fill the entire row
+  width, while a sub-group with 2+ teams kept normal-sized chips. Since
+  chip text is centered, a lone wide chip's text visually landed somewhere
+  in the middle of the full row, while denser rows' text sat much further
+  left — different rows' text appeared to jump left/right scrolling down
+  the list, even though each chip's own alignment was technically correct.
+  Fixed by capping the max chip width (`minmax(96px, 140px)`) so chips stay
+  a consistent size regardless of how many share a row — confirmed via
+  screenshot, no more stretch-to-fill. Scoped to just this one chip grid
+  (`js/picks.js`); verified it was the only occurrence of this pattern.
+
 - **FIXED (2026-08-30): real production bug — every player stuck at 0
   points, confirmed happening on a fresh (non-cached, non-PWA) load, not a
   device-staleness issue.** Root cause: `fetchScoreboard()`

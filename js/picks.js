@@ -537,7 +537,7 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
       .map(
         (group) => `
         <div style="font-size:10.5px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px">${group}</div>
-        <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">
+        <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(96px,140px))">
           ${byGroup
             .get(group)
             .map(
