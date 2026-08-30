@@ -4,6 +4,34 @@
 
 ## Status
 
+- **CORRECTION (2026-08-30): retracted the "malformed ESPN event" fix as
+  the confirmed cause of the 0-points bug.** Re-verified more carefully:
+  my first verification script didn't accurately replicate the real old
+  `normalizeEvent`'s optional chaining, giving a false "confirmed" result.
+  Redone properly against the real old code and real current ESPN data:
+  zero events actually throw. The defensive per-event try/catch in
+  `fetchScoreboard()` is still in place (harmless, good practice
+  regardless), but it was never proven to be *the* cause — noting this
+  so the record's accurate rather than overclaiming a fix that wasn't
+  verified.
+- **IN PROGRESS (2026-08-30): live-data loading failure on one specific
+  device, still unresolved.** Neil confirmed: full Safari data clear on
+  iPhone (removes all cached code/service workers — rules out staleness
+  entirely), still fails; fails identically on WiFi and cellular (rules
+  out one specific network blocking it); the app **does** show the new
+  "⚠️ Couldn't load live game data" warning, confirming today's code has
+  reached the device and a real fetch failure is happening — just not
+  yet clear which source (ESPN NFL, ESPN college, or Supabase) or why.
+  Added a temporary on-page diagnostics panel to `standings.html`
+  (`#diagnostics-card`) that independently fetches all three sources with
+  raw, unwrapped error reporting — shows per-source success/failure, HTTP
+  status, timing, `navigator.onLine`, and user agent directly on screen,
+  so this can be read off a phone with no dev tools. **Remove this panel
+  once the root cause is found** — it's diagnostic scaffolding, not a
+  permanent feature. Verified via Playwright (5/5) that it correctly
+  distinguishes per-source success/failure and surfaces real HTTP/network
+  error details.
+
 - **DONE (2026-08-30): fixed uneven chip sizing/alignment within the 4 pick
   categories** — Neil's ask ("text is bouncing left and right... doesn't
   look professional"). Root cause: the pick-option chip grid used
