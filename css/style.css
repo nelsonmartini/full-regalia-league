@@ -336,21 +336,35 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
 }
 
-/* Icon-only "change player" affordance — recolors with --picker-color (set
+/* Crisper than the default .chip look (flat --bg-elev-2 fill, same as every
+ * plain chip elsewhere) — a solid card-colored fill with a border tinted to
+ * the current player's color reads sharper against the tinted card behind
+ * it, instead of blending into it. */
+.picker-select {
+  background: var(--bg-elev);
+  border: 1.5px solid color-mix(in srgb, var(--picker-color) 45%, var(--border-strong));
+  border-radius: 10px;
+  color: var(--text);
+}
+
+/* Labeled "change player" affordance — recolors with --picker-color (set
  * per selected player, same variable the card's own background/border use)
- * so it reads as part of the themed card rather than a generic control. */
+ * so it reads as part of the themed card rather than a generic control.
+ * Was icon-only (a bare "⌄" in a circle) — confirmed unclear that this is
+ * how you switch names (Neil); spelling out "Switch" removes the guesswork. */
 .picker-change-btn {
   flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
   background: var(--picker-color);
   color: #ffffff;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 15px;
+  gap: 3px;
+  font-size: 12.5px;
   font-weight: 800;
+  white-space: nowrap;
   line-height: 1;
   transition: background 0.2s;
 }
@@ -736,6 +750,21 @@ a.game-card-team:active {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-faint);
+}
+
+.sport-section-result {
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--text-faint) 16%, transparent);
+  color: var(--text-dim);
+}
+
+.sport-section-result.all-hit {
+  background: color-mix(in srgb, var(--positive) 20%, transparent);
+  color: var(--positive);
 }
 
 .sport-section-chevron {

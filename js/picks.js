@@ -409,6 +409,28 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
  * expanded up front. Search now spans both sports — a sport section
  * auto-expands (or hides entirely if nothing in it matches) the same way
  * categories already did within one sport. */
+/** How many of this sport's 4 picks are graded (game finished) and how many
+ * of those hit — lets the collapsed header show a result at a glance
+ * without expanding into the categories (Neil: "4/4 picks made" already
+ * shows completion, but not whether they won once games are over). Only
+ * counts a slot once its game is actually final, same gradePick() every
+ * other page uses. */
+function sportGradedSummary(slots, allGames) {
+  let hits = 0;
+  let graded = 0;
+  for (const cat of CATEGORIES) {
+    const slot = slots[cat];
+    const gameId = slot?.entry.snapshot?.gameId;
+    const game = gameId ? allGames.find((g) => g.id === gameId) : null;
+    if (!game || game.status.state !== "post" || !game.status.completed) continue;
+    const result = gradePick(slot.entry.value, game);
+    if (result == null) continue;
+    graded++;
+    if (result === "hit") hits++;
+  }
+  return { hits, graded };
+}
+
 function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames) {
   const query = searchQuery.trim().toLowerCase();
   const filtering = !!query || !!conferenceFilter;
@@ -426,6 +448,8 @@ function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivi
     const filled = CATEGORIES.filter((c) => slots[c]).length;
     const expanded = filtering ? true : !!sportExpanded[sport];
     const icon = sport === "nfl" ? "🏈" : "🎓";
+    const { hits, graded } = sportGradedSummary(slots, allGames);
+    const resultBadge = graded > 0 ? `<span class="sport-section-result${hits === graded ? " all-hit" : ""}">${hits}/${graded} hit</span>` : "";
 
     return `
       <div class="sport-section" data-sport-section="${sport}">
@@ -433,6 +457,7 @@ function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivi
           <span class="sport-section-icon">${icon}</span>
           <span class="sport-section-label">${sportLabel(sport)}</span>
           <span class="sport-section-summary">${filled}/4 picks made</span>
+          ${resultBadge}
           <span class="sport-section-chevron">${expanded ? "▲" : "▼"}</span>
         </div>
         <div class="sport-section-body" style="display:${expanded ? "block" : "none"}">

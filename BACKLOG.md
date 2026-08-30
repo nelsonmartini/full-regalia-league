@@ -2244,3 +2244,23 @@
   new default, and the existing `scrollIntoView` fix would otherwise scroll
   to a hidden section.
 - Bumped `sw.js` to `full-regalia-shell-v67`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 9) — Picks page: sharper picker card, hit badge on collapsed sections
+- **"Who's picking?" card sharpened** — Neil: loved the color/icon theme but
+  wanted it "crispier and sharper," and wasn't sure how to actually change
+  names. Two fixes: (1) new `.picker-select` gives the dropdown its own
+  solid `--bg-elev` fill with a border tinted to the player's color, instead
+  of blending into the card via the default flat `.chip` gray; (2) the bare
+  icon-only "⌄" change button is now a labeled pill reading "Switch ▾"
+  (`.picker-change-btn`) — spells out the action instead of relying on a
+  small circular glyph to communicate it.
+- **Sport section headers (NFL/NCAA on the Make Picks list) now show a hit
+  result inline, collapsed or not** — Neil: "4/4 picks made" already showed
+  completion, but not whether they'd won once games were final, without
+  opening the section. New `sportGradedSummary()` (`js/picks.js`) grades
+  each of the sport's 4 slots against `allGames` the same way every other
+  page does (`gradePick`), counts how many are graded/hit, and renders a
+  small pill next to the picks-made count — e.g. "2/4 picks made · 1/2 hit"
+  — green when every graded pick hit, neutral gray otherwise. Only appears
+  once at least one pick in that sport is actually graded.
+- Bumped `sw.js` to `full-regalia-shell-v68`, committed, pushed, confirmed live.
