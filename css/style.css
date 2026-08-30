@@ -961,10 +961,6 @@ a.game-card-team:active {
   grid-template-columns: 24px 32px 1fr 64px;
 }
 
-.standings-header-row-compact {
-  grid-template-columns: 24px 32px 1fr 64px;
-}
-
 /* Matches .card-title .link's look (accent color, bold, small) — this link
  * moved out of the card-title row to make room for the column header above
  * it, but plain `.link` has no styling of its own outside that context, so

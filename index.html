@@ -46,14 +46,7 @@
 </header>
 
 <main class="app">
-  <div style="display:flex;align-items:center;gap:14px;margin:8px 0 4px">
-    <span class="mark" style="width:56px;height:56px;border-radius:16px;flex-shrink:0"><svg viewBox="0 0 24 24" width="60%" height="60%" xmlns="http://www.w3.org/2000/svg"><path d="M3 17 L5 8 L9 13 L12 5 L15 13 L19 8 L21 17 Z" fill="white"/><rect x="3" y="17" width="18" height="3" rx="1" fill="white"/><circle cx="5" cy="8" r="1.3" fill="white"/><circle cx="12" cy="5" r="1.3" fill="white"/><circle cx="19" cy="8" r="1.3" fill="white"/></svg></span>
-    <div>
-      <h1 class="page-title" style="margin:0">Full Regalia</h1>
-    </div>
-  </div>
-
-  <p class="brand-quote">
+  <p class="brand-quote" style="margin-top:14px">
     <span class="quote-cursive">We do the Bags 💰 right, then we go</span><br />
     <span class="quote-pop">Full Regalia</span>
   </p>
@@ -65,12 +58,9 @@
   <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
 
   <div class="card">
-    <div class="card-title"><span>Top of the standings</span></div>
-    <div class="standings-header-row standings-header-row-compact">
-      <div></div>
-      <div></div>
-      <div></div>
-      <div class="standings-header-label">Season Total</div>
+    <div class="card-title">
+      <span>Top of the standings</span>
+      <span class="standings-header-label" style="font-size:11px">Season Total</span>
     </div>
     <div id="top-standings"><div class="empty-state">Loading standings…</div></div>
     <div class="standings-preview-footer"><a class="link" href="standings.html">Full board →</a></div>
@@ -79,6 +69,17 @@
   <div class="card">
     <div class="card-title">🏅 Last Week Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
     <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Analytics</div>
+    <p class="prose" style="margin-bottom:12px">Team and player trends against the 4 betting categories, computed live as games finish.</p>
+    <a class="btn btn-ghost btn-block" href="analytics.html">View trends →</a>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
+    <div id="home-games"><div class="empty-state">Loading games…</div></div>
   </div>
 
   <div class="section-label">Get around the app</div>
@@ -103,17 +104,6 @@
       <span class="hub-title">Guide</span>
       <span class="hub-desc">How the bets work, how scoring works, how to use the app.</span>
     </a>
-  </div>
-
-  <div class="card">
-    <div class="card-title">📊 Analytics</div>
-    <p class="prose" style="margin-bottom:12px">Team and player trends against the 4 betting categories, computed live as games finish.</p>
-    <a class="btn btn-ghost btn-block" href="analytics.html">View trends →</a>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
-    <div id="home-games"><div class="empty-state">Loading games…</div></div>
   </div>
 
   <div class="card">

@@ -2144,3 +2144,23 @@
   "LEAGUE" stays in the existing small-caps style for contrast/legibility
   next to the script text.
 - Bumped `sw.js` to `full-regalia-shell-v62`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 6) — Home page cleanup: dedupe header, hub grid reorder
+- Neil still saw "Top of the standings"/"Season Total" as visually
+  disconnected even after the fixed-width column fix — turned out the real
+  issue was structural, not a sizing bug: the header row had been split onto
+  its own line below the card title (from an earlier request to "make room"
+  for it), so the two read as unrelated floating elements instead of one
+  unit. Folded "Season Total" back into the card-title row itself (`.card-
+  title` is already a flex row with space-between — same pattern every other
+  card's trailing label/link uses), removing the separate `.standings-
+  header-row-compact` row and its now-dead CSS entirely.
+- **Removed a duplicate "Full Regalia" heading on Home** — the topbar's
+  wordmark (now cursive, see above) made the second bold "Full Regalia"
+  h1 + icon block right below it pure repetition. Deleted that block; the
+  brand quote now sits directly under the topbar.
+- **Moved "Get around the app" to the bottom of Home**, directly above the
+  Admin card (was between Weekly Awards and Analytics) — Analytics and Live
+  Scores now come right after Standings/Awards, with the navigation hub
+  grid last before Admin/footer.
+- Bumped `sw.js` to `full-regalia-shell-v63`, committed, pushed, confirmed live.
