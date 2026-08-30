@@ -169,6 +169,19 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.06em;
 }
 
+/* Same cursive font as the Home page's brand quote (.quote-cursive),
+ * carried into the topbar so every page's header reads consistently
+ * branded, not just Home's. Sized up from the bold-sans it replaces —
+ * script fonts read smaller at the same font-size, and need the extra
+ * size to stay legible at a glance in the topbar. */
+.wordmark-name {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 23px;
+  letter-spacing: normal;
+  color: var(--accent-2);
+}
+
 .page-title {
   font-size: 26px;
   font-weight: 800;
@@ -871,9 +884,16 @@ a.game-card-team:active {
 
 /* ---------- Standings table ---------- */
 
+/* Fixed pixel widths (not auto/1fr) on the value columns — .standings-row
+ * and .standings-header-row are separate grid containers, so an "auto"
+ * column sizes itself off THAT grid's own content only. With "Season
+ * Total"/"Win %" (wide header text) in one grid and a bare number (narrow)
+ * in the other, each auto-sized to a different width and the two never
+ * lined up — confirmed visually, Neil. Explicit widths guarantee both
+ * grids agree on the same column width regardless of content. */
 .standings-row {
   display: grid;
-  grid-template-columns: 24px 32px 1fr auto auto;
+  grid-template-columns: 24px 32px 1fr 64px 52px;
   align-items: center;
   gap: 10px;
   padding: 10px 4px;
@@ -884,7 +904,7 @@ a.game-card-team:active {
 
 .standings-header-row {
   display: grid;
-  grid-template-columns: 24px 32px 1fr auto auto;
+  grid-template-columns: 24px 32px 1fr 64px 52px;
   align-items: center;
   gap: 10px;
   padding: 0 4px 6px;
@@ -938,11 +958,11 @@ a.game-card-team:active {
 }
 
 .standings-row-compact {
-  grid-template-columns: 24px 32px 1fr auto;
+  grid-template-columns: 24px 32px 1fr 64px;
 }
 
 .standings-header-row-compact {
-  grid-template-columns: 24px 32px 1fr auto;
+  grid-template-columns: 24px 32px 1fr 64px;
 }
 
 /* Matches .card-title .link's look (accent color, bold, small) — this link

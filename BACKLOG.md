@@ -2118,3 +2118,29 @@
     points-per-game tiles, while still correctly showing "No data yet" for
     all 3 odds-dependent categories.
 - Bumped `sw.js` to `full-regalia-shell-v61`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 5) — Standings column alignment, cursive topbar
+- Neil still not seeing Ice Cold — confirmed the live deployed `js/awards.js`
+  does contain it (curled the production file directly). Not a deploy/cache
+  issue — Ice Cold requires 2+ CONSECUTIVE misses by one player within the
+  same calendar week, and with only a couple games graded so far this early
+  in the season, nobody has hit that yet. Expected to start appearing
+  naturally as more weeks get more graded picks; nothing to fix here.
+- **Fixed real Standings column misalignment** (Home preview AND the full
+  Standings page): `.standings-row`/`.standings-header-row` are separate
+  grid containers, so an `auto`-width column sizes itself off THAT grid's
+  own content only — with "Season Total"/"Win %" (wide header text) in one
+  grid and a bare number (narrow) in the sibling grid, each auto-sized to a
+  different width and never lined up. Confirmed visually. Switched both
+  grids' value columns to explicit fixed widths (`64px`/`52px` full,
+  `64px` compact) in `css/style.css` so header and value columns always
+  agree, regardless of what the actual numbers look like.
+- **Cursive topbar, site-wide**: same Pacifico font already used in the Home
+  page's brand quote, now applied to "Full Regalia" in the topbar wordmark
+  on all 9 pages (new `.wordmark-name` class) — Neil wanted the branding
+  consistent everywhere, not just Home. Required adding the Google Fonts
+  `<link>` tags (previously only on `index.html`) to the other 8 pages too,
+  or the font would've silently fallen back to a generic cursive there.
+  "LEAGUE" stays in the existing small-caps style for contrast/legibility
+  next to the script text.
+- Bumped `sw.js` to `full-regalia-shell-v62`, committed, pushed, confirmed live.
