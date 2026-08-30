@@ -66,20 +66,26 @@
     <div class="standings-preview-footer"><a class="link" href="standings.html">Full board →</a></div>
   </div>
 
+  <div class="card" style="padding:14px 16px">
+    <div class="card-title" style="margin:0">
+      <span>Picks</span>
+      <a class="link" href="picks.html">Enter picks →</a>
+    </div>
+    <div id="home-picks-status" class="footer-note" style="padding:6px 0 0;text-align:left">Loading…</div>
+  </div>
+
   <div class="card">
     <div class="card-title">🏅 Last Week Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
     <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
   </div>
 
   <div class="card">
-    <div class="card-title">📊 Analytics</div>
-    <p class="prose" style="margin-bottom:12px">Team and player trends against the 4 betting categories, computed live as games finish.</p>
-    <a class="btn btn-ghost btn-block" href="analytics.html">View trends →</a>
-  </div>
-
-  <div class="card">
     <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
     <div id="home-games"><div class="empty-state">Loading games…</div></div>
+  </div>
+
+  <div class="card" style="padding:14px 16px">
+    <div class="card-title" style="margin:0">📊 Analytics <a class="link" href="analytics.html">View trends →</a></div>
   </div>
 
   <div class="section-label">Get around the app</div>
@@ -164,6 +170,21 @@
     // gap on the live site 2026-08-14.
     document.getElementById("picks-cta-week").textContent = pickableWeekText(games);
     document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
+  })();
+
+  (async function loadPicksStatus() {
+    const [games, allPicksRows] = await Promise.all([loadSeasonGames(), loadAllPicks()]);
+    const el = document.getElementById("home-picks-status");
+    const week = currentRegaliaWeek(games);
+    if (!week) {
+      el.textContent = "No games posted yet — check back soon";
+      return;
+    }
+    const sportWeeks = { nfl: week.nflWeekKey ?? null, cfb: week.cfbWeekKey ?? null };
+    const statusList = computeWeekStatus(allPicksRows, sportWeeks);
+    const expectedTotal = expectedPickTotal(sportWeeks);
+    const submittedCount = statusList.filter((s) => s.total === expectedTotal).length;
+    el.textContent = `Week ${week.regaliaWeekNumber} · ${submittedCount} of ${statusList.length} submitted this week`;
   })();
 
   (async function loadHomeGames() {

@@ -2210,3 +2210,37 @@
     consistent everywhere without needing per-page changes, since both
     classes are shared/global in `css/style.css`.
 - Bumped `sw.js` to `full-regalia-shell-v65`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 8) — Home page reorder, Analytics collapsible sections
+- Darkened `.card-title`/`.section-label` from `--text-faint` to `--text-dim`
+  — Neil found the new Anton headers hard to read; Anton's thinner strokes
+  read lower-contrast than the bold sans they replaced at the same color.
+- Answered Neil's Over/Under question directly: confirmed via live ESPN data
+  that the games finished so far (season openers) never had ANY odds posted
+  at all — not spread, not total. Not a parsing bug; later Week 1 games
+  already have real posted lines and will populate once they finish.
+- **Home page reorder**, per Neil's spec: Standings (top 3) → Picks status →
+  Awards → Live scores → Analytics (shrunk) → hub grid → Admin.
+  - Standings preview: rank medals (🥇🥈🥉) replaced with plain numerals in
+    the same cursive Pacifico font as the topbar/brand quote (new
+    `.standings-rank-cursive`) — "1, 2, 3" reads more like part of the brand
+    now, not plain body text buried under emoji.
+  - **New "Picks" card**: compact status line ("Week N · X of Y submitted
+    this week") plus an "Enter picks →" link — surfaces the same submission
+    count picks.html already computes (`computeWeekStatus`/
+    `expectedPickTotal`/`loadAllPicks`), moved from `js/picks.js` into the
+    shared `js/pick-utils.js` so Home can use it without pulling in picks.js's
+    DOM-binding code.
+  - **Analytics card shrunk** to a single compact line (icon + title + "View
+    trends →"), dropping the paragraph + full-width button — matches Neil's
+    "reduce its space" ask now that it's moved to the bottom of the page.
+- **Analytics page sections now collapsible, collapsed by default** — Player
+  Comparison and Team Trends can each get long (full roster / two-team
+  matchup card), so landing with everything expanded meant scrolling past a
+  lot before seeing anything else. New `.section-toggle`/`.section-chevron`
+  pattern (click a section-label to expand/collapse). The game-click deep
+  link (`?team=X&opp=Y`) explicitly force-expands Team Trends first — it's
+  the whole reason someone lands there, so it can't stay collapsed under the
+  new default, and the existing `scrollIntoView` fix would otherwise scroll
+  to a hidden section.
+- Bumped `sw.js` to `full-regalia-shell-v67`, committed, pushed, confirmed live.

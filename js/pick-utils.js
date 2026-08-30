@@ -295,3 +295,49 @@ function standingsFreshnessText(games) {
   const week = currentRegaliaWeek(games);
   return week ? `Standings as of ${today} (Week ${week.regaliaWeekNumber})` : `Standings as of ${today}`;
 }
+
+/** Moved here (from js/picks.js) so index.html can show a "how many have
+ * submitted this week" summary without pulling in picks.js's DOM-binding
+ * code. Requires js/players.js (LEAGUE_PLAYERS) to already be loaded. */
+async function loadAllPicks() {
+  const { data, error } = await sb.from("picks").select("player_name, pick, snapshot");
+  if (error) {
+    console.error("loadAllPicks failed:", error);
+    return [];
+  }
+  return data;
+}
+
+/** Per-player completion (0-4 per sport) for the currently selected NFL/NCAA
+ * weeks, sorted least-complete first so stragglers surface at the top. */
+function computeWeekStatus(allPicksRows, sportWeeks) {
+  const catsSeen = {};
+  for (const p of LEAGUE_PLAYERS) catsSeen[p.name] = { nfl: new Set(), cfb: new Set() };
+
+  for (const row of allPicksRows) {
+    const sport = row.snapshot?.sport;
+    if (!SPORTS.includes(sport)) continue;
+    if (weekBucketKeyFromSnapshot(row.snapshot) !== sportWeeks[sport]) continue;
+    const cat = pickCategory(row.pick);
+    if (!cat) continue;
+    if (!catsSeen[row.player_name]) catsSeen[row.player_name] = { nfl: new Set(), cfb: new Set() };
+    catsSeen[row.player_name][sport].add(cat);
+  }
+
+  return LEAGUE_PLAYERS.map((p) => {
+    const nfl = catsSeen[p.name].nfl.size;
+    const cfb = catsSeen[p.name].cfb.size;
+    return { name: p.name, nfl, cfb, total: nfl + cfb };
+  }).sort((a, b) => a.total - b.total || a.name.localeCompare(b.name));
+}
+
+/** How many total picks actually count as "done" this week — 4 per sport
+ * that's actually pickable right now, not a hardcoded 8. NCAA's season
+ * starting ~2 weeks before the NFL's means some weeks only have one sport
+ * linked (see buildRegaliaWeeks); requiring all 8 in that case made it
+ * impossible for anyone to ever show as "Submitted" for those weeks, even
+ * after completing every pick actually available (real gap, caught by
+ * Neil). */
+function expectedPickTotal(sportWeeks) {
+  return (sportWeeks.nfl != null ? 4 : 0) + (sportWeeks.cfb != null ? 4 : 0);
+}

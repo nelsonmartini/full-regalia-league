@@ -26,13 +26,17 @@ function renderStandingsRow(player, rank) {
 
 /** Home page's "Top of the standings" preview — same row, minus the win %
  * column (Neil: keep the mini preview to just points, full board still
- * shows both). Grid drops to 4 columns since there's one fewer cell. */
+ * shows both). Grid drops to 4 columns since there's one fewer cell. Rank
+ * shows as a plain numeral in the same cursive font as the brand quote/
+ * topbar (Neil: "1,2,3 font is the cursive") instead of medal emoji — this
+ * preview is always exactly the top 3, so a medal for every single row
+ * added nothing a numeral doesn't already say, once it's styled to feel
+ * like part of the brand rather than plain body text. */
 function renderStandingsRowCompact(player, rank) {
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
-  const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
   return `
     <a class="standings-row standings-row-compact${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
-      <div class="standings-rank">${medal}</div>
+      <div class="standings-rank standings-rank-cursive">${rank}</div>
       ${avatarHtml(player.name, 32)}
       <div class="standings-name">${titleCase(player.name)}</div>
       <div class="standings-points">${player.points}</div>

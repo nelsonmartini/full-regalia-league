@@ -39,39 +39,49 @@
   <h1 class="page-title">Analytics</h1>
   <p class="page-sub">Players against players, and teams against their own lines — the same 4 betting categories used for picks, computed live from this season's results.</p>
 
-  <div class="section-label">Player comparison</div>
-  <div id="player-trends-empty" class="card" style="display:none">
-    <div class="empty-state">🏈 No graded picks yet — check back once the season's underway.</div>
+  <div class="section-toggle" data-target="player-compare-section">
+    <span class="section-label" style="margin:0">Player comparison</span>
+    <span class="section-chevron">▼</span>
   </div>
-  <div class="card" id="player-compare-wrap" style="display:none;overflow-x:auto;padding:8px 4px">
-    <table class="compare-table">
-      <thead>
-        <tr>
-          <th>Player</th>
-          <th title="Minus Spread">−</th>
-          <th title="Plus Spread">+</th>
-          <th title="Over">▲</th>
-          <th title="Under">▼</th>
-        </tr>
-      </thead>
-      <tbody id="player-compare-body"></tbody>
-    </table>
-    <div class="footer-note" style="text-align:left;padding:8px 8px 2px">🟢 Covering more often · 🔴 Covering less often</div>
-  </div>
-
-  <div class="section-label" style="margin-top:20px">Team trends</div>
-  <div id="team-trends-picker" style="display:none">
-    <div class="card" style="padding:14px 16px">
-      <div class="chip-row" id="team-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
-        <div class="chip selected" data-sport="nfl">🏈 NFL</div>
-        <div class="chip" data-sport="cfb">🎓 NCAA</div>
-      </div>
-      <select id="team-select" class="chip" style="width:100%;box-sizing:border-box;appearance:none;text-align:left;padding:12px;cursor:pointer">
-        <option value="">Select a team…</option>
-      </select>
+  <div class="section-body" id="player-compare-section" style="display:none">
+    <div id="player-trends-empty" class="card" style="display:none">
+      <div class="empty-state">🏈 No graded picks yet — check back once the season's underway.</div>
+    </div>
+    <div class="card" id="player-compare-wrap" style="display:none;overflow-x:auto;padding:8px 4px">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th title="Minus Spread">−</th>
+            <th title="Plus Spread">+</th>
+            <th title="Over">▲</th>
+            <th title="Under">▼</th>
+          </tr>
+        </thead>
+        <tbody id="player-compare-body"></tbody>
+      </table>
+      <div class="footer-note" style="text-align:left;padding:8px 8px 2px">🟢 Covering more often · 🔴 Covering less often</div>
     </div>
   </div>
-  <div id="team-detail"></div>
+
+  <div class="section-toggle" data-target="team-trends-section" style="margin-top:20px">
+    <span class="section-label" style="margin:0">Team trends</span>
+    <span class="section-chevron">▼</span>
+  </div>
+  <div class="section-body" id="team-trends-section" style="display:none">
+    <div id="team-trends-picker" style="display:none">
+      <div class="card" style="padding:14px 16px">
+        <div class="chip-row" id="team-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+          <div class="chip selected" data-sport="nfl">🏈 NFL</div>
+          <div class="chip" data-sport="cfb">🎓 NCAA</div>
+        </div>
+        <select id="team-select" class="chip" style="width:100%;box-sizing:border-box;appearance:none;text-align:left;padding:12px;cursor:pointer">
+          <option value="">Select a team…</option>
+        </select>
+      </div>
+    </div>
+    <div id="team-detail"></div>
+  </div>
 </main>
 
 <nav class="bottom-nav">
@@ -169,6 +179,24 @@
     return record;
   }
 
+  // Both sections start collapsed — Player Comparison and Team Trends can
+  // each get long (a full roster of players, or a matchup card with two
+  // teams' stat rows), so landing on the page with everything already
+  // expanded meant a lot of scrolling before seeing anything else (Neil).
+  function setSectionExpanded(target, expanded) {
+    const body = document.getElementById(target);
+    const toggle = document.querySelector(`.section-toggle[data-target="${target}"]`);
+    body.style.display = expanded ? "block" : "none";
+    toggle.querySelector(".section-chevron").textContent = expanded ? "▲" : "▼";
+  }
+  document.querySelectorAll(".section-toggle").forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const target = toggle.dataset.target;
+      const isOpen = document.getElementById(target).style.display !== "none";
+      setSectionExpanded(target, !isOpen);
+    });
+  });
+
   (async function () {
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
@@ -256,6 +284,10 @@
     if (deepLinkTeam) {
       if (allTeams.length > 0) teamSelect.value = deepLinkTeam;
       renderTeamDetail(deepLinkTeam, deepLinkOpp || null);
+      // A team link is the whole reason someone landed here — expand Team
+      // Trends even though it starts collapsed by default, or the
+      // scrollIntoView below would scroll to a section that's still hidden.
+      setSectionExpanded("team-trends-section", true);
     } else if (allTeams.length === 0) {
       teamDetail.innerHTML = `<div class="card"><div class="empty-state">📊 No completed games yet this season — team trends will populate automatically once games start finishing.</div></div>`;
     }

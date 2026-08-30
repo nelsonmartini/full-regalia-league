@@ -955,6 +955,12 @@ a.game-card-team:active {
 .standings-row.rank-2 .standings-rank { color: #cfd4e6; }
 .standings-row.rank-3 .standings-rank { color: #d99a63; }
 
+.standings-rank-cursive {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 19px;
+}
+
 .standings-name {
   font-weight: 700;
   font-size: 14.5px;
@@ -1244,6 +1250,26 @@ a.game-card-team:active {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin: 0 2px 8px;
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px;
+  margin: 0 0 8px;
+}
+
+.section-toggle .section-label {
+  margin: 0;
+}
+
+.section-chevron {
+  font-size: 11px;
+  color: var(--text-faint);
+  flex: none;
 }
 
 /* Condensed "who's in" line under the week picker — deliberately NOT a
