@@ -92,16 +92,16 @@ function renderWeeklyAwards(awards) {
 
   const rows = [
     awards.dumbass && awards.dumbass.misses > 0
-      ? ["🤡", "Dumbass of the Week", awards.dumbass.name, `${awards.dumbass.misses} miss${awards.dumbass.misses === 1 ? "" : "es"}`]
+      ? ["🤡", "Dumbass of the Week", "Most misses this week", awards.dumbass.name, `${awards.dumbass.misses} miss${awards.dumbass.misses === 1 ? "" : "es"}`]
       : null,
     awards.nostradamus && awards.nostradamus.hits > 0
-      ? ["🔮", "Nostradamus", awards.nostradamus.name, `${awards.nostradamus.hits} hit${awards.nostradamus.hits === 1 ? "" : "s"}`]
+      ? ["🔮", "Nostradamus", "Most hits this week", awards.nostradamus.name, `${awards.nostradamus.hits} hit${awards.nostradamus.hits === 1 ? "" : "s"}`]
       : null,
     awards.highRoller
-      ? ["🎰", "High Roller", awards.highRoller.name, `took ${awards.highRoller.biggestDog.pick.team} +${awards.highRoller.biggestDog.pick.line}`]
+      ? ["🎰", "High Roller", "Biggest underdog taken", awards.highRoller.name, `took ${awards.highRoller.biggestDog.pick.team} +${awards.highRoller.biggestDog.pick.line}`]
       : null,
     awards.buzzerBeater
-      ? ["⏰", "Buzzer Beater", awards.buzzerBeater.name, formatBuzzerGap(awards.buzzerBeater.buzzer.gapMs)]
+      ? ["⏰", "Buzzer Beater", "Picked closest to kickoff", awards.buzzerBeater.name, formatBuzzerGap(awards.buzzerBeater.buzzer.gapMs)]
       : null,
   ].filter(Boolean);
 
@@ -109,10 +109,13 @@ function renderWeeklyAwards(awards) {
 
   return rows
     .map(
-      ([icon, label, name, detail]) => `
+      ([icon, label, blurb, name, detail]) => `
     <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
       <span style="font-size:20px">${icon}</span>
-      <span style="flex:1;font-size:13px;color:var(--text-dim)">${label}</span>
+      <span style="flex:1">
+        <div style="font-size:13px;color:var(--text-dim);font-weight:700">${label}</div>
+        <div style="font-size:10.5px;color:var(--text-faint)">${blurb}</div>
+      </span>
       <span style="text-align:right">
         <div style="font-weight:800">${titleCase(name)}</div>
         <div style="font-size:11px;color:var(--text-faint)">${detail}</div>

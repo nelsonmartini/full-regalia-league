@@ -792,6 +792,21 @@ a.game-card-team:active {
   font-weight: 800;
 }
 
+.compare-pct {
+  display: inline-block;
+  min-width: 42px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  font-weight: 800;
+  font-size: 12.5px;
+}
+
+.compare-pct-empty {
+  color: var(--text-faint);
+  font-weight: 700;
+  background: none;
+}
+
 /* ---------- Analytics: category stat rows (Team + Player trends) ---------- */
 /* Same visual language as .progress-bar, repurposed for a cover-% / hit-rate
  * bar instead of a completion bar. .stat-split-bar is the one exception —
@@ -923,6 +938,10 @@ a.game-card-team:active {
 }
 
 .standings-row-compact {
+  grid-template-columns: 24px 32px 1fr auto;
+}
+
+.standings-header-row-compact {
   grid-template-columns: 24px 32px 1fr auto;
 }
 

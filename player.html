@@ -148,10 +148,13 @@
       // horizontal progress bars (which read oddly once every bar's just
       // showing off against the same single number anyway).
       const maxPts = Math.max(1, ...graded_.map((r) => r.points));
+      // Sport emoji + week number ("🏈 W1") instead of a bare letter+number
+      // ("N1") — the letter abbreviation read as unexplained shorthand with
+      // no legend anywhere on the page (confirmed confusing, Neil).
       const shortLabel = (label) =>
         label
-          .replace("NFL · Week ", "N")
-          .replace("NCAA · Week ", "C")
+          .replace("NFL · Week ", "🏈 W")
+          .replace("NCAA · Week ", "🎓 W")
           .replace("Preseason ", "Pre ")
           .replace("Postseason ", "Post ");
       document.getElementById("trend").innerHTML = graded_

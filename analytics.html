@@ -53,6 +53,7 @@
       </thead>
       <tbody id="player-compare-body"></tbody>
     </table>
+    <div class="footer-note" style="text-align:left;padding:8px 8px 2px">🟢 Covering more often · 🔴 Covering less often</div>
   </div>
 
   <div class="section-label" style="margin-top:20px">Team trends</div>
@@ -232,9 +233,16 @@
       playerTrendsEmpty.style.display = "block";
     } else {
       playerCompareWrap.style.display = "block";
+      // Color-coded pill instead of plain text — green the higher the cover
+      // %, red the lower — so the table reads at a glance (who's hot in
+      // which category) instead of requiring line-by-line number reading.
+      // Same --positive/--negative palette used everywhere else (Hit/Miss
+      // badges, etc.), just blended by cover % instead of a fixed color.
       const compareCell = (bucket) => {
         const pct = coverPct(bucket);
-        return `<td>${pct == null ? "–" : pct + "%"}</td>`;
+        if (pct == null) return `<td><span class="compare-pct compare-pct-empty">–</span></td>`;
+        const tone = `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
+        return `<td><span class="compare-pct" style="color:${tone};background:color-mix(in srgb, ${tone} 18%, transparent)">${pct}%</span></td>`;
       };
       playerCompareBody.innerHTML = LEAGUE_PLAYERS.map((p) => {
         const record = computePlayerCategoryRecord(p.name, graded);

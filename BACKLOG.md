@@ -2032,3 +2032,29 @@
   follow-up if Neil wants Awards' week label to match the Regalia Week number
   too.
 - Bumped `sw.js` to `full-regalia-shell-v58`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 2) — Home standings header, award blurbs, Analytics visuals
+- Home page's "Top of the standings" preview: added the same "Season Total"
+  column header as the full Standings page (`.standings-header-row-compact`,
+  `css/style.css`), and moved the "Full board →" link out of the card title
+  down to its own right-aligned line under the list, to make room.
+- Weekly Awards: each award now shows a short one-line description of what it
+  measures (e.g. "Most misses this week", "Biggest underdog taken"), separate
+  from the winner's specific stat line — previously only the winner's number
+  was shown, with no explanation of what the award itself was for.
+  `js/awards.js`'s `renderWeeklyAwards()`. Confirmed for Neil what the 2
+  reserve (not-yet-built) award ideas are, still sitting in the backlog from
+  2026-08-14: 🎢 Rollercoaster (point swing vs. own average) and 🥶 Ice Cold
+  (miss streak) — easy to add later, same data model as the 4 live ones.
+- Player page: fixed the "C1"/"N1" bar-chart labels (my own abbreviation from
+  the last session's redesign, confirmed confusing) to show the sport emoji
+  instead — "🎓 W1" / "🏈 W1" — matching the 🏈/🎓 convention already used
+  elsewhere in the app (e.g. Analytics' team-sport toggle), no legend needed.
+- Analytics' Player Comparison table was a plain grid of percentages, no
+  visual weight — Neil asked for "more visual and graphics." Added
+  color-coded pills per cell (green the higher the cover %, red the lower,
+  blended via `color-mix()` off the existing `--positive`/`--negative`
+  palette — same colors already used for Hit/Miss badges elsewhere) plus a
+  small legend caption. Team Trends already had bar-style stat rows from
+  earlier work, left unchanged.
+- Bumped `sw.js` to `full-regalia-shell-v59`, committed, pushed, confirmed live.
