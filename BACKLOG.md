@@ -2189,3 +2189,24 @@
     etc.) were NOT touched — Neil confirmed only the bottom nav looked out
     of place, not those.
 - Bumped `sw.js` to `full-regalia-shell-v64`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 7) — Anton on section headers, site-wide
+- Neil went with the recommended middle ground: Anton (the bold condensed
+  font already used for "FULL REGALIA" in the brand quote) on `.card-title`
+  and `.section-label` — every card's heading ("TOP OF THE STANDINGS",
+  "LAST WEEK AWARDS", "FULL LEADERBOARD", "PLAYER COMPARISON", "SEASON
+  SUMMARY", etc.) across all pages, plus every `.section-label`
+  ("PLAYER COMPARISON", "TEAM TRENDS", "GET AROUND THE APP"). Not applied to
+  `.page-title` (the big per-page h1 like "Standings"/"Analytics") — kept
+  that as the existing bold sans for now, a smaller, more conservative first
+  pass than reworking the whole heading hierarchy at once.
+  - Nested small elements inside a `.card-title` — the trailing `.link`
+    ("Full board →", "See all →") and the "Season Total" mini column label
+    (`.standings-header-label`) — explicitly reset back to the normal sans
+    stack, so only the actual heading text picks up Anton. Distinct from
+    tabular fields and trailing actions, per Neil's own framing of what he
+    wanted.
+  - Verified visually across Home, Standings, Player, and Analytics — reads
+    consistent everywhere without needing per-page changes, since both
+    classes are shared/global in `css/style.css`.
+- Bumped `sw.js` to `full-regalia-shell-v65`, committed, pushed, confirmed live.

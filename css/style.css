@@ -406,15 +406,25 @@ a { color: inherit; text-decoration: none; }
 }
 
 .card-title {
-  font-size: 13px;
-  font-weight: 800;
+  font-family: "Anton", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   color: var(--text-faint);
   margin: 0 0 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.card-title .link,
+.card-title .standings-header-label {
+  /* Reset back to the normal sans stack — Anton is for the section heading
+   * itself (see .card-title), not the small trailing action link or a data
+   * column label sitting next to it. Distinct from the header, distinct
+   * from tabular fields, per Neil. */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
 }
 
 .card-title .link {
@@ -1222,11 +1232,12 @@ a.game-card-team:active {
 }
 
 .section-label {
-  font-size: 11px;
-  font-weight: 800;
+  font-family: "Anton", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   margin: 0 2px 8px;
 }
 
