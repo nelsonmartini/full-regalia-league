@@ -170,127 +170,6 @@ function weekBucketLabel(key, games) {
   }
 }
 
-/** One entry per "Regalia Season Week" — NFL's own week numbering is the
- * backbone (clean, complete coverage all season; NFL's also the site's
- * default/primary sport everywhere else), paired with whichever NCAA week's
- * games START closest in time (within 10 days). Confirmed real confusion
- * (Neil): NFL Week 4 and NCAA Week 4 don't refer to the same calendar dates,
- * so picking one Regalia Week now sets the correct underlying week for BOTH
- * sports at once instead of two independently-drifting selectors.
- * cfbWeekKey/cfbWeekNumber are null when there's no NCAA week within that
- * window yet — normal, college odds post later than the NFL's, not a bug. */
-function buildRegaliaWeeks(gamesBySport) {
-  function weekInfo(games, key) {
-    const weekGames = games.filter((g) => weekBucketKey(g) === key);
-    const dates = weekGames.map((g) => new Date(g.date));
-    return {
-      key,
-      weekNumber: weekGames[0]?.week ?? null,
-      seasonType: weekGames[0]?.seasonType ?? null,
-      startDate: new Date(Math.min(...dates)),
-      endDate: new Date(Math.max(...dates)),
-    };
-  }
-
-  function sortedWeeks(games) {
-    return [...new Set(games.map(weekBucketKey))]
-      .map((key) => weekInfo(games, key))
-      .sort((a, b) => a.startDate - b.startDate);
-  }
-
-  const nflWeeks = sortedWeeks(gamesBySport.nfl);
-  const cfbWeeks = sortedWeeks(gamesBySport.cfb);
-  const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
-
-  // One-to-one nearest-match pairing (greedy on smallest date gap first), not
-  // "each NFL week independently grabs whichever CFB week is closest" — the
-  // latter let two different NFL weeks both claim the same CFB week whenever
-  // only one or two college weeks had odds posted so far (a real, likely
-  // scenario early in a week — college odds lag the NFL's). Confirmed via
-  // test: with only one posted CFB week, both an NFL week 8 days away and one
-  // 1 day away were independently matching to it. Greedy-pairing by smallest
-  // gap first, removing both sides once matched, guarantees each CFB week
-  // links to at most one NFL week — whichever is genuinely closest.
-  const candidatePairs = [];
-  for (const nfl of nflWeeks) {
-    for (const cfb of cfbWeeks) {
-      const diff = Math.abs(cfb.startDate - nfl.startDate);
-      if (diff <= TEN_DAYS_MS) candidatePairs.push({ nfl, cfb, diff });
-    }
-  }
-  candidatePairs.sort((a, b) => a.diff - b.diff);
-  const linkedCfbByNflKey = new Map();
-  const usedCfbKeys = new Set();
-  for (const pair of candidatePairs) {
-    if (linkedCfbByNflKey.has(pair.nfl.key) || usedCfbKeys.has(pair.cfb.key)) continue;
-    linkedCfbByNflKey.set(pair.nfl.key, pair.cfb);
-    usedCfbKeys.add(pair.cfb.key);
-  }
-
-  const nflEntries = nflWeeks.map((nfl) => {
-    const cfbMatch = linkedCfbByNflKey.get(nfl.key) ?? null;
-    return {
-      nflWeekKey: nfl.key,
-      nflWeekNumber: nfl.weekNumber,
-      nflSeasonType: nfl.seasonType,
-      cfbWeekKey: cfbMatch?.key ?? null,
-      cfbWeekNumber: cfbMatch?.weekNumber ?? null,
-      startDate: nfl.startDate,
-      endDate: nfl.endDate,
-    };
-  });
-
-  // College football's season starts ~2 weeks before the NFL's, so its
-  // season-opening week (or two) has no NFL week close enough to pair with
-  // (real case, confirmed 2026-08-19: NFL's only pickable week was Week 1
-  // starting Sep 10, which paired with CFB Week 2 — the nearer of the two —
-  // leaving CFB Week 1 (98 games, nearly full odds coverage) completely
-  // unlinked and therefore invisible in this list, even though it's the
-  // most complete, most pickable week available). Surface those orphaned
-  // CFB weeks as their own NCAA-only Regalia Week entries instead of
-  // silently dropping them.
-  const cfbOnlyEntries = cfbWeeks
-    .filter((cfb) => !usedCfbKeys.has(cfb.key))
-    .map((cfb) => ({
-      nflWeekKey: null,
-      nflWeekNumber: null,
-      nflSeasonType: null,
-      cfbWeekKey: cfb.key,
-      cfbWeekNumber: cfb.weekNumber,
-      startDate: cfb.startDate,
-      endDate: cfb.endDate,
-    }));
-
-  // "Crown Week" numbering is purely positional (1, 2, 3, ... in chronological
-  // order) — deliberately NOT either sport's own week number. Before this,
-  // an NFL-paired week showed the NFL's number and a CFB-only week showed
-  // the NCAA's, which could both land on "Week 1" independently and read as
-  // a duplicate/typo (confirmed confusing, per Neil). One continuous
-  // sequence sidesteps that entirely — the NFL/NCAA-specific numbers still
-  // show in the row's subline (see renderWeekPickerList), just not in the
-  // headline number.
-  return [...nflEntries, ...cfbOnlyEntries]
-    .sort((a, b) => a.startDate - b.startDate)
-    .map((week, i) => ({ ...week, regaliaWeekNumber: i + 1 }));
-}
-
-function regaliaWeekDateRange(week) {
-  const fmt = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return fmt(week.startDate) === fmt(week.endDate) ? fmt(week.startDate) : `${fmt(week.startDate)}–${fmt(week.endDate)}`;
-}
-
-/** "👑 Week N" — the crown emoji itself IS the "Crown Week" branding
- * (spelling out the word too read as redundant, per Neil — one or the
- * other, not both). Date range is appended separately by callers in a
- * smaller font rather than baked in here, so it stays on the same line
- * without dominating it. The number itself is OUR unified sequence, not
- * either sport's own native week number (which can, and often does, differ
- * from this one — see buildRegaliaWeeks above, where the NFL/NCAA-specific
- * numbers still show in the row subline). */
-function regaliaWeekTitle(week) {
-  return `👑 Week ${week.regaliaWeekNumber}`;
-}
-
 /** Build the 4 category pools (one option per eligible game) for a set of
  * games, excluding whichever game is already the OTHER side of the same bet
  * family (a game used for Minus Spread can't also appear in Plus Spread, etc.)
@@ -688,11 +567,15 @@ async function initPicksPage() {
   const gamesBySport = { nfl: pickableAll.filter((g) => g.sport === "nfl"), cfb: pickableAll.filter((g) => g.sport === "cfb") };
 
   // "Regalia Week" links an NFL week to whichever NCAA week starts closest in
-  // time (see buildRegaliaWeeks) — picking one sets sportWeeks.nfl AND
-  // sportWeeks.cfb together, so switching the sport toggle below never lands
-  // on two unrelated weeks. Sorted chronologically, so index 0 is always
-  // "current" (only upcoming pickable weeks are ever in this list).
-  const regaliaWeeks = buildRegaliaWeeks(gamesBySport);
+  // time (see buildRegaliaWeeks, js/pick-utils.js) — picking one sets
+  // sportWeeks.nfl AND sportWeeks.cfb together, so switching the sport toggle
+  // below never lands on two unrelated weeks. Sorted chronologically, so
+  // index 0 is always "current". buildRegaliaWeeks takes ALL games (not just
+  // pickable ones, unlike gamesBySport above) so it can compute each week's
+  // TRUE date range, including any already-played games sharing that week —
+  // it filters down to still-pickable weeks internally.
+  const allGamesBySport = { nfl: allGames.filter((g) => g.sport === "nfl"), cfb: allGames.filter((g) => g.sport === "cfb") };
+  const regaliaWeeks = buildRegaliaWeeks(allGamesBySport);
   const currentRegaliaIndex = 0;
   let selectedRegaliaIndex = currentRegaliaIndex;
   const sportWeeks = {

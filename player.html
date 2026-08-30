@@ -60,13 +60,14 @@
         <div>
           <div style="font-size:22px;font-weight:800" id="stat-best">–</div>
           <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em">Best Week</div>
+          <div style="font-size:10.5px;color:var(--text-faint);margin-top:2px" id="stat-best-label">&nbsp;</div>
         </div>
       </div>
     </div>
 
     <div class="card">
       <div class="card-title">Points by week</div>
-      <div id="trend"></div>
+      <div id="trend" class="week-chart"></div>
     </div>
 
     <div id="weeks-list"></div>
@@ -136,19 +137,33 @@
 
       document.getElementById("stat-total").textContent = total.toFixed(1);
       document.getElementById("stat-avg").textContent = avg.toFixed(1);
-      document.getElementById("stat-best").textContent = graded_.length ? `${best.points} (${best.label})` : "–";
+      document.getElementById("stat-best").textContent = graded_.length ? best.points : "–";
+      // Which week it happened, shown as its own small line rather than
+      // crammed into the big number in parentheses — the label can be long
+      // ("NCAA · Week 12") and was crowding a tile meant to read at a glance.
+      document.getElementById("stat-best-label").textContent = graded_.length ? best.label : "";
 
+      // Vertical bar chart, one bar per (sport, week) — a "build of the
+      // season" you can scan left to right, instead of a stacked list of
+      // horizontal progress bars (which read oddly once every bar's just
+      // showing off against the same single number anyway).
       const maxPts = Math.max(1, ...graded_.map((r) => r.points));
+      const shortLabel = (label) =>
+        label
+          .replace("NFL · Week ", "N")
+          .replace("NCAA · Week ", "C")
+          .replace("Preseason ", "Pre ")
+          .replace("Postseason ", "Post ");
       document.getElementById("trend").innerHTML = graded_
         .map((r) => {
-          const pct = Math.max(4, Math.round((r.points / maxPts) * 100));
+          const pct = Math.max(6, Math.round((r.points / maxPts) * 100));
           return `
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <div style="width:80px;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.label}</div>
-              <div style="flex:1;background:var(--bg-elev-2);border-radius:6px;overflow:hidden;height:14px">
-                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>
+            <div class="week-chart-bar" title="${r.label}: ${r.points} pts">
+              <div class="week-chart-bar-value">${r.points}</div>
+              <div class="week-chart-bar-track">
+                <div class="week-chart-bar-fill" style="height:${pct}%"></div>
               </div>
-              <div style="width:32px;text-align:right;font-size:11.5px;font-weight:700;flex-shrink:0">${r.points}</div>
+              <div class="week-chart-bar-label">${shortLabel(r.label)}</div>
             </div>`;
         })
         .join("");

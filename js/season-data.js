@@ -19,8 +19,8 @@ function renderStandingsRow(player, rank) {
       <div class="standings-rank">${medal}</div>
       ${avatarHtml(player.name, 32)}
       <div class="standings-name">${titleCase(player.name)}</div>
-      <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
       <div class="standings-points">${player.points}</div>
+      <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
     </a>`;
 }
 

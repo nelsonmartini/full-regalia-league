@@ -1976,3 +1976,59 @@
   Playwright: right edges match exactly (0px spread) across all 4 categories, for
   both NFL and NCAA. Shared CSS, so no sport-specific code path to duplicate.
 - Bumped `sw.js` to `full-regalia-shell-v57`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd) — "Week N" unification, Standings/Player polish
+- Neil reported real confusion: the Home page said "Week 1" was Sept 9-14ish, the
+  Picks page said "Week 1" was Sept 3-7, and college football games tagged
+  "Week 1" had already been played despite the date range implying it hadn't
+  started. Investigated and found **four independent "week" concepts** coexisting:
+  (1) Home/Standings' freshness line used an NFL-only native week number, (2) the
+  Picks page's "Regalia/Crown Week" pairs NFL+NCAA by nearest date into one unified
+  number (the "good" one, already built earlier this project), (3) Weekly Awards
+  uses a plain Monday-anchored calendar week off each pick's game date, (4)
+  History/Player label things by each sport's own native week number. None of
+  these knew about each other, so "Week 1" meant a different date range depending
+  which page you were on.
+  - Confirmed via live ESPN data (2026-08-30): CFB's own "Week 1" spans Aug 29
+    (season-opener games, already final) through Sep 7 (still upcoming) — a real
+    ESPN data quirk, not an app bug. The app's date-range math only looked at
+    still-open (`pre`-status) games, so it showed "Sep 3–7" and hid that part of
+    the week had already happened.
+  - Fix: moved `buildRegaliaWeeks`/`regaliaWeekDateRange`/`regaliaWeekTitle` out of
+    `js/picks.js` into the shared `js/pick-utils.js`, added `currentRegaliaWeek()`,
+    and rewrote `pickableWeekText()`/`standingsFreshnessText()` to use it instead
+    of the old NFL-only `earliestPickableWeek()` (removed). Also fixed
+    `buildRegaliaWeeks`'s date-range calc to use ALL games sharing a week key
+    (any status), not just still-pickable ones, while still only listing weeks
+    that have at least one pickable game left (`hasPickable` filter) — same
+    "which week is current" behavior, accurate displayed range. `js/picks.js`
+    now passes `allGamesBySport` (unfiltered) instead of the old pickable-only
+    `gamesBySport` into this function; `gamesBySport` itself is untouched and
+    still drives the actual pickable chip lists.
+  - Did NOT change the underlying NFL+NCAA pairing rule itself (Neil confirmed
+    this was already correct: earliest calendar week is NCAA-only, next one
+    pairs NCAA+NFL) — only unified which pages use it and fixed the date range.
+  - Verified via Playwright with data shaped exactly like the real live
+    ESPN state (mixed final + pre games in the same CFB week): Home's CTA
+    subline, Home's "Standings as of" line, and the Picks page's week picker
+    all now show the identical "Week 1 · Aug 29–Sep 7."
+- Standings leaderboard: reordered columns to Points-then-Win% (was Win%-then-
+  Points), centered both value columns and their headers (was right-aligned),
+  and relabeled the points header "Season Total" (was "Points") — all in
+  `js/season-data.js` (`renderStandingsRow`) and `css/style.css`
+  (`.standings-points`, `.standings-winpct`, `.standings-header-label`).
+- Player page (`player.html`): "Best Week" stat no longer crams the week label
+  into the big number as `"14 (NFL · Week 3)"` — now shows the number alone with
+  the week label as its own small line underneath (`#stat-best-label`). Replaced
+  the "Points by week" horizontal progress-bar list with a proper vertical bar
+  chart (`.week-chart`/`.week-chart-bar` in `css/style.css`) — a left-to-right
+  "build of the season" instead of a stack of bars that were really just
+  comparing against a single number each.
+- Answered Neil's question on Weekly Awards: they're **not** tied to any of the
+  above week systems — `js/awards.js` uses its own plain calendar week (Monday-
+  anchored, off each pick's game date) and recomputes live as more of that
+  week's games go final, right up until the next calendar week produces its own
+  first graded result. Not changed this session; flagged as a possible future
+  follow-up if Neil wants Awards' week label to match the Regalia Week number
+  too.
+- Bumped `sw.js` to `full-regalia-shell-v58`, committed, pushed, confirmed live.
