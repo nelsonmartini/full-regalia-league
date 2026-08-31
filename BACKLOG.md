@@ -2264,3 +2264,29 @@
   — green when every graded pick hit, neutral gray otherwise. Only appears
   once at least one pick in that sport is actually graded.
 - Bumped `sw.js` to `full-regalia-shell-v68`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 10) — Fixed duplicate "Enter Picks" CTA on Home
+- Adding the "Picks" status card two sessions ago created a real duplicate:
+  the original top-of-page "Enter your picks →" button AND the new card's
+  own "Enter picks →" link both did the same thing. Neil asked to collapse
+  back to one. Removed the new "Picks" card entirely (including
+  `loadPicksStatus()` and the "X of Y submitted this week" line it showed —
+  that feature's gone from Home now, still lives on picks.html itself).
+  - Original CTA button kept, but moved to sit right below the Standings
+    preview instead of above it, and restyled in the same Pacifico cursive
+    font as the brand quote/topbar (`.enter-picks-cursive`) — reads as part
+    of the brand now rather than a generic button label. The Week N/date
+    subline stays directly beneath it, unchanged.
+  - Removed the "👇 Tap below to make your picks for the week" instruction
+    line — redundant once the CTA sits directly under something you're
+    already looking at, not several sections away.
+- **Standings preview trimmed down further** ("reduce and optimize... much
+  smaller real estate"): smaller rank/avatar grid columns, tighter padding,
+  smaller name/points type (new sizing under `.standings-row-compact`),
+  avatar dropped from 32px to 24px.
+- **Rank numerals now render in `var(--text)`** instead of the gold/silver/
+  bronze accent colors — reads white in dark mode (confirmed via computed
+  style: `rgb(245, 246, 250)`) without vanishing in light mode, where
+  `--text` is a dark navy instead. A literal `#fff` would've disappeared
+  against light-mode's white cards.
+- Bumped `sw.js` to `full-regalia-shell-v69`, committed, pushed, confirmed live.

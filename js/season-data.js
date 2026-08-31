@@ -37,7 +37,7 @@ function renderStandingsRowCompact(player, rank) {
   return `
     <a class="standings-row standings-row-compact${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank standings-rank-cursive">${rank}</div>
-      ${avatarHtml(player.name, 32)}
+      ${avatarHtml(player.name, 24)}
       <div class="standings-name">${titleCase(player.name)}</div>
       <div class="standings-points">${player.points}</div>
     </a>`;

@@ -990,6 +990,17 @@ a.game-card-team:active {
   font-size: 19px;
 }
 
+/* Neil: "white" — using --text (near-white in dark mode, the theme most
+ * relevant here) instead of a literal #fff so it doesn't vanish against a
+ * light-mode card. Matches specificity of the gold/silver/bronze rank
+ * rules above (same 3 selector classes) so it wins by being declared
+ * later, rather than needing !important. */
+.standings-row.rank-1 .standings-rank-cursive,
+.standings-row.rank-2 .standings-rank-cursive,
+.standings-row.rank-3 .standings-rank-cursive {
+  color: var(--text);
+}
+
 .standings-name {
   font-weight: 700;
   font-size: 14.5px;
@@ -1017,8 +1028,27 @@ a.game-card-team:active {
   min-width: 46px;
 }
 
+/* Tighter than the full Standings page's rows — this is a "top 3" teaser on
+ * Home, not the full leaderboard, so it doesn't need the same breathing
+ * room (Neil: "reduce and optimize... to take up much smaller real
+ * estate"). Smaller rank/avatar columns, less vertical padding, slightly
+ * smaller type throughout. */
 .standings-row-compact {
-  grid-template-columns: 24px 32px 1fr 64px;
+  grid-template-columns: 20px 24px 1fr 50px;
+  gap: 8px;
+  padding: 6px 4px;
+}
+
+.standings-row-compact .standings-name {
+  font-size: 13px;
+}
+
+.standings-row-compact .standings-points {
+  font-size: 14px;
+}
+
+.standings-row-compact .standings-rank-cursive {
+  font-size: 16px;
 }
 
 /* Matches .card-title .link's look (accent color, bold, small) — this link
@@ -1111,6 +1141,17 @@ a.game-card-team:active {
 }
 
 .btn-block { width: 100%; }
+
+/* The primary CTA, styled in the same cursive brand font as the topbar/
+ * quote instead of the usual bold button label — Neil wanted this button
+ * to read as part of the brand voice now that it's the thing that follows
+ * the standings preview, not a generic "click here" action. */
+.enter-picks-cursive {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 21px;
+  padding: 13px 16px;
+}
 
 /* ---------- Pick selector chips ---------- */
 

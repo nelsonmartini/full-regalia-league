@@ -50,15 +50,11 @@
     <span class="quote-cursive">We do the Bags 💰 right, then we go</span><br />
     <span class="quote-pop">Full Regalia</span>
   </p>
-  <p class="brand-quote-instruction">👇 Tap below to make your picks for the week</p>
-
-  <a class="btn btn-primary btn-block" href="picks.html" id="picks-cta" style="margin-bottom:2px">Enter your picks →</a>
-  <div id="picks-cta-week" class="footer-note" style="padding-top:2px;padding-bottom:14px"></div>
 
   <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
 
-  <div class="card">
-    <div class="card-title">
+  <div class="card" style="padding:12px 14px">
+    <div class="card-title" style="margin:0 0 6px">
       <span>Top of the standings</span>
       <span class="standings-header-label" style="font-size:11px">Season Total</span>
     </div>
@@ -66,13 +62,8 @@
     <div class="standings-preview-footer"><a class="link" href="standings.html">Full board →</a></div>
   </div>
 
-  <div class="card" style="padding:14px 16px">
-    <div class="card-title" style="margin:0">
-      <span>Picks</span>
-      <a class="link" href="picks.html">Enter picks →</a>
-    </div>
-    <div id="home-picks-status" class="footer-note" style="padding:6px 0 0;text-align:left">Loading…</div>
-  </div>
+  <a class="btn btn-primary btn-block enter-picks-cursive" href="picks.html" id="picks-cta" style="margin:14px 0 2px">Enter Your Picks →</a>
+  <div id="picks-cta-week" class="footer-note" style="padding-top:2px;padding-bottom:14px"></div>
 
   <div class="card">
     <div class="card-title">🏅 Last Week Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
@@ -170,21 +161,6 @@
     // gap on the live site 2026-08-14.
     document.getElementById("picks-cta-week").textContent = pickableWeekText(games);
     document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
-  })();
-
-  (async function loadPicksStatus() {
-    const [games, allPicksRows] = await Promise.all([loadSeasonGames(), loadAllPicks()]);
-    const el = document.getElementById("home-picks-status");
-    const week = currentRegaliaWeek(games);
-    if (!week) {
-      el.textContent = "No games posted yet — check back soon";
-      return;
-    }
-    const sportWeeks = { nfl: week.nflWeekKey ?? null, cfb: week.cfbWeekKey ?? null };
-    const statusList = computeWeekStatus(allPicksRows, sportWeeks);
-    const expectedTotal = expectedPickTotal(sportWeeks);
-    const submittedCount = statusList.filter((s) => s.total === expectedTotal).length;
-    el.textContent = `Week ${week.regaliaWeekNumber} · ${submittedCount} of ${statusList.length} submitted this week`;
   })();
 
   (async function loadHomeGames() {
