@@ -106,6 +106,17 @@
   <span id="picker-badge-name">Picking as…</span>
 </div>
 
+<div class="confirm-modal-overlay" id="confirm-modal-overlay" style="display:none">
+  <div class="confirm-modal-box">
+    <div class="confirm-modal-title">Change this pick?</div>
+    <div class="confirm-modal-message" id="confirm-modal-message"></div>
+    <div class="confirm-modal-actions">
+      <button class="btn btn-ghost btn-block" id="confirm-modal-cancel">Cancel</button>
+      <button class="btn btn-primary btn-block" id="confirm-modal-confirm">Change pick</button>
+    </div>
+  </div>
+</div>
+
 <nav class="bottom-nav">
   <div class="bottom-nav-inner">
     <a class="nav-item" data-page="index.html" href="index.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></span>Home</a>

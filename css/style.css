@@ -1274,10 +1274,14 @@ a.game-card-team:active {
   gap: 8px;
 }
 
+/* Chevron sits right next to the name (not spread across the row via
+ * space-between) and is bigger than a typical tiny disclosure triangle —
+ * Neil: make it "easier and more obvious" to see this is tappable. Padding
+ * widens the actual tap target beyond just the text+arrow. */
 .pick-group-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   cursor: pointer;
   user-select: none;
   font-size: 10.5px;
@@ -1286,12 +1290,14 @@ a.game-card-team:active {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 8px 0 4px;
-  padding: 2px 0;
+  padding: 4px 2px;
 }
 
 .pick-group-chevron {
-  font-size: 9px;
+  font-size: 13px;
+  color: var(--accent);
   flex: none;
+  line-height: 1;
 }
 
 .chip {
@@ -1512,4 +1518,53 @@ a.game-card-team:active {
   font-weight: 700;
   min-height: 18px;
   margin-top: 10px;
+}
+
+/* Custom in-app popup replacing the native browser confirm() — Neil wanted
+ * it to look like it's part of the site, not an OS-level dialog box. A
+ * translucent scrim (not a solid full-bleed background like .fr-gate-
+ * overlay) since this sits on TOP of an in-progress picks session rather
+ * than replacing the whole screen. */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirm-modal-box {
+  background: var(--bg-elev);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 20px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.confirm-modal-title {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 23px;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.confirm-modal-message {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-modal-actions .btn {
+  flex: 1;
 }

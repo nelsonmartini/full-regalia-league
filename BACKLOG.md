@@ -2317,3 +2317,22 @@
   canceling leaves the existing pick untouched. Verified: fires on real
   changes, silent on first-time picks.
 - Bumped `sw.js` to `full-regalia-shell-v70`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 12) — Conference chevron polish, custom confirm popup
+- **Conference header chevron made bigger and moved next to the name** —
+  was spread to the far right via `justify-content: space-between`, reading
+  as disconnected from the conference label; switched to a simple flex row
+  with a small gap so the arrow sits right next to "SEC"/"BIG TEN", and
+  bumped its size/color (13px, accent blue) so it reads as clearly tappable
+  (Neil: "easier and more obvious").
+- **Replaced the native browser `confirm()` with a custom in-app popup** —
+  Neil wanted the "change this pick?" prompt to look like part of the site,
+  not an OS dialog. New `#confirm-modal-overlay` (picks.html): a translucent
+  scrim + centered card with a cursive Pacifico title ("Change this pick?",
+  per Neil's suggestion), the same message text as before, and Cancel/
+  Change pick buttons matching the site's existing button styles.
+  `showConfirmModal(message)` (`js/picks.js`) returns a Promise resolved by
+  whichever button is tapped (or by tapping the scrim, which cancels) —
+  same true/false calling convention as `confirm()`, so the one call site
+  just added an `await`. The chip-click handler is now `async` to support this.
+- Bumped `sw.js` to `full-regalia-shell-v71`, committed, pushed, confirmed live.

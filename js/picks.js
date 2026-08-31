@@ -516,6 +516,40 @@ function renderWeekPickerList(container, regaliaWeeks, selectedIndex, currentInd
     .join("");
 }
 
+/** In-app replacement for the native browser confirm() — Neil wanted the
+ * "change this pick?" prompt to look like part of the site (branded, same
+ * cursive title, rounded card) rather than a generic OS dialog box. Single
+ * shared overlay in picks.html (#confirm-modal-overlay); resolves true/false
+ * once the user picks a button, same calling convention as confirm() so the
+ * one call site just adds an `await`. */
+function showConfirmModal(message) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("confirm-modal-overlay");
+    const confirmBtn = document.getElementById("confirm-modal-confirm");
+    const cancelBtn = document.getElementById("confirm-modal-cancel");
+    document.getElementById("confirm-modal-message").textContent = message;
+    overlay.style.display = "flex";
+
+    function cleanup(result) {
+      overlay.style.display = "none";
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      overlay.removeEventListener("click", onOverlayClick);
+      resolve(result);
+    }
+    function onConfirm() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    // Tapping the dark scrim outside the card cancels, same as tapping
+    // "Cancel" — matches how the OS-level confirm() this replaces worked
+    // (dismissing it any way defaults to "no").
+    function onOverlayClick(e) { if (e.target === overlay) cleanup(false); }
+
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    overlay.addEventListener("click", onOverlayClick);
+  });
+}
+
 async function initPicksPage() {
   const select = document.getElementById("player-select");
   const weekPickerHeader = document.getElementById("week-picker-header");
@@ -720,7 +754,7 @@ async function initPicksPage() {
     loadAndRenderStatus();
   });
 
-  container.addEventListener("click", (e) => {
+  container.addEventListener("click", async (e) => {
     // Sport section headers (🏈 NFL / 🎓 NCAA) toggle collapse/expand for
     // that whole sport. Checked before category headers since a sport
     // header click could otherwise also match a category selector if they
@@ -789,7 +823,7 @@ async function initPicksPage() {
     // category's expanded; a first pick has no prior choice to lose, so
     // there's nothing to confirm away from).
     if (isChange) {
-      const confirmed = confirm(`Change your ${CATEGORY_LABEL[category]} pick from "${pickLabel(old.entry.value)}" to "${pickLabel(value)}"?`);
+      const confirmed = await showConfirmModal(`Change your ${CATEGORY_LABEL[category]} pick from "${pickLabel(old.entry.value)}" to "${pickLabel(value)}"?`);
       if (!confirmed) return;
     }
     if (isChange) {
