@@ -2290,3 +2290,30 @@
   `--text` is a dark navy instead. A literal `#fff` would've disappeared
   against light-mode's white cards.
 - Bumped `sw.js` to `full-regalia-shell-v69`, committed, pushed, confirmed live.
+
+### 2026-08-30 (cont'd 11) — Collapsible conferences, confirm-before-change on picks
+- Neil: too much scrolling under a category once every conference/division
+  subgroup (SEC, Big Ten, AFC, etc.) rendered fully expanded at once. Added
+  a second collapse layer, one level deeper than the existing category
+  collapse: each conference now starts collapsed, keyed per (sport,
+  category, conference) so the same conference can be open under one
+  category and closed under another. Force-expands while searching/
+  filtering (same as categories), AND whichever conference contains the
+  currently picked game — opening a category you've already picked in
+  shows the pick, not a wall of collapsed conference headers to guess
+  through. New `.pick-group-header`/`.pick-group-chevron` (`css/style.css`),
+  `groupExpanded` state + click handler (`js/picks.js`), `groupExpanded`
+  threaded through `categoriesHtmlForSport`/`renderSportSections`.
+- Answered Neil's "Week 2 NCAA barely has anything to pick" question:
+  confirmed via live ESPN data — 85 games exist for CFB Week 2, but only 7
+  have a posted line so far. Not a bug; college odds post closer to
+  kickoff than the NFL's (already documented elsewhere in this codebase).
+  Will fill in as books post lines closer to that week.
+- **Confirm dialog before changing an existing pick** — Neil wanted a gate
+  before overwriting a pick that's already set, not for a first-time pick
+  into an empty slot (nothing to lose there). Chip-click handler now shows
+  a native `confirm()` — `Change your Minus Spread pick from "X" to "Y"?"`
+  — only when the category already had a different game/value selected;
+  canceling leaves the existing pick untouched. Verified: fires on real
+  changes, silent on first-time picks.
+- Bumped `sw.js` to `full-regalia-shell-v70`, committed, pushed, confirmed live.

@@ -1274,6 +1274,26 @@ a.game-card-team:active {
   gap: 8px;
 }
 
+.pick-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 8px 0 4px;
+  padding: 2px 0;
+}
+
+.pick-group-chevron {
+  font-size: 9px;
+  flex: none;
+}
+
 .chip {
   border: 1px solid var(--border-strong);
   background: var(--bg-elev-2);

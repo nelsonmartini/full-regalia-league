@@ -269,7 +269,7 @@ function sortGroupKeys(sport, keys) {
  * toggled between). Each category/chip element carries data-sport so the
  * click handler in initPicksPage can tell which sport a click belongs to
  * without a single global "selected sport" to fall back on. */
-function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames) {
+function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames, groupExpanded) {
   if (games.length === 0) {
     return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
   }
@@ -370,11 +370,25 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
       if (!byGroup.has(o.group)) byGroup.set(o.group, []);
       byGroup.get(o.group).push(o);
     }
+    // Each conference/division is its own collapsible block, collapsed by
+    // default — a category with every conference already expanded meant a
+    // lot of scrolling just to reach the one you actually wanted (Neil).
+    // Force-expanded while filtering/searching, same as categories above,
+    // so results aren't hidden behind a second collapsed layer. A group
+    // containing the CURRENTLY PICKED game also force-expands, so opening a
+    // category you've already picked in shows your pick instead of a
+    // collapsed conference list you'd have to guess through.
     const subgroupsHtml = sortGroupKeys(sport, [...byGroup.keys()])
-      .map(
-        (group) => `
-        <div style="font-size:10.5px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px">${group}</div>
-        <div class="chip-row" style="grid-template-columns:repeat(auto-fill,minmax(96px,140px))">
+      .map((group) => {
+        const groupKey = `${cat}:${group}`;
+        const groupHasCurrentPick = currentGameId && byGroup.get(group).some((o) => o.gameId === currentGameId);
+        const groupExpandedState = query || conferenceFilter ? true : groupHasCurrentPick ? true : !!groupExpanded?.[groupKey];
+        return `
+        <div class="pick-group-header" data-group-header="${escapeHtml(group)}" data-sport="${sport}" data-category="${cat}">
+          <span>${group}</span>
+          <span class="pick-group-chevron">${groupExpandedState ? "▲" : "▼"}</span>
+        </div>
+        <div class="chip-row" style="display:${groupExpandedState ? "grid" : "none"};grid-template-columns:repeat(auto-fill,minmax(96px,140px))">
           ${byGroup
             .get(group)
             .map(
@@ -384,8 +398,8 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
           `
             )
             .join("")}
-        </div>`
-      )
+        </div>`;
+      })
       .join("");
 
     return `
@@ -431,7 +445,7 @@ function sportGradedSummary(slots, allGames) {
   return { hits, graded };
 }
 
-function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames) {
+function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded) {
   const query = searchQuery.trim().toLowerCase();
   const filtering = !!query || !!conferenceFilter;
   let anySportMatched = false;
@@ -440,7 +454,7 @@ function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivi
     const weekKey = sportWeeks[sport];
     const games = gamesBySport[sport].filter((g) => weekBucketKey(g) === weekKey);
     const slots = slotsForSportWeek(picks, sport, weekKey);
-    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter, allGames);
+    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter, allGames, groupExpanded[sport]);
 
     if (filtering && !anyMatched) return ""; // hide the whole sport section if nothing in it matches
 
@@ -583,6 +597,12 @@ async function initPicksPage() {
     nfl: { minus: false, plus: false, over: false, under: false },
     cfb: { minus: false, plus: false, over: false, under: false },
   };
+  // Conference/division subgroups inside a category (e.g. "SEC" under NCAA
+  // Plus Spread) also start collapsed, one layer deeper than categories —
+  // keyed by "${category}:${group}" per sport so the same conference can be
+  // open under one category and closed under another (Neil: too much
+  // scrolling with every conference expanded at once).
+  const groupExpanded = { nfl: {}, cfb: {} };
   let searchQuery = "";
   let conferenceFilter = "";
 
@@ -612,7 +632,7 @@ async function initPicksPage() {
   }
 
   function renderAll() {
-    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames);
+    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded);
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
   }
 
@@ -728,6 +748,20 @@ async function initPicksPage() {
       return;
     }
 
+    // Conference/division subgroup headers, one layer deeper than category
+    // headers — same sibling-not-wrapper relationship to the chip row below
+    // them, so this doesn't interfere with chip clicks either.
+    const groupHeader = e.target.closest("[data-group-header]");
+    if (groupHeader) {
+      const sport = groupHeader.getAttribute("data-sport");
+      const cat = groupHeader.getAttribute("data-category");
+      const group = groupHeader.getAttribute("data-group-header");
+      const key = `${cat}:${group}`;
+      groupExpanded[sport][key] = !groupExpanded[sport][key];
+      renderAll();
+      return;
+    }
+
     const chip = e.target.closest(".chip");
     if (!chip) return;
     // Sport now comes from the clicked chip's own category container, not a
@@ -748,7 +782,17 @@ async function initPicksPage() {
     // Replace whatever was previously filling this (sport, week, category) slot.
     const slots = slotsForSportWeek(currentPicks, sport, weekKey);
     const old = slots[category];
-    if (old && old.groupId !== newGroupId) {
+    const isChange = old && old.groupId !== newGroupId;
+    // Confirm before overwriting an EXISTING pick — a first-time pick into
+    // an empty slot needs no confirmation, only replacing one that was
+    // already set (Neil: easy to bump a different chip by accident once a
+    // category's expanded; a first pick has no prior choice to lose, so
+    // there's nothing to confirm away from).
+    if (isChange) {
+      const confirmed = confirm(`Change your ${CATEGORY_LABEL[category]} pick from "${pickLabel(old.entry.value)}" to "${pickLabel(value)}"?`);
+      if (!confirmed) return;
+    }
+    if (isChange) {
       delete currentPicks[old.groupId];
       pendingUpserts.delete(old.groupId);
       if (originalPicks[old.groupId]) {
