@@ -2492,3 +2492,13 @@
   row showing avatar, player, week, their pick, and a Hit/Miss/Push badge.
   Shown for both teams when viewing a matchup (?team=X&opp=Y).
 - Bumped `sw.js` to `full-regalia-shell-v77`, committed, pushed, confirmed live.
+
+### 2026-09-04 (cont'd) — Replaced Guide with Analytics in the bottom nav
+- Neil went with the recommendation to keep History (settled record of what
+  happened) and instead swap out Guide for Analytics in the bottom nav —
+  Guide is a reference doc people check once, not something tapped
+  repeatedly, and it's already reachable from Home's hub grid, so nothing's
+  lost. New nav order across all 8 pages: Home, Picks, Standings, Games,
+  History, Analytics. New line-icon (axis + 3 ascending solid bars) matches
+  the style of the other 5 nav icons.
+- Bumped `sw.js` to `full-regalia-shell-v78`, committed, pushed, confirmed live.
