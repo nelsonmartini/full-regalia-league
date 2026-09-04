@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-09-04): Replaced the Games tab's date slider with tappable date chips.** Neil, immediately after the slider shipped: "very confusing" — with the ~45-day ESPN window, a drag slider could have 15+ stops with only one floating text label showing which day you'd landed on, no visual reference for the rest.
+  - New design: same idea (narrow the game list to one day), but as a row of chips — "All" plus up to 5 real dates, each labeled directly on the chip (e.g. "Sat, Sep 5"), same tap-to-select pattern as the conference filter right above it. Capped at 5 real dates so a long ESPN window doesn't turn into a wall of chips; when there are more than 5 distinct days, keeps the 5 *closest to today* (not just the first 5 chronologically) so the visible set tracks whatever's actually relevant right now, then displays them in ascending order. "All" still means every game regardless of date — the 5-day cap only limits which quick-filter chips are offered, not what "All" includes.
+  - Removed the now-unused range-input CSS (`.date-filter-slider` and its custom thumb/track rules); the chip row reuses the site's existing `.chip`/`.chip-row` styles, no new CSS needed.
+  - Verified via Playwright (8/8): chip row appears with >1 day, caps at 5 dates + All when 9 distinct days exist in the mock data, chips render in ascending order, clicking a specific date filters correctly, and clicking All restores every game (not just the 5 shown as chips).
+  - Bumped service worker cache to `full-regalia-shell-v82`.
+
 - **SHIPPED (2026-09-04): Games tab gets a date scrubber + ranked-teams-first
   sorting.** Neil asked for "some sort of slider" to filter by date, plus
   "highest ranking teams always appear first."

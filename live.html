@@ -55,9 +55,8 @@
     <div class="chip" data-conference="Other">Other</div>
   </div>
 
-  <div class="date-filter-block" id="date-filter-block" style="display:none">
-    <div class="date-filter-label" id="date-filter-label">All Dates</div>
-    <input type="range" id="date-filter-slider" class="date-filter-slider" min="0" max="0" value="0" step="1" />
+  <div class="chip-row" id="date-filter-row" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr));margin-bottom:14px;display:none">
+    <div class="chip selected" data-day="">All</div>
   </div>
 
   <div id="games-loading" class="empty-state">Loading games…</div>
@@ -116,40 +115,53 @@
     return Math.min(h, a);
   }
 
+  // Distinct game days as chips instead of a drag slider — with the ~45-day
+  // ESPN window, "every distinct day" could be 15+ stops on a single track
+  // with only one floating label, which Neil found unreadable. Capped at 5
+  // dates, picked by closeness to *now* (not just the first 5 chronologically)
+  // so the visible set is always this week's-ish games, then re-sorted
+  // ascending for display.
   function rebuildDateFilter() {
     const keys = new Set(allGames.map((g) => dayKey(g.date)));
-    gameDays = [...keys]
-      .map((k) => new Date(k))
-      .sort((a, b) => a - b);
+    let days = [...keys].map((k) => new Date(k)).sort((a, b) => a - b);
+    if (days.length > 5) {
+      const now = Date.now();
+      days = days
+        .slice()
+        .sort((a, b) => Math.abs(a - now) - Math.abs(b - now))
+        .slice(0, 5)
+        .sort((a, b) => a - b);
+    }
+    gameDays = days;
 
-    const block = document.getElementById("date-filter-block");
-    const slider = document.getElementById("date-filter-slider");
-    block.style.display = gameDays.length > 1 ? "block" : "none";
-    slider.max = String(gameDays.length);
     // Keep the current selection if that day still exists in the fresh data
     // (this runs on every 30s refresh); otherwise fall back to "All Dates"
-    // rather than silently pointing at a day that's no longer in range.
+    // rather than silently pointing at a day no longer offered.
     if (selectedDayKey && !gameDays.some((d) => d.toDateString() === selectedDayKey)) {
       selectedDayKey = null;
-      slider.value = "0";
     }
-    updateDateFilterLabel();
+
+    const row = document.getElementById("date-filter-row");
+    row.style.display = gameDays.length > 1 ? "grid" : "none";
+    row.innerHTML =
+      `<div class="chip${selectedDayKey ? "" : " selected"}" data-day="">All</div>` +
+      gameDays
+        .map((d) => {
+          const key = d.toDateString();
+          const label = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+          return `<div class="chip${selectedDayKey === key ? " selected" : ""}" data-day="${key}">${label}</div>`;
+        })
+        .join("");
   }
 
-  function updateDateFilterLabel() {
-    const label = document.getElementById("date-filter-label");
-    if (!selectedDayKey) {
-      label.textContent = "All Dates";
-      return;
-    }
-    const d = gameDays.find((d) => d.toDateString() === selectedDayKey);
-    label.textContent = d ? d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : "All Dates";
-  }
-
-  document.getElementById("date-filter-slider").addEventListener("input", (e) => {
-    const idx = Number(e.target.value);
-    selectedDayKey = idx === 0 ? null : gameDays[idx - 1].toDateString();
-    updateDateFilterLabel();
+  // Delegated on the row itself (not the chips) since rebuildDateFilter()
+  // replaces the chips' innerHTML on every 30s refresh.
+  document.getElementById("date-filter-row").addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-day]");
+    if (!chip) return;
+    document.querySelectorAll("#date-filter-row .chip").forEach((c) => c.classList.remove("selected"));
+    chip.classList.add("selected");
+    selectedDayKey = chip.getAttribute("data-day") || null;
     render();
   });
 
