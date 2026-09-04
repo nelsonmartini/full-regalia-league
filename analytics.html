@@ -39,6 +39,18 @@
   <h1 class="page-title">Analytics</h1>
   <p class="page-sub">Players against players, and teams against their own lines — the same 4 betting categories used for picks, computed live from this season's results.</p>
 
+  <!-- One sport toggle drives BOTH sections below — previously only Team
+       Trends had one, and it was buried inside that section's own collapsed
+       body, so it was easy to miss entirely (confirmed, Neil: "still not
+       seeing a filter for NFL and NCAA"). Player Comparison had no sport
+       split at all before this — it just combined both sports into one
+       table. Sitting outside both collapsible sections so it stays visible
+       and applies no matter which section is open. -->
+  <div class="chip-row" id="page-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+    <div class="chip selected" data-sport="nfl">🏈 NFL</div>
+    <div class="chip" data-sport="cfb">🎓 NCAA</div>
+  </div>
+
   <div class="section-toggle" data-target="player-compare-section">
     <span class="section-label" style="margin:0">Player comparison</span>
     <span class="section-chevron">▼</span>
@@ -71,10 +83,6 @@
   <div class="section-body" id="team-trends-section" style="display:none">
     <div id="team-trends-picker" style="display:none">
       <div class="card" style="padding:14px 16px">
-        <div class="chip-row" id="team-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
-          <div class="chip selected" data-sport="nfl">🏈 NFL</div>
-          <div class="chip" data-sport="cfb">🎓 NCAA</div>
-        </div>
         <input type="text" id="team-search-input" placeholder="🔎 Search for a team…" autocomplete="off"
                style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
         <select id="team-select" class="chip" style="width:100%;box-sizing:border-box;appearance:none;text-align:left;padding:12px;cursor:pointer">
@@ -166,7 +174,7 @@
       </div>`;
   }
 
-  function computePlayerCategoryRecord(name, gradedPicks) {
+  function computePlayerCategoryRecord(name, gradedPicks, sport) {
     const record = {
       minus: { hit: 0, miss: 0, push: 0 },
       plus: { hit: 0, miss: 0, push: 0 },
@@ -175,6 +183,7 @@
     };
     for (const gp of gradedPicks) {
       if (gp.player_name !== name || !gp.result) continue;
+      if (sport && gp.snapshot?.sport !== sport) continue;
       const cat = pickCategory(gp.pick);
       if (cat) record[cat][gp.result]++;
     }
@@ -203,19 +212,21 @@
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
 
+    // ---------- Page-wide sport toggle (drives both sections below) ----------
+    const pageSportToggle = document.getElementById("page-sport-toggle");
+    const params = new URLSearchParams(location.search);
+    const deepLinkSport = params.get("sport") === "cfb" ? "cfb" : params.get("sport") === "nfl" ? "nfl" : null;
+    let pageSport = deepLinkSport || "nfl";
+
     // ---------- Team trends ----------
     const allTeams = teamsWithFinishedGames(games);
     const teamTrendsPicker = document.getElementById("team-trends-picker");
     const teamSelect = document.getElementById("team-select");
     const teamSearchInput = document.getElementById("team-search-input");
     const teamDetail = document.getElementById("team-detail");
-    const teamSportToggle = document.getElementById("team-sport-toggle");
 
-    const params = new URLSearchParams(location.search);
     const deepLinkTeam = (params.get("team") || "").toUpperCase();
     const deepLinkOpp = (params.get("opp") || "").toUpperCase();
-    const deepLinkSport = params.get("sport") === "cfb" ? "cfb" : params.get("sport") === "nfl" ? "nfl" : null;
-    let teamSport = deepLinkSport || "nfl";
 
     // Filters the <select>'s own option list live as you type — NCAA alone
     // can be 130+ schools, way too many to scroll through in a native
@@ -224,7 +235,7 @@
     function renderTeamOptions() {
       const query = teamSearchInput.value.trim().toLowerCase();
       const opts = allTeams
-        .filter((t) => t.sport === teamSport)
+        .filter((t) => t.sport === pageSport)
         .filter((t) => !query || t.abbr.toLowerCase().includes(query) || t.name.toLowerCase().includes(query));
       teamSelect.innerHTML = '<option value="">Select a team…</option>' + opts.map((t) => `<option value="${t.abbr}">${t.abbr} — ${t.name}</option>`).join("");
     }
@@ -315,22 +326,28 @@
     if (allTeams.length > 0) {
       teamTrendsPicker.style.display = "block";
       renderTeamOptions();
-      teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c.getAttribute("data-sport") === teamSport));
+      teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value));
+    }
 
-      teamSportToggle.addEventListener("click", (e) => {
-        const chip = e.target.closest("[data-sport]");
-        if (!chip) return;
-        teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
-        chip.classList.add("selected");
-        teamSport = chip.getAttribute("data-sport");
+    // Single toggle for the whole page — updates Player Comparison's cover
+    // rates AND Team Trends' team list/picker together, so there's exactly
+    // one "which sport am I looking at" answer instead of two independent
+    // ones that could disagree.
+    pageSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.toggle("selected", c.getAttribute("data-sport") === pageSport));
+    pageSportToggle.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-sport]");
+      if (!chip) return;
+      pageSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
+      chip.classList.add("selected");
+      pageSport = chip.getAttribute("data-sport");
+      renderPlayerComparison();
+      if (allTeams.length > 0) {
         teamSearchInput.value = "";
         renderTeamOptions();
         teamSelect.value = "";
         renderTeamDetail("");
-      });
-
-      teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value));
-    }
+      }
+    });
 
     // Deep-link support: ?team=ABBR&opp=ABBR&sport=nfl|cfb — the Games page's
     // team rows link here. Resolved independently of the picker above so it
@@ -351,16 +368,17 @@
     // is scanning across a row/column to compare, e.g. "who's actually good
     // at Unders." Each player's own full history/points trend still lives
     // on player.html, linked from the name cell — this table is purely the
-    // category-comparison view.
-    const anyGraded = graded.some((gp) => gp.result);
+    // category-comparison view. Scoped to pageSport (the page-level toggle)
+    // so NFL and NCAA cover rates don't get blended into one number.
     const playerTrendsEmpty = document.getElementById("player-trends-empty");
     const playerCompareWrap = document.getElementById("player-compare-wrap");
     const playerCompareBody = document.getElementById("player-compare-body");
 
-    if (!anyGraded) {
-      playerTrendsEmpty.style.display = "block";
-    } else {
-      playerCompareWrap.style.display = "block";
+    function renderPlayerComparison() {
+      const anyGraded = graded.some((gp) => gp.result && gp.snapshot?.sport === pageSport);
+      playerTrendsEmpty.style.display = anyGraded ? "none" : "block";
+      playerCompareWrap.style.display = anyGraded ? "block" : "none";
+      if (!anyGraded) return;
       // Color-coded pill instead of plain text — green the higher the cover
       // %, red the lower — so the table reads at a glance (who's hot in
       // which category) instead of requiring line-by-line number reading.
@@ -373,7 +391,7 @@
         return `<td><span class="compare-pct" style="color:${tone};background:color-mix(in srgb, ${tone} 18%, transparent)">${pct}%</span></td>`;
       };
       playerCompareBody.innerHTML = LEAGUE_PLAYERS.map((p) => {
-        const record = computePlayerCategoryRecord(p.name, graded);
+        const record = computePlayerCategoryRecord(p.name, graded, pageSport);
         return `
           <tr>
             <td class="compare-table-player">
@@ -386,6 +404,7 @@
           </tr>`;
       }).join("");
     }
+    renderPlayerComparison();
 
     // Player Comparison (above) can render several rows tall, pushing Team
     // Trends well below the fold — scrolling has to happen AFTER that table

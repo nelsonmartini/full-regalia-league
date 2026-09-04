@@ -4,6 +4,36 @@
 
 ## Status
 
+- **SHIPPED (2026-09-04): Analytics page's NFL/NCAA filter was there all
+  along, just buried — plus a new "Add to Home Screen" install banner.**
+  Neil reported "still not seeing a filter in the analytics tab for NFL
+  and NCAA." Root cause: the only sport toggle on the page (`#team-sport-toggle`)
+  lived *inside* the "Team Trends" section, which is collapsed by default —
+  so unless you opened that section first, there was nothing to click.
+  Worse, "Player Comparison" had no sport filter at all; it silently
+  combined NFL and NCAA picks into one table.
+  - Fix: added one page-level toggle (`#page-sport-toggle`) right under the
+    page description, outside both collapsible sections, so it's visible
+    immediately on load. It now drives both Player Comparison (added a
+    `sport` param to `computePlayerCategoryRecord`) and Team Trends (kept
+    working as before, just re-wired to the shared `pageSport` variable
+    instead of its own local one). Verified via Playwright (7/7): toggle
+    visible without expanding anything, Player Comparison correctly shows
+    "–" for categories with no picks in the selected sport, Team Trends'
+    team dropdown repopulates with only that sport's teams.
+  - Also shipped, per Neil's "sure we can try it" on the earlier install-
+    prompt idea: a dismissible "Add to Home Screen" banner (`js/app.js` +
+    `css/style.css`), shown once per device via a `localStorage` flag.
+    Never shows if the site's already running as the installed app
+    (`display-mode: standalone` / `navigator.standalone`). iOS gets
+    Share → Add to Home Screen instructions (no `beforeinstallprompt`
+    event exists there); Android/Chrome gets a real one-tap "Install"
+    button wired to the browser's own install prompt. Verified via
+    Playwright (7/7): banner shows on a fresh iOS visit, dismissing it
+    hides it immediately and it stays hidden across a reload, and it
+    never appears at all when already running standalone.
+  - Bumped service worker cache to `full-regalia-shell-v80`.
+
 - **ROOT CAUSE FOUND AND FIXED (2026-08-30): Standings/History/Player showed
   everyone at 0 points / "Pending" forever — ESPN's scoreboard endpoint
   silently rejects date ranges over roughly 360 days, and `loadSeasonGames()`
