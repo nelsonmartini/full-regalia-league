@@ -55,6 +55,11 @@
     <div class="chip" data-conference="Other">Other</div>
   </div>
 
+  <div class="date-filter-block" id="date-filter-block" style="display:none">
+    <div class="date-filter-label" id="date-filter-label">All Dates</div>
+    <input type="range" id="date-filter-slider" class="date-filter-slider" min="0" max="0" value="0" step="1" />
+  </div>
+
   <div id="games-loading" class="empty-state">Loading games…</div>
   <div id="games-list"></div>
   <div id="games-empty" class="empty-state" style="display:none">No games match this filter right now.</div>
@@ -84,6 +89,8 @@
   let filter = "all";
   let conferenceFilter = "";
   let nflDivisions = new Map();
+  let gameDays = []; // distinct calendar days present in allGames, ascending
+  let selectedDayKey = null; // null = All Dates
 
   function gameMatchesConference(g) {
     if (!conferenceFilter) return true;
@@ -91,6 +98,60 @@
     const homeGroup = g.home ? teamGroupLabel(g.sport, g.home.abbr, nflDivisions) : null;
     return awayGroup === conferenceFilter || homeGroup === conferenceFilter;
   }
+
+  function dayKey(iso) {
+    return new Date(iso).toDateString();
+  }
+
+  // Top-25 (AP/Coaches) matchups float to the top within whatever order the
+  // status/date grouping below already establishes — a ranked team playing
+  // right now still shows above an ranked team's later game, but a #3 vs #7
+  // matchup shows above an unranked one kicking off around the same time.
+  // NFL teams never carry a rank (ESPN doesn't publish curatedRank for pro
+  // games), so this only ever pulls NCAA games upward — expected, since
+  // "highest ranking teams" is inherently a college-poll concept.
+  function bestRank(g) {
+    const h = g.home?.rank ?? Infinity;
+    const a = g.away?.rank ?? Infinity;
+    return Math.min(h, a);
+  }
+
+  function rebuildDateFilter() {
+    const keys = new Set(allGames.map((g) => dayKey(g.date)));
+    gameDays = [...keys]
+      .map((k) => new Date(k))
+      .sort((a, b) => a - b);
+
+    const block = document.getElementById("date-filter-block");
+    const slider = document.getElementById("date-filter-slider");
+    block.style.display = gameDays.length > 1 ? "block" : "none";
+    slider.max = String(gameDays.length);
+    // Keep the current selection if that day still exists in the fresh data
+    // (this runs on every 30s refresh); otherwise fall back to "All Dates"
+    // rather than silently pointing at a day that's no longer in range.
+    if (selectedDayKey && !gameDays.some((d) => d.toDateString() === selectedDayKey)) {
+      selectedDayKey = null;
+      slider.value = "0";
+    }
+    updateDateFilterLabel();
+  }
+
+  function updateDateFilterLabel() {
+    const label = document.getElementById("date-filter-label");
+    if (!selectedDayKey) {
+      label.textContent = "All Dates";
+      return;
+    }
+    const d = gameDays.find((d) => d.toDateString() === selectedDayKey);
+    label.textContent = d ? d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : "All Dates";
+  }
+
+  document.getElementById("date-filter-slider").addEventListener("input", (e) => {
+    const idx = Number(e.target.value);
+    selectedDayKey = idx === 0 ? null : gameDays[idx - 1].toDateString();
+    updateDateFilterLabel();
+    render();
+  });
 
   function render() {
     const loading = document.getElementById("games-loading");
@@ -100,13 +161,15 @@
 
     let filtered = filter === "all" ? allGames : allGames.filter((g) => g.status.state === filter);
     filtered = filtered.filter(gameMatchesConference);
+    if (selectedDayKey) filtered = filtered.filter((g) => dayKey(g.date) === selectedDayKey);
     if (filter === "post") {
-      // Results view: most recently finished first.
-      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+      // Results view: ranked matchups first, then most recently finished.
+      filtered.sort((a, b) => bestRank(a) - bestRank(b) || new Date(b.date) - new Date(a.date));
     } else {
-      // Live first, then upcoming soonest, then finals.
-      const rank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
-      filtered.sort((a, b) => rank(a) - rank(b) || new Date(a.date) - new Date(b.date));
+      // Live first, then upcoming soonest, then finals — ranked matchups
+      // float to the top within each of those groups.
+      const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
+      filtered.sort((a, b) => statusRank(a) - statusRank(b) || bestRank(a) - bestRank(b) || new Date(a.date) - new Date(b.date));
     }
 
     list.innerHTML = filtered.slice(0, 40).map(renderGameCard).join("");
@@ -133,6 +196,7 @@
 
   async function load() {
     [allGames, nflDivisions] = await Promise.all([loadAllGames(), fetchNflDivisions()]);
+    rebuildDateFilter();
     render();
   }
 

@@ -4,6 +4,32 @@
 
 ## Status
 
+- **SHIPPED (2026-09-04): Games tab gets a date scrubber + ranked-teams-first
+  sorting.** Neil asked for "some sort of slider" to filter by date, plus
+  "highest ranking teams always appear first."
+  - Date filter: a native range slider under the conference chips walks
+    through every distinct calendar day that currently has a game (left end
+    = "All Dates"), built fresh from `allGames` on every load/refresh so it
+    always reflects what's actually in the current ~45-day ESPN window.
+    Scrubbing it re-filters the list to just that day; if the previously
+    selected day rolls out of range on a refresh, it resets to "All Dates"
+    instead of silently showing an empty list. Hidden entirely when there's
+    only one day of games in view (nothing to scrub between).
+  - Ranking sort: games with a ranked team (AP/Coaches Top 25 — college
+    only, ESPN doesn't publish this for NFL) now sort to the top *within*
+    each existing status group (live, then upcoming, then final for the
+    "All"/"Live"/"Results" tabs; most-recent-first for Results specifically)
+    rather than overriding status entirely — a #1-vs-#5 matchup floats above
+    an unranked game kicking off around the same time, but a live unranked
+    game still shows before a ranked game that's already final. Used the
+    existing `team.rank` field (already wired up for the game-card rank
+    badges) via a new `bestRank(g)` helper — no new ESPN calls needed.
+  - Verified via Playwright (10/10): slider count matches distinct days,
+    scrubbing to a specific day filters correctly, resetting to "All Dates"
+    restores the full list, and a mixed ranked/unranked slate sorts ranked-
+    highest-first with the unranked game last.
+  - Bumped service worker cache to `full-regalia-shell-v81`.
+
 - **SHIPPED (2026-09-04): Analytics page's NFL/NCAA filter was there all
   along, just buried — plus a new "Add to Home Screen" install banner.**
   Neil reported "still not seeing a filter in the analytics tab for NFL

@@ -1444,6 +1444,61 @@ a.game-card-team:active {
   color: var(--accent);
 }
 
+/* Date scrubber (Games tab) — one native range input walks through every
+ * distinct calendar day that has a game, left end reserved for "All Dates".
+ * Custom thumb/track styling since the browser default reads as a stray
+ * gray bar against the site's dark cards. */
+.date-filter-block {
+  margin-bottom: 14px;
+}
+
+.date-filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.date-filter-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-strong);
+  outline: none;
+  margin: 0;
+}
+
+.date-filter-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-elev);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.date-filter-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-elev);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.date-filter-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-strong);
+}
+
 /* ---------- Misc ---------- */
 
 .empty-state {
