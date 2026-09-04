@@ -2460,3 +2460,35 @@
   school name on NCAA game cards. College-only concept — NFL's `rank` is
   always null since ESPN doesn't return `curatedRank` for pro games.
 - Bumped `sw.js` to `full-regalia-shell-v76`, committed, pushed, confirmed live.
+
+### 2026-09-04 — Nav reorder, filter/click investigation, team pick history
+- **Moved Games ahead of History** in the bottom nav on all 8 pages that
+  have it (Admin deliberately has none, unchanged).
+- Neil reported the NFL/NCAA conference filters on the Games page and
+  clicking a team both "not really working." Investigated extensively:
+  - Built clean, controlled test data for the conference filter (AFC-only
+    game vs. NFC-only game) and confirmed `gameMatchesConference()`
+    correctly reduces the list when a chip is clicked — the underlying
+    logic is sound. (An earlier test run gave a false positive because the
+    mock data itself had Miami mis-assigned to the wrong conference — a
+    test bug, not an app bug.) Cross-checked all 67 hardcoded NCAA Power-4
+    abbreviations (`NCAA_TEAM_TO_CONF`, `js/pick-utils.js`) against live
+    ESPN data — all 67 matched real current abbreviations exactly.
+  - Tested the full team-click flow (game card → Analytics `?team=X&opp=Y`)
+    end to end — navigates correctly, renders both teams, zero errors.
+  - Couldn't reproduce a functional bug in either case. Best working theory:
+    the team detail page read as "not working" because it was mostly empty
+    early in the season ("No finished games yet") rather than an actual
+    defect — addressed below by giving it real substance. Flagged to Neil
+    to get exact repro steps (which chip, what was expected vs. seen) if
+    this persists on his device.
+- **New: "Who's picked [team]" on Analytics team detail** — Neil wanted to
+  see who in the league has bet on a team, which week, and whether it hit,
+  alongside the team's own ATS/O-U record. New `teamPickHistoryHtml()`
+  (`analytics.html`) filters the same `graded` picks list already computed
+  for Player Comparison down to picks whose game involves this team (either
+  side, any bet type — an Over/Under pick on the team's game counts too,
+  not just picks literally naming the team), sorted most recent first, each
+  row showing avatar, player, week, their pick, and a Hit/Miss/Push badge.
+  Shown for both teams when viewing a matchup (?team=X&opp=Y).
+- Bumped `sw.js` to `full-regalia-shell-v77`, committed, pushed, confirmed live.

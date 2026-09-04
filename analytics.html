@@ -91,8 +91,8 @@
     <a class="nav-item" data-page="index.html" href="index.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></span>Home</a>
     <a class="nav-item" data-page="picks.html" href="picks.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></span>Picks</a>
     <a class="nav-item" data-page="standings.html" href="standings.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a1 1 0 0 0-1 1v1a3 3 0 0 0 3 3"/><path d="M17 5h3a1 1 0 0 1 1 1v1a3 3 0 0 1-3 3"/></svg></span>Standings</a>
-    <a class="nav-item" data-page="history.html" href="history.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l4 2"/></svg></span>History</a>
     <a class="nav-item" data-page="live.html" href="live.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a12 12 0 0 1 16 0"/><path d="M7.5 14.5a7 7 0 0 1 9 0"/><circle cx="12" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg></span>Games</a>
+    <a class="nav-item" data-page="history.html" href="history.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l4 2"/></svg></span>History</a>
     <a class="nav-item" data-page="betting-guide.html" href="betting-guide.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Guide</a>
   </div>
 </nav>
@@ -246,6 +246,33 @@
       return null;
     }
 
+    // Who in the league has bet on games involving this team, which week,
+    // and whether it hit — Neil wanted this alongside the raw ATS/O-U
+    // record, so a team's page shows both "how has this team performed"
+    // and "how has the league done betting on them." Matches on the
+    // GAME (either side), not just picks that literally named this team —
+    // an Over/Under pick on one of this team's games is just as relevant.
+    function teamPickHistoryHtml(abbr) {
+      const relevant = graded.filter((gp) => gp.result && (gp.game?.home?.abbr === abbr || gp.game?.away?.abbr === abbr));
+      if (relevant.length === 0) return "";
+      const rows = [...relevant]
+        .sort((a, b) => new Date(b.snapshot?.date || 0) - new Date(a.snapshot?.date || 0))
+        .map(
+          (gp) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;border-bottom:1px solid var(--border)">
+            <span style="display:flex;align-items:center;gap:6px;min-width:0">
+              ${avatarHtml(gp.player_name, 18)}
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleCase(gp.player_name)} <span style="color:var(--text-faint);font-weight:600">· ${gp.snapshot ? weekGroupLabel(gp.snapshot) : ""}</span></span>
+            </span>
+            <span style="flex:none;white-space:nowrap">${pickLabel(gp.pick)} ${statusBadge(gp.result)}</span>
+          </div>`
+        )
+        .join("");
+      return `
+        <div class="section-label" style="margin-top:14px">Who's picked ${abbr}</div>
+        <div style="max-height:260px;overflow-y:auto">${rows}</div>`;
+    }
+
     function teamBlockHtml(abbr) {
       const record = computeTeamRecord(games, abbr);
       const logo = findTeamLogo(abbr);
@@ -258,7 +285,8 @@
         ${pointsSummaryHtml(record)}
         ${statRowHtml("Minus Spread", record.minus)}
         ${statRowHtml("Plus Spread", record.plus)}
-        ${teamOuSplitHtml(record)}`;
+        ${teamOuSplitHtml(record)}
+        ${teamPickHistoryHtml(abbr)}`;
     }
 
     // A game is a matchup between two teams — showing just the one you
