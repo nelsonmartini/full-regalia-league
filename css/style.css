@@ -624,10 +624,14 @@ a.game-card-team:active {
 }
 
 /* AP/Coaches Top 25 badge — college only, shown inline right before the
- * school name when that team is currently ranked. */
+ * school name when that team is currently ranked. Cursive to match the
+ * same brand font used in the topbar/quote/standings rank numerals
+ * elsewhere on the site, instead of plain bold text. */
 .game-card-team-rank {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 13px;
   color: var(--accent);
-  font-weight: 800;
   margin-right: 3px;
 }
 

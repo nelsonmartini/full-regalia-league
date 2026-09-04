@@ -2502,3 +2502,10 @@
   History, Analytics. New line-icon (axis + 3 ascending solid bars) matches
   the style of the other 5 nav icons.
 - Bumped `sw.js` to `full-regalia-shell-v78`, committed, pushed, confirmed live.
+
+### 2026-09-04 (cont'd 2) — AP rank badge in cursive
+- `.game-card-team-rank` ("#5" next to a ranked NCAA team) switched to the
+  same Pacifico cursive used everywhere else (topbar, quote, standings rank
+  numerals, confirm modal title) instead of plain bold text — Neil wanted
+  it consistent with the rest of the page's branding.
+- Bumped `sw.js` to `full-regalia-shell-v79`, committed, pushed, confirmed live.
