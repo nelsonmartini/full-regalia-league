@@ -1444,6 +1444,29 @@ a.game-card-team:active {
   color: var(--accent);
 }
 
+/* Date filter row (Games tab) — flexbox instead of the grid other chip-rows
+ * use, so "All" can shrink to just its own text width instead of claiming
+ * an equal share of the row. That's what actually makes room for up to 4
+ * real date chips (5 total) to sit on one line on a phone-width screen. */
+.date-filter-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+
+.date-filter-row .chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 4px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.date-filter-row .chip[data-day=""] {
+  flex: 0 0 auto;
+  padding: 9px 12px;
+}
+
 /* ---------- Misc ---------- */
 
 .empty-state {

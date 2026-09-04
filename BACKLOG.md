@@ -4,6 +4,37 @@
 
 ## Status
 
+- **SHIPPED (2026-09-04): Games tab layout pass — scoreboard nav icon, dates
+  moved to top, title removed, filters reordered, date row fits on one line.**
+  Neil's follow-up round after the date chips shipped:
+  - **Nav icon**: the Games tab used a wifi-signal-style icon left over from
+    an earlier design; replaced with a scoreboard shape (divided rectangle
+    with two score blocks) plus a small dot in the corner reading as a
+    live/on-air indicator. Same SVG swapped into the bottom nav on all 8
+    pages that have one (index, picks, standings, live, history, analytics,
+    betting-guide, player).
+  - **Layout, top to bottom is now**: date chips → All/Live now/Results →
+    conference filter (NFL's AFC/NFC + NCAA's ACC/Big 12/Big Ten/SEC/Other)
+    → game list. Removed the `<h1>`"Scores, Odds & Results" title and its
+    ESPN-attribution subtitle entirely — that attribution still lives in the
+    footer note at the bottom of the page, so the disclosure isn't lost,
+    just no longer duplicated at the top.
+  - **Date row wrapping**: Neil reported the date chips didn't fit on one
+    row ("All" plus 5 real dates was 6 chips total). Fixed two ways: (1)
+    switched the row from the grid layout other chip-rows use to flexbox,
+    with "All" set to shrink to just its own text width instead of an equal
+    share of the row, and (2) capped the number of real date chips from 5
+    to 4 (5 chips total) — the safer, Neil-endorsed fallback ("if we can't
+    [fit 5], let's just have 4") rather than risking it still wrapping on a
+    narrower phone. Verified via Playwright at both 375px (iPhone SE) and
+    390px (modern phone) viewports — 5 chips sit on one line at both widths
+    with zero wrap.
+  - Verified via Playwright (16/16 across two viewport widths): date row
+    renders before the status row before the conference row, title/subtitle
+    are gone, all date chips share one visual row, and the new nav icon is
+    live everywhere.
+  - Bumped service worker cache to `full-regalia-shell-v83`.
+
 - **SHIPPED (2026-09-04): Replaced the Games tab's date slider with tappable date chips.** Neil, immediately after the slider shipped: "very confusing" — with the ~45-day ESPN window, a drag slider could have 15+ stops with only one floating text label showing which day you'd landed on, no visual reference for the rest.
   - New design: same idea (narrow the game list to one day), but as a row of chips — "All" plus up to 5 real dates, each labeled directly on the chip (e.g. "Sat, Sep 5"), same tap-to-select pattern as the conference filter right above it. Capped at 5 real dates so a long ESPN window doesn't turn into a wall of chips; when there are more than 5 distinct days, keeps the 5 *closest to today* (not just the first 5 chronologically) so the visible set tracks whatever's actually relevant right now, then displays them in ascending order. "All" still means every game regardless of date — the 5-day cap only limits which quick-filter chips are offered, not what "All" includes.
   - Removed the now-unused range-input CSS (`.date-filter-slider` and its custom thumb/track rules); the chip row reuses the site's existing `.chip`/`.chip-row` styles, no new CSS needed.
