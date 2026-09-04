@@ -2336,3 +2336,37 @@
   same true/false calling convention as `confirm()`, so the one call site
   just added an `await`. The chip-click handler is now `async` to support this.
 - Bumped `sw.js` to `full-regalia-shell-v71`, committed, pushed, confirmed live.
+
+### 2026-09-03 — UI enhancement round: logos, consensus, streaks
+- Neil asked for "cool UI features" — proposed 6 ideas, he asked to add all
+  except confetti (dropped after a design discussion about how it'd even
+  know whose win to celebrate with no login — resolved conceptually as
+  "scoped to whichever player's page/selection is on screen," but Neil
+  opted to skip it anyway).
+- **Team logos** — confirmed ESPN's scoreboard API returns a direct logo URL
+  per team (`team.logo`) for both NFL and CFB. `normalizeEvent()`
+  (`js/live-scores.js`) now carries it through on `home`/`away`. Wired up in
+  3 places: game cards (`gameCardTeamRow`, new `.game-card-team-logo`
+  column), Picks page spread chips (`buildCategoryPools`/chip render, new
+  `.chip-team-logo`), and Analytics' team detail card (new `findTeamLogo()`
+  helper scanning already-fetched games, no separate roster needed). Missing/
+  broken logos fail silently (`onerror` hides the `<img>`) rather than
+  showing a broken-image icon — some smaller schools' art isn't always
+  backfilled.
+- **Pick consensus** — once a category locks, shows "X of Y in the group
+  picked this side" (`.pick-consensus`), comparing the current pick against
+  every OTHER player's pick for that exact game+bet-type (spread's minus/
+  plus are the same line's two sides, so both categories count together).
+  New `computeConsensusForPick()` in `js/picks.js`; reuses the `allPicksRows`
+  already fetched for the existing "Who's picked" card instead of a second
+  query, threaded through `categoriesHtmlForSport`/`renderSportSections`.
+- **Streak badges** — a 🔥N badge once a player's current CONSECUTIVE hit
+  streak (walking backwards from their most recent graded pick) reaches 3+;
+  a miss or push ends it immediately. New `computeCurrentStreak()` in
+  `js/season-data.js`, `computeStandings()` now attaches `.streak` per
+  player, shown in both standings rows and on `player.html`'s header.
+  Caught and fixed a real bug while wiring this up: `player.html` was
+  setting `#player-title`'s `textContent` (wiping out any child nodes) AFTER
+  the streak badge would've been added as a child — moved the badge to a
+  sibling `<span>` instead of nesting it inside the `<h1>`.
+- Bumped `sw.js` to `full-regalia-shell-v72`, committed, pushed, confirmed live.

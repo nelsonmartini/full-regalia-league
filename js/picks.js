@@ -165,6 +165,7 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
           display: `${side.team.abbr} ${fmtLine(side.line)}`,
           sub: `${side.atHome ? "vs" : "@"} ${side.opp.abbr}`,
           when,
+          logo: side.team.logo,
           group: teamGroupLabel(sport, side.team.abbr, nflDivisions),
           search: searchText(side.team, side.opp),
           value: { type: "spread", team: side.team.abbr, line: side.line },
@@ -269,7 +270,22 @@ function sortGroupKeys(sport, keys) {
  * toggled between). Each category/chip element carries data-sport so the
  * click handler in initPicksPage can tell which sport a click belongs to
  * without a single global "selected sport" to fall back on. */
-function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames, groupExpanded) {
+/** How many of the WHOLE group (every player, not just the current one)
+ * picked the same side of this bet as the pick being shown — e.g. "4 of 6
+ * picked ALA -3" once a spread game locks. Compares against every pick for
+ * this exact game+bet-type, spanning both categories a spread can land in
+ * (minus/plus are just the two sides of the same line, not independent
+ * bets) so the count reflects the whole group's read on the game, not just
+ * whichever category happens to be rendering. */
+function computeConsensusForPick(allPicksRows, gameId, betType, chosenValue) {
+  const relevant = allPicksRows.filter((r) => r.snapshot?.gameId === gameId && r.pick?.type === betType);
+  if (relevant.length === 0) return null;
+  const matches = (r) => (betType === "spread" ? r.pick.team === chosenValue.team : r.pick.direction === chosenValue.direction);
+  const same = relevant.filter(matches).length;
+  return { same, total: relevant.length };
+}
+
+function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames, groupExpanded, allPicksRows) {
   if (games.length === 0) {
     return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
   }
@@ -348,10 +364,14 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     // the game's still in progress.
     if (isLocked) {
       const gameCardHtml = lockedGame ? renderGameCard(lockedGame) : "";
+      const consensus = computeConsensusForPick(allPicksRows, currentGameId, slot.entry.value.type, slot.entry.value);
+      const consensusHtml = consensus
+        ? `<div class="pick-consensus">👥 ${consensus.same} of ${consensus.total} in the group picked this side</div>`
+        : "";
       return `
         <div class="pick-game is-locked" data-category="${cat}" data-sport="${sport}">
           ${headerHtml}
-          ${gameCardHtml ? `<div class="pick-game-body">${gameCardHtml}</div>` : ""}
+          ${gameCardHtml ? `<div class="pick-game-body">${gameCardHtml}${consensusHtml}</div>` : ""}
         </div>`;
     }
 
@@ -394,7 +414,7 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
             .map(
               (o) => `
             <div class="chip${o.gameId === currentGameId ? " selected" : ""}"
-                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}${o.when ? `<div style="font-size:9.5px;font-weight:600;opacity:0.55;margin-top:1px">${o.when}</div>` : ""}</div>
+                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.logo ? `<img class="chip-team-logo" src="${o.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ""}${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}${o.when ? `<div style="font-size:9.5px;font-weight:600;opacity:0.55;margin-top:1px">${o.when}</div>` : ""}</div>
           `
             )
             .join("")}
@@ -445,7 +465,7 @@ function sportGradedSummary(slots, allGames) {
   return { hits, graded };
 }
 
-function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded) {
+function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded, allPicksRows) {
   const query = searchQuery.trim().toLowerCase();
   const filtering = !!query || !!conferenceFilter;
   let anySportMatched = false;
@@ -454,7 +474,7 @@ function renderSportSections(container, gamesBySport, picks, sportWeeks, nflDivi
     const weekKey = sportWeeks[sport];
     const games = gamesBySport[sport].filter((g) => weekBucketKey(g) === weekKey);
     const slots = slotsForSportWeek(picks, sport, weekKey);
-    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter, allGames, groupExpanded[sport]);
+    const { html: categoriesHtml, anyMatched } = categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded[sport], query, conferenceFilter, allGames, groupExpanded[sport], allPicksRows);
 
     if (filtering && !anyMatched) return ""; // hide the whole sport section if nothing in it matches
 
@@ -639,6 +659,11 @@ async function initPicksPage() {
   const groupExpanded = { nfl: {}, cfb: {} };
   let searchQuery = "";
   let conferenceFilter = "";
+  // Every player's picks, for the group-consensus line on locked categories
+  // ("4 of 6 picked this side") — populated by loadAndRenderStatus() below
+  // (which already fetches this for the "Who's picked" card) and re-used
+  // here rather than fetching it twice.
+  let allPicksRows = [];
 
   function renderWeekPicker() {
     if (regaliaWeeks.length === 0) {
@@ -666,7 +691,7 @@ async function initPicksPage() {
   }
 
   function renderAll() {
-    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded);
+    renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded, allPicksRows);
     renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
   }
 
@@ -912,11 +937,15 @@ async function initPicksPage() {
 
   async function loadAndRenderStatus() {
     statusSummary.innerHTML = "<span>Loading who's picked…</span>";
-    const allPicksRows = await loadAllPicks();
+    allPicksRows = await loadAllPicks();
     const statusList = computeWeekStatus(allPicksRows, sportWeeks);
     const submittedCount = statusList.filter((s) => s.total === expectedPickTotal(sportWeeks)).length;
     statusSummary.innerHTML = `<span>${submittedCount} of ${statusList.length} submitted this week</span><span style="color:var(--accent)">${statusExpanded ? "▲ Hide" : "▼ Who's in?"}</span>`;
     renderWeekStatus(weekStatusList, statusList, sportWeeks);
+    // Consensus lines on locked categories ("4 of 6 picked this side") need
+    // this same data — re-render once it's in so they don't stay blank
+    // until something else happens to trigger a redraw.
+    renderAll();
   }
 
   // Bound to the summary header only, not the whole card — otherwise a click on a

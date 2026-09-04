@@ -115,11 +115,13 @@ function normalizeEvent(e, sport) {
       abbr: home.team?.abbreviation,
       name: home.team?.shortDisplayName || home.team?.displayName,
       score: home.score,
+      logo: home.team?.logo || null,
     },
     away: away && {
       abbr: away.team?.abbreviation,
       name: away.team?.shortDisplayName || away.team?.displayName,
       score: away.score,
+      logo: away.team?.logo || null,
     },
     odds: odds ? normalizeOdds(odds) : null,
   };
@@ -185,7 +187,15 @@ function formatFullDate(iso) {
 function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome) {
   const homeMark = isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : "";
   const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
+  // Loading="lazy" + onerror hide — a missing/broken logo (some smaller
+  // schools, mid-season roster of teams ESPN hasn't backfilled art for)
+  // shouldn't leave a broken-image icon sitting in the row; it just quietly
+  // collapses back to text-only, same as before logos existed.
+  const logoHtml = team?.logo
+    ? `<img class="game-card-team-logo" src="${team.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />`
+    : `<span class="game-card-team-logo"></span>`;
   const inner = `
+    ${logoHtml}
     <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
     <span class="game-card-team-name">${homeMark}${team?.name || ""}</span>
     ${showScore ? `<span class="game-card-team-score">${team?.score ?? "-"}</span>` : ""}`;

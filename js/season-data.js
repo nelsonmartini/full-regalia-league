@@ -11,6 +11,13 @@
  * js/live-scores.js and js/grading.js first.
  */
 
+/** A small flame badge once a player's current hit streak is long enough to
+ * mean something — 3+ in a row. Kept as a separate, reusable snippet since
+ * it shows up in both standings rows and (eventually) player.html. */
+function streakBadgeHtml(streak) {
+  return streak >= 3 ? `<span class="streak-badge" title="${streak} hits in a row">🔥${streak}</span>` : "";
+}
+
 function renderStandingsRow(player, rank) {
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
   const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
@@ -18,7 +25,7 @@ function renderStandingsRow(player, rank) {
     <a class="standings-row${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank">${medal}</div>
       ${avatarHtml(player.name, 32)}
-      <div class="standings-name">${titleCase(player.name)}</div>
+      <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
       <div class="standings-points">${player.points}</div>
       <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
     </a>`;
@@ -38,7 +45,7 @@ function renderStandingsRowCompact(player, rank) {
     <a class="standings-row standings-row-compact${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank standings-rank-cursive">${rank}</div>
       ${avatarHtml(player.name, 24)}
-      <div class="standings-name">${titleCase(player.name)}</div>
+      <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
       <div class="standings-points">${player.points}</div>
     </a>`;
 }
@@ -95,17 +102,32 @@ function gradeSeasonPicks(picksRows, games) {
  * sitting in the DB, since the roster (not a scan of distinct picks) is what
  * this iterates. */
 function computeStandings(gradedPicks, players) {
-  const byName = new Map(players.map((p) => [p.name, { name: p.name, points: 0, graded: 0, hits: 0 }]));
+  const byName = new Map(players.map((p) => [p.name, { name: p.name, points: 0, graded: 0, hits: 0, picks: [] }]));
   for (const gp of gradedPicks) {
     const entry = byName.get(gp.player_name);
     if (!entry || !gp.result) continue;
     entry.graded++;
     entry.points += gp.points;
     if (gp.result === "hit") entry.hits++;
+    entry.picks.push(gp);
   }
   return [...byName.values()]
-    .map((e) => ({ ...e, winPct: e.graded ? (e.hits / e.graded) * 100 : 0 }))
+    .map((e) => ({ ...e, winPct: e.graded ? (e.hits / e.graded) * 100 : 0, streak: computeCurrentStreak(e.picks) }))
     .sort((a, b) => b.points - a.points);
+}
+
+/** Current consecutive-hit streak, walking backwards from the most recently
+ * graded pick (by kickoff date) — shown as a small flame badge once it's
+ * long enough to mean something. A push or a miss both end it the moment
+ * they show up; only real, un-hedged hits keep it alive. */
+function computeCurrentStreak(picks) {
+  const sorted = [...picks].filter((p) => p.snapshot?.date).sort((a, b) => new Date(b.snapshot.date) - new Date(a.snapshot.date));
+  let streak = 0;
+  for (const p of sorted) {
+    if (p.result !== "hit") break;
+    streak++;
+  }
+  return streak;
 }
 
 /** One entry per (player, sport, week) — the unit History/Player pages

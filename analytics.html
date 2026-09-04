@@ -223,13 +223,26 @@
     // for THIS team yet" — rather than only working once at least one team
     // somewhere has played. A team link tapped in week 1 should say that,
     // not silently do nothing just because allTeams is still empty.
+    // Finds a team's logo by scanning already-fetched games for either side
+    // matching this abbr — no separate lookup/roster needed, the same
+    // "logo" field normalizeEvent() already carries on every home/away team.
+    function findTeamLogo(abbr) {
+      for (const g of games) {
+        if (g.home?.abbr === abbr && g.home.logo) return g.home.logo;
+        if (g.away?.abbr === abbr && g.away.logo) return g.away.logo;
+      }
+      return null;
+    }
+
     function teamBlockHtml(abbr) {
       const record = computeTeamRecord(games, abbr);
+      const logo = findTeamLogo(abbr);
+      const logoHtml = logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px" />` : "";
       if (record.gamesCounted === 0) {
-        return `<div class="empty-state">No finished games yet for ${abbr} this season — check back once they've played.</div>`;
+        return `<div class="empty-state">${logoHtml}No finished games yet for ${abbr} this season — check back once they've played.</div>`;
       }
       return `
-        <div class="section-label" style="margin-top:0">${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
+        <div class="section-label" style="margin-top:0">${logoHtml}${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
         ${pointsSummaryHtml(record)}
         ${statRowHtml("Minus Spread", record.minus)}
         ${statRowHtml("Plus Spread", record.plus)}

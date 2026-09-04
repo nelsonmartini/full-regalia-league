@@ -39,7 +39,7 @@
   <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
     <span id="player-avatar"></span>
     <div>
-      <h1 class="page-title" id="player-title" style="margin:0">Player</h1>
+      <h1 class="page-title" id="player-title" style="margin:0;display:inline-block">Player</h1><span id="player-streak"></span>
       <p class="page-sub" id="player-sub" style="margin:2px 0 0"></p>
     </div>
   </div>
@@ -129,6 +129,7 @@
 
       document.getElementById("no-player").style.display = "none";
       document.getElementById("player-content").style.display = "block";
+      document.getElementById("player-streak").innerHTML = streakBadgeHtml(computeCurrentStreak(graded));
 
       // Only graded (finished) weeks count toward the averages — an in-progress
       // week sitting at 0 pts because games haven't finished yet would otherwise
