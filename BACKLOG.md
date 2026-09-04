@@ -2434,3 +2434,29 @@
   primary. "@" now prefixes the HOME team's nickname instead of the away
   team's. NFL is untouched (still abbr + mascot name + house icon).
 - Bumped `sw.js` to `full-regalia-shell-v75`, committed, pushed, confirmed live.
+
+### 2026-09-03 (cont'd 4) — Dropped mascot, fixed a real name-source bug, added AP rankings
+- Neil said the nickname pass still looked repetitive and asked to drop it —
+  landed back on NCAA showing just the school's own name (`location`), no
+  mascot, "@" still marking the home team.
+  - While investigating, found the ACTUAL bug behind "looks like the school
+    name is just repeated": the app's `name` field for a team was populated
+    from ESPN's `shortDisplayName`, which for NCAA is often a shortened
+    SCHOOL name ("E Michigan" for Eastern Michigan), not the true mascot —
+    confirmed via live ESPN data. So the "nickname" shown a moment ago
+    wasn't actually the mascot at all for most schools, just a second,
+    shorter copy of the school name — which is exactly why it read as
+    duplicated. (The raw ESPN `team.name` field, not `shortDisplayName`, is
+    the actual mascot — not used now that mascot's been dropped, but worth
+    recording in case it comes back.)
+  - `.game-card-team-fullname` restored (was removed in the mascot pass).
+- **AP/Coaches Top 25 rankings** — Neil asked for ranked teams to show their
+  rank. Confirmed via live ESPN data: `competitor.curatedRank.current` gives
+  1-25 for ranked teams, with **99 as ESPN's "unranked" sentinel** (not
+  null/undefined — had to check a real response to catch this). New `rank`
+  field on `normalizeEvent()`'s home/away objects (`js/live-scores.js`),
+  only non-null when `curatedRank.current <= 25`. Shown as a small "#N"
+  badge (new `.game-card-team-rank`, accent-colored) right before the
+  school name on NCAA game cards. College-only concept — NFL's `rank` is
+  always null since ESPN doesn't return `curatedRank` for pro games.
+- Bumped `sw.js` to `full-regalia-shell-v76`, committed, pushed, confirmed live.

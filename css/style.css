@@ -610,25 +610,25 @@ a.game-card-team:active {
   white-space: nowrap;
 }
 
-/* NCAA only — mascot nickname as the bold, bright primary label (mirrors
- * NFL's abbr slot, just brighter — Neil wanted it back "in the bigger
- * white font" next to the logo, not the plain school name alone). */
-.game-card-team-nickname {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--text);
-}
-
-/* School name as the smaller secondary line right after the nickname —
- * mirrors NFL's mascot-name slot, just swapped which piece of text is
- * primary vs secondary. */
-.game-card-team-schoolname {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-faint);
+/* NCAA only — just the school's own name, smaller than the NFL abbr it
+ * replaces so it still fits cleanly next to the logo and score (tried
+ * showing the mascot alongside it too; landed back on school-name-only,
+ * confirmed it read as duplicated with `location` — Neil). */
+.game-card-team-fullname {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* AP/Coaches Top 25 badge — college only, shown inline right before the
+ * school name when that team is currently ranked. */
+.game-card-team-rank {
+  color: var(--accent);
+  font-weight: 800;
+  margin-right: 3px;
 }
 
 .game-card-team-score {
@@ -641,8 +641,7 @@ a.game-card-team:active {
 
 .game-card-team.is-winner .game-card-team-abbr,
 .game-card-team.is-winner .game-card-team-name,
-.game-card-team.is-winner .game-card-team-nickname,
-.game-card-team.is-winner .game-card-team-schoolname,
+.game-card-team.is-winner .game-card-team-fullname,
 .game-card-team.is-winner .game-card-team-score {
   color: var(--text);
 }

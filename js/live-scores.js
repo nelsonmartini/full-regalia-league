@@ -117,6 +117,9 @@ function normalizeEvent(e, sport) {
       location: home.team?.location || null,
       score: home.score,
       logo: home.team?.logo || null,
+      // AP/Coaches poll rank — ESPN uses 99 as the "unranked" sentinel, not
+      // null, so anything above 25 doesn't count as a real ranking.
+      rank: home.curatedRank?.current && home.curatedRank.current <= 25 ? home.curatedRank.current : null,
     },
     away: away && {
       abbr: away.team?.abbreviation,
@@ -124,6 +127,7 @@ function normalizeEvent(e, sport) {
       location: away.team?.location || null,
       score: away.score,
       logo: away.team?.logo || null,
+      rank: away.curatedRank?.current && away.curatedRank.current <= 25 ? away.curatedRank.current : null,
     },
     odds: odds ? normalizeOdds(odds) : null,
   };
@@ -196,13 +200,11 @@ function formatFullDate(iso) {
  *
  * NFL: abbreviation+mascot-name stack (KC / Chiefs), home team marked with
  * a house icon — unchanged, those abbreviations are widely recognized on
- * their own. NCAA: mascot nickname (Crimson Tide) as the bold/bright
- * primary label next to the logo, school name (Alabama) as a smaller
- * secondary line right after it (Neil: wanted both back, nickname in the
- * bigger bright style, not just the plain school name alone). Home team
- * gets a leading "@" — standard sports shorthand ("@" marks the site of
- * the game, i.e. the home team's place — confirmed, Neil, this was
- * backwards on the away side in the previous pass). */
+ * their own. NCAA: just the school's own name (Alabama, not ALA) — tried
+ * showing the mascot too, but landed back on school-name-only per Neil.
+ * Home team gets a leading "@" — standard sports shorthand ("@" marks the
+ * site of the game, i.e. the home team's place). A #N prefix shows up for
+ * either sport when that team is currently AP/Coaches top-25 ranked. */
 function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome) {
   const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
   // Loading="lazy" + onerror hide — a missing/broken logo (some smaller
@@ -212,12 +214,13 @@ function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome)
   const logoHtml = team?.logo
     ? `<img class="game-card-team-logo" src="${team.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />`
     : `<span class="game-card-team-logo"></span>`;
+  // AP/Coaches Top 25 is a college-only concept — NFL's `rank` is always
+  // null (ESPN doesn't return curatedRank for pro games), so this only
+  // ever shows up on the NCAA branch below.
+  const rankHtml = team?.rank ? `<span class="game-card-team-rank">#${team.rank}</span>` : "";
   const nameHtml =
     sport === "cfb"
-      ? `<span class="game-card-team-stack">
-          <span class="game-card-team-nickname">${isHome ? "@ " : ""}${team?.name || team?.abbr || "?"}</span>
-          <span class="game-card-team-schoolname">${team?.location || ""}</span>
-        </span>`
+      ? `<span class="game-card-team-fullname">${isHome ? "@ " : ""}${rankHtml}${team?.location || team?.abbr || "?"}</span>`
       : `<span class="game-card-team-stack">
           <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
           <span class="game-card-team-name">${isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : ""}${team?.name || ""}</span>
