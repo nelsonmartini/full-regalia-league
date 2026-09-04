@@ -1467,6 +1467,26 @@ a.game-card-team:active {
   padding: 9px 12px;
 }
 
+/* Subtle marker for "today" — a small dot under the label, independent of
+ * whether that day is the one currently selected, so you can still tell
+ * which chip is today even after tapping over to a different date. */
+.date-filter-row .chip[data-today="true"] {
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.date-filter-row .chip[data-today="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 /* ---------- Misc ---------- */
 
 .empty-state {

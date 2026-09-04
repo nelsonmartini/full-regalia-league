@@ -39,22 +39,13 @@
     <div class="chip selected" data-day="">All</div>
   </div>
 
-  <div class="chip-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">
-    <div class="chip selected" id="filter-all" data-filter="all">All</div>
-    <div class="chip" id="filter-live" data-filter="in">Live now</div>
-    <div class="chip" id="filter-final" data-filter="post">Results</div>
+  <div class="chip-row" id="sport-filter" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">
+    <div class="chip selected" data-sport="">All</div>
+    <div class="chip" data-sport="nfl">🏈 NFL</div>
+    <div class="chip" data-sport="cfb">🎓 NCAA</div>
   </div>
 
-  <div class="chip-row" id="conference-filter" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr));margin-bottom:14px">
-    <div class="chip selected" data-conference="">All</div>
-    <div class="chip" data-conference="AFC">AFC</div>
-    <div class="chip" data-conference="NFC">NFC</div>
-    <div class="chip" data-conference="ACC">ACC</div>
-    <div class="chip" data-conference="Big 12">Big 12</div>
-    <div class="chip" data-conference="Big Ten">Big Ten</div>
-    <div class="chip" data-conference="SEC">SEC</div>
-    <div class="chip" data-conference="Other">Other</div>
-  </div>
+  <div class="chip-row" id="conference-filter" style="grid-template-columns:repeat(auto-fill,minmax(64px,1fr));margin-bottom:14px"></div>
 
   <div id="games-loading" class="empty-state">Loading games…</div>
   <div id="games-list"></div>
@@ -82,11 +73,25 @@
 <script src="js/pick-utils.js"></script>
 <script>
   let allGames = [];
-  let filter = "all";
+  let sportFilter = ""; // "" = All, "nfl", "cfb"
   let conferenceFilter = "";
   let nflDivisions = new Map();
   let gameDays = []; // distinct calendar days present in allGames, ascending
   let selectedDayKey = null; // null = All Dates
+  let userPickedDay = false; // true once the user taps a date chip themselves
+
+  // Which conference chips are offered depends on the selected sport — no
+  // point showing ACC/SEC/etc. next to an NFL-only view, or AFC/NFC next to
+  // an NCAA-only one. "" (All sports) keeps the full combined list.
+  const CONFERENCE_OPTIONS = {
+    "": ["AFC", "NFC", "ACC", "Big 12", "Big Ten", "SEC", "Other"],
+    nfl: ["AFC", "NFC"],
+    cfb: ["ACC", "Big 12", "Big Ten", "SEC", "Other"],
+  };
+
+  function gameMatchesSport(g) {
+    return !sportFilter || g.sport === sportFilter;
+  }
 
   function gameMatchesConference(g) {
     if (!conferenceFilter) return true;
@@ -98,6 +103,34 @@
   function dayKey(iso) {
     return new Date(iso).toDateString();
   }
+
+  function todayKey() {
+    return new Date().toDateString();
+  }
+
+  // Conference row is static per sport selection (doesn't depend on loaded
+  // game data), so it's rebuilt purely from CONFERENCE_OPTIONS and can run
+  // immediately on page load, before games ever finish fetching.
+  function renderConferenceChips() {
+    const options = CONFERENCE_OPTIONS[sportFilter] || CONFERENCE_OPTIONS[""];
+    if (conferenceFilter && !options.includes(conferenceFilter)) conferenceFilter = "";
+    const row = document.getElementById("conference-filter");
+    row.innerHTML =
+      `<div class="chip${conferenceFilter ? "" : " selected"}" data-conference="">All</div>` +
+      options.map((c) => `<div class="chip${conferenceFilter === c ? " selected" : ""}" data-conference="${c}">${c}</div>`).join("");
+  }
+
+  document.getElementById("sport-filter").addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-sport]");
+    if (!chip) return;
+    document.querySelectorAll("#sport-filter .chip").forEach((c) => c.classList.remove("selected"));
+    chip.classList.add("selected");
+    sportFilter = chip.getAttribute("data-sport");
+    renderConferenceChips();
+    render();
+  });
+
+  renderConferenceChips();
 
   // Top-25 (AP/Coaches) matchups float to the top within whatever order the
   // status/date grouping below already establishes — a ranked team playing
@@ -132,10 +165,15 @@
     }
     gameDays = days;
 
-    // Keep the current selection if that day still exists in the fresh data
-    // (this runs on every 30s refresh); otherwise fall back to "All Dates"
-    // rather than silently pointing at a day no longer offered.
-    if (selectedDayKey && !gameDays.some((d) => d.toDateString() === selectedDayKey)) {
+    if (!userPickedDay) {
+      // Nobody's tapped a specific day yet — keep tracking "today" live so
+      // the default view advances on its own as calendar days pass (this
+      // re-runs every 30s via load()), rather than freezing on whatever day
+      // happened to be "today" when the page was first opened.
+      selectedDayKey = gameDays.some((d) => d.toDateString() === todayKey()) ? todayKey() : null;
+    } else if (selectedDayKey && !gameDays.some((d) => d.toDateString() === selectedDayKey)) {
+      // User's chosen day aged out of the available window — fall back to
+      // All rather than silently showing an empty list forever.
       selectedDayKey = null;
     }
 
@@ -146,8 +184,9 @@
       gameDays
         .map((d) => {
           const key = d.toDateString();
+          const isToday = key === todayKey();
           const label = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }).replace(",", "");
-          return `<div class="chip${selectedDayKey === key ? " selected" : ""}" data-day="${key}">${label}</div>`;
+          return `<div class="chip${selectedDayKey === key ? " selected" : ""}" data-day="${key}"${isToday ? ' data-today="true"' : ""}>${label}</div>`;
         })
         .join("");
   }
@@ -160,6 +199,7 @@
     document.querySelectorAll("#date-filter-row .chip").forEach((c) => c.classList.remove("selected"));
     chip.classList.add("selected");
     selectedDayKey = chip.getAttribute("data-day") || null;
+    userPickedDay = true; // any explicit tap, including "All", stops auto-tracking today
     render();
   });
 
@@ -169,31 +209,18 @@
     const empty = document.getElementById("games-empty");
     loading.style.display = "none";
 
-    let filtered = filter === "all" ? allGames : allGames.filter((g) => g.status.state === filter);
-    filtered = filtered.filter(gameMatchesConference);
+    let filtered = allGames.filter(gameMatchesSport).filter(gameMatchesConference);
     if (selectedDayKey) filtered = filtered.filter((g) => dayKey(g.date) === selectedDayKey);
-    if (filter === "post") {
-      // Results view: ranked matchups first, then most recently finished.
-      filtered.sort((a, b) => bestRank(a) - bestRank(b) || new Date(b.date) - new Date(a.date));
-    } else {
-      // Live first, then upcoming soonest, then finals — ranked matchups
-      // float to the top within each of those groups.
-      const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
-      filtered.sort((a, b) => statusRank(a) - statusRank(b) || bestRank(a) - bestRank(b) || new Date(a.date) - new Date(b.date));
-    }
+
+    // No more separate Live/Results tabs — every date's games show together,
+    // live first, then upcoming soonest, then finals, with ranked matchups
+    // floating to the top within each of those groups.
+    const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
+    filtered.sort((a, b) => statusRank(a) - statusRank(b) || bestRank(a) - bestRank(b) || new Date(a.date) - new Date(b.date));
 
     list.innerHTML = filtered.slice(0, 40).map(renderGameCard).join("");
     empty.style.display = filtered.length === 0 ? "block" : "none";
   }
-
-  document.querySelectorAll("[data-filter]").forEach((el) => {
-    el.addEventListener("click", () => {
-      document.querySelectorAll("[data-filter]").forEach((c) => c.classList.remove("selected"));
-      el.classList.add("selected");
-      filter = el.getAttribute("data-filter");
-      render();
-    });
-  });
 
   document.getElementById("conference-filter").addEventListener("click", (e) => {
     const chip = e.target.closest("[data-conference]");

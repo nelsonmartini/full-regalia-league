@@ -4,6 +4,14 @@
 
 ## Status
 
+- **SHIPPED (2026-09-04): Games tab — today-default dates, dropped Live/Results, two-tier NFL/NCAA + conference filters.** Third round of Neil's Games tab feedback.
+  - **Date defaults to today, and actually keeps up as days pass.** Previously the date row defaulted to "All." Now it auto-selects today's date chip on load — and, since Neil specifically asked "will it progress as time moves on?", it keeps tracking today live: every 30s refresh re-checks the real date and moves the selection forward on its own, as long as the user hasn't manually tapped a chip themselves. The moment someone taps any chip (including "All"), that becomes a deliberate choice and stops auto-tracking — refreshing the page (which most people do each new visit anyway) resets it back to auto mode. Verified this specifically with Playwright's fake clock: fast-forwarded a full simulated day and confirmed the view moved from "today's game" to "tomorrow's game" with zero taps.
+  - **Subtle "today" marker**: a small dot under whichever chip is today's date, independent of which chip is actually selected — so if you've tapped over to a different day, you can still see where "today" is at a glance.
+  - **Removed the All/Live now/Results status filter.** Neil: "simply have the games tied to dates, default to all" — with date-based browsing as the primary way to narrow the list, a separate live/upcoming/final tab added a second, mostly-redundant axis. The full slate for whatever date is selected now always shows together, sorted live-first/rank-first same as before. Kept the "All" *date* chip, though — recommended keeping it since it's the only way to see the full multi-week slate (e.g. checking a spread line for a game 3 weeks out), and it costs nothing to leave in.
+  - **Two-tier NFL/NCAA + conference filters** (Neil chose this over grouping games into collapsible conference sections in the list): a new All/NFL/NCAA row sits above the conference chips. Selecting NFL or NCAA both filters the game list AND swaps which conference chips are offered (AFC/NFC for NFL; ACC/Big 12/Big Ten/SEC/Other for NCAA) instead of one flat 7-option list mixing both leagues. "All" sports keeps the original combined list.
+  - Verified via Playwright (14/14 + 4/4 for the day-progression test specifically): today auto-selected by default, exactly one today-marker present, old status chips gone, conference row correctly re-scopes per sport, and each sport/conference combination filters the visible games correctly.
+  - Bumped service worker cache to `full-regalia-shell-v84`.
+
 - **SHIPPED (2026-09-04): Games tab layout pass — scoreboard nav icon, dates
   moved to top, title removed, filters reordered, date row fits on one line.**
   Neil's follow-up round after the date chips shipped:
