@@ -610,14 +610,22 @@ a.game-card-team:active {
   white-space: nowrap;
 }
 
-/* NCAA only — the school's own name instead of a 3-4 letter abbreviation,
- * smaller than the NFL abbr it replaces so it still fits cleanly next to
- * the logo and score (Neil: abbr + mascot name read as duplicated once the
- * logo's doing the "which team" work). */
-.game-card-team-fullname {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-dim);
+/* NCAA only — mascot nickname as the bold, bright primary label (mirrors
+ * NFL's abbr slot, just brighter — Neil wanted it back "in the bigger
+ * white font" next to the logo, not the plain school name alone). */
+.game-card-team-nickname {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* School name as the smaller secondary line right after the nickname —
+ * mirrors NFL's mascot-name slot, just swapped which piece of text is
+ * primary vs secondary. */
+.game-card-team-schoolname {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -633,7 +641,8 @@ a.game-card-team:active {
 
 .game-card-team.is-winner .game-card-team-abbr,
 .game-card-team.is-winner .game-card-team-name,
-.game-card-team.is-winner .game-card-team-fullname,
+.game-card-team.is-winner .game-card-team-nickname,
+.game-card-team.is-winner .game-card-team-schoolname,
 .game-card-team.is-winner .game-card-team-score {
   color: var(--text);
 }

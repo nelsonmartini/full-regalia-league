@@ -2416,3 +2416,21 @@
   name — same visual pattern as the Picks page's existing team search.
   Clears automatically when switching the NFL/NCAA toggle.
 - Bumped `sw.js` to `full-regalia-shell-v74`, committed, pushed, confirmed live.
+
+### 2026-09-03 (cont'd 3) — Fixed "@" polarity, restored NCAA nickname
+- Neil caught two things from the last pass: (1) "@" was marking the AWAY
+  team — standard sports shorthand actually uses "@" for the home side
+  (it marks the site of the game), so this was backwards; (2) he wanted the
+  mascot nickname back too, not just the plain school name — specifically
+  "the bigger white font" nickname next to the logo, with the school name
+  adjacent as a smaller secondary line, rather than replacing one with the
+  other.
+- Fixed both in `gameCardTeamRow()` (`js/live-scores.js`): NCAA now shows
+  the nickname (e.g. "Crimson Tide") as the bold, bright primary label
+  (new `.game-card-team-nickname`, `color: var(--text)` — white in dark
+  mode) with the school name (e.g. "Alabama") right after it as a smaller
+  muted line (new `.game-card-team-schoolname`) — same layout pattern NFL's
+  abbr+mascot-name stack already used, just swapped which piece of text is
+  primary. "@" now prefixes the HOME team's nickname instead of the away
+  team's. NFL is untouched (still abbr + mascot name + house icon).
+- Bumped `sw.js` to `full-regalia-shell-v75`, committed, pushed, confirmed live.

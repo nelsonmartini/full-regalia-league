@@ -194,26 +194,15 @@ function formatFullDate(iso) {
  * final) is brought up to full text color so the result reads at a glance
  * without needing to compare two numbers.
  *
- * NFL keeps the abbreviation+mascot-name stack (KC / Chiefs) — those
- * abbreviations are widely recognized on their own. NCAA instead shows the
- * school's own name (Alabama, not ALA) at a smaller size — with the logo
- * now doing the "which team" visual work, abbreviation + mascot name side
- * by side read as duplicated for 130+ schools nobody has memorized
- * (confirmed, Neil). Away side gets a leading "@" (standard sports
- * shorthand for "playing at") instead of a home-team house emoji — no
- * icon legend needed, reads instantly to anyone who's seen a schedule.
- *
- * The whole row links into Analytics' team trends for BOTH teams in this
- * game (analytics.html?team=X&opp=Y&sport=Z), not just whichever side was
- * tapped — a game is inherently a matchup between two teams, so "team A's
- * history against the 4 bet categories" is only half the useful comparison
- * (confirmed, Neil: clicking a game should show the 2 teams' history on the
- * 4 bets, not one team in isolation, and definitely not the Player
- * Comparison table above it — see analytics.html's scroll-into-view on
- * deep-link for the other half of that fix). Deliberately only wired up
- * here (not on the Picks page's category chips), since a chip there is
- * already a tap target for making a pick and a second meaning on the same
- * tap would be confusing. Games/Live has no such conflict. */
+ * NFL: abbreviation+mascot-name stack (KC / Chiefs), home team marked with
+ * a house icon — unchanged, those abbreviations are widely recognized on
+ * their own. NCAA: mascot nickname (Crimson Tide) as the bold/bright
+ * primary label next to the logo, school name (Alabama) as a smaller
+ * secondary line right after it (Neil: wanted both back, nickname in the
+ * bigger bright style, not just the plain school name alone). Home team
+ * gets a leading "@" — standard sports shorthand ("@" marks the site of
+ * the game, i.e. the home team's place — confirmed, Neil, this was
+ * backwards on the away side in the previous pass). */
 function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome) {
   const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
   // Loading="lazy" + onerror hide — a missing/broken logo (some smaller
@@ -223,14 +212,12 @@ function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome)
   const logoHtml = team?.logo
     ? `<img class="game-card-team-logo" src="${team.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />`
     : `<span class="game-card-team-logo"></span>`;
-  // "@" only applies to NCAA's new single-line full-name treatment (Neil
-  // scoped this to NCAA specifically) — NFL keeps its original home-team
-  // house icon on the abbr+mascot-name stack, since "@" landing next to a
-  // bare mascot name ("KC @Chiefs") read oddly rather than clarifying
-  // anything once there's already a separate abbreviation right next to it.
   const nameHtml =
     sport === "cfb"
-      ? `<span class="game-card-team-fullname">${!isHome ? "@ " : ""}${team?.location || team?.abbr || "?"}</span>`
+      ? `<span class="game-card-team-stack">
+          <span class="game-card-team-nickname">${isHome ? "@ " : ""}${team?.name || team?.abbr || "?"}</span>
+          <span class="game-card-team-schoolname">${team?.location || ""}</span>
+        </span>`
       : `<span class="game-card-team-stack">
           <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
           <span class="game-card-team-name">${isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : ""}${team?.name || ""}</span>
