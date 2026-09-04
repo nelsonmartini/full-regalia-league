@@ -2392,3 +2392,27 @@
   scoped to whichever player's page is on screen, not device identity,
   since there's no login).
 - Bumped `sw.js` to `full-regalia-shell-v73`, committed, pushed, confirmed live.
+
+### 2026-09-03 (cont'd 2) — Game card cleanup, Analytics team search
+- Neil: with logos now in game cards, NCAA's abbreviation + mascot name
+  (ALA / Crimson Tide) read as duplicated once the logo was already doing
+  the "which team" work. Reworked `gameCardTeamRow()` (`js/live-scores.js`)
+  sport-conditionally:
+  - **NCAA**: single line showing the school's own name (`team.location`,
+    e.g. "Alabama") at a smaller size, replacing the abbr+mascot-name pair.
+    Away side gets a leading "@" (standard sports shorthand for "at") instead
+    of a home-team house emoji — reads instantly, no icon legend needed.
+  - **NFL**: left exactly as it was (abbr + mascot name stack, home icon) —
+    NFL abbreviations are widely recognized on their own, and "@" landing
+    next to a bare mascot name read oddly once tried ("KC @Chiefs") rather
+    than clarifying anything.
+  - `normalizeEvent()` now also carries `team.location` through for CFB.
+  - `.game-card-team` grid dropped from 4 columns to 3 (logo, name, score)
+    now that NCAA doesn't need a separate abbr column.
+- **Analytics team search** — Neil: 130+ NCAA teams in a plain `<select>`
+  was too much to scroll through to find one team. Added a search input
+  above the team picker (`#team-search-input`) that filters the `<select>`'s
+  own option list live as you type, matching on either abbreviation or full
+  name — same visual pattern as the Picks page's existing team search.
+  Clears automatically when switching the NFL/NCAA toggle.
+- Bumped `sw.js` to `full-regalia-shell-v74`, committed, pushed, confirmed live.

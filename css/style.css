@@ -558,7 +558,7 @@ a { color: inherit; text-decoration: none; }
 
 .game-card-team {
   display: grid;
-  grid-template-columns: 26px 40px 1fr auto;
+  grid-template-columns: 26px 1fr auto;
   align-items: center;
   gap: 8px;
   color: var(--text-faint);
@@ -584,16 +584,40 @@ a.game-card-team:active {
   opacity: 0.65;
 }
 
+/* NFL only — abbreviation + mascot name side by side, sharing the one grid
+ * cell the two used to split between them. */
+.game-card-team-stack {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .game-card-team-abbr {
   font-size: 14.5px;
   font-weight: 800;
   color: var(--text-dim);
+  flex: none;
 }
 
 .game-card-team-name {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* NCAA only — the school's own name instead of a 3-4 letter abbreviation,
+ * smaller than the NFL abbr it replaces so it still fits cleanly next to
+ * the logo and score (Neil: abbr + mascot name read as duplicated once the
+ * logo's doing the "which team" work). */
+.game-card-team-fullname {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -609,6 +633,7 @@ a.game-card-team:active {
 
 .game-card-team.is-winner .game-card-team-abbr,
 .game-card-team.is-winner .game-card-team-name,
+.game-card-team.is-winner .game-card-team-fullname,
 .game-card-team.is-winner .game-card-team-score {
   color: var(--text);
 }

@@ -75,6 +75,8 @@
           <div class="chip selected" data-sport="nfl">🏈 NFL</div>
           <div class="chip" data-sport="cfb">🎓 NCAA</div>
         </div>
+        <input type="text" id="team-search-input" placeholder="🔎 Search for a team…" autocomplete="off"
+               style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-size:15px;margin-bottom:10px" />
         <select id="team-select" class="chip" style="width:100%;box-sizing:border-box;appearance:none;text-align:left;padding:12px;cursor:pointer">
           <option value="">Select a team…</option>
         </select>
@@ -205,6 +207,7 @@
     const allTeams = teamsWithFinishedGames(games);
     const teamTrendsPicker = document.getElementById("team-trends-picker");
     const teamSelect = document.getElementById("team-select");
+    const teamSearchInput = document.getElementById("team-search-input");
     const teamDetail = document.getElementById("team-detail");
     const teamSportToggle = document.getElementById("team-sport-toggle");
 
@@ -214,10 +217,19 @@
     const deepLinkSport = params.get("sport") === "cfb" ? "cfb" : params.get("sport") === "nfl" ? "nfl" : null;
     let teamSport = deepLinkSport || "nfl";
 
+    // Filters the <select>'s own option list live as you type — NCAA alone
+    // can be 130+ schools, way too many to scroll through in a native
+    // picker to find one team (Neil). Matches on either the abbreviation
+    // or the full name, so "bama" and "ala" both find Alabama.
     function renderTeamOptions() {
-      const opts = allTeams.filter((t) => t.sport === teamSport);
+      const query = teamSearchInput.value.trim().toLowerCase();
+      const opts = allTeams
+        .filter((t) => t.sport === teamSport)
+        .filter((t) => !query || t.abbr.toLowerCase().includes(query) || t.name.toLowerCase().includes(query));
       teamSelect.innerHTML = '<option value="">Select a team…</option>' + opts.map((t) => `<option value="${t.abbr}">${t.abbr} — ${t.name}</option>`).join("");
     }
+
+    teamSearchInput.addEventListener("input", renderTeamOptions);
 
     // Always resolves to something meaningful — including "no finished games
     // for THIS team yet" — rather than only working once at least one team
@@ -283,6 +295,7 @@
         teamSportToggle.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
         chip.classList.add("selected");
         teamSport = chip.getAttribute("data-sport");
+        teamSearchInput.value = "";
         renderTeamOptions();
         teamSelect.value = "";
         renderTeamDetail("");

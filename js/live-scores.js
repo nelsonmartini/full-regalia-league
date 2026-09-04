@@ -114,12 +114,14 @@ function normalizeEvent(e, sport) {
     home: home && {
       abbr: home.team?.abbreviation,
       name: home.team?.shortDisplayName || home.team?.displayName,
+      location: home.team?.location || null,
       score: home.score,
       logo: home.team?.logo || null,
     },
     away: away && {
       abbr: away.team?.abbreviation,
       name: away.team?.shortDisplayName || away.team?.displayName,
+      location: away.team?.location || null,
       score: away.score,
       logo: away.team?.logo || null,
     },
@@ -187,11 +189,19 @@ function formatFullDate(iso) {
   }
 }
 
-/** One team row within a game card — abbreviation (bold), full name (muted,
- * truncates rather than wraps), and score (right-aligned, only shown once
- * the game has actually started). The winning side (once final) is brought
- * up to full text color so the result reads at a glance without needing to
- * compare two numbers.
+/** One team row within a game card — logo, name, and score (right-aligned,
+ * only shown once the game has actually started). The winning side (once
+ * final) is brought up to full text color so the result reads at a glance
+ * without needing to compare two numbers.
+ *
+ * NFL keeps the abbreviation+mascot-name stack (KC / Chiefs) — those
+ * abbreviations are widely recognized on their own. NCAA instead shows the
+ * school's own name (Alabama, not ALA) at a smaller size — with the logo
+ * now doing the "which team" visual work, abbreviation + mascot name side
+ * by side read as duplicated for 130+ schools nobody has memorized
+ * (confirmed, Neil). Away side gets a leading "@" (standard sports
+ * shorthand for "playing at") instead of a home-team house emoji — no
+ * icon legend needed, reads instantly to anyone who's seen a schedule.
  *
  * The whole row links into Analytics' team trends for BOTH teams in this
  * game (analytics.html?team=X&opp=Y&sport=Z), not just whichever side was
@@ -205,7 +215,6 @@ function formatFullDate(iso) {
  * already a tap target for making a pick and a second meaning on the same
  * tap would be confusing. Games/Live has no such conflict. */
 function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome) {
-  const homeMark = isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : "";
   const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
   // Loading="lazy" + onerror hide — a missing/broken logo (some smaller
   // schools, mid-season roster of teams ESPN hasn't backfilled art for)
@@ -214,10 +223,21 @@ function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome)
   const logoHtml = team?.logo
     ? `<img class="game-card-team-logo" src="${team.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />`
     : `<span class="game-card-team-logo"></span>`;
+  // "@" only applies to NCAA's new single-line full-name treatment (Neil
+  // scoped this to NCAA specifically) — NFL keeps its original home-team
+  // house icon on the abbr+mascot-name stack, since "@" landing next to a
+  // bare mascot name ("KC @Chiefs") read oddly rather than clarifying
+  // anything once there's already a separate abbreviation right next to it.
+  const nameHtml =
+    sport === "cfb"
+      ? `<span class="game-card-team-fullname">${!isHome ? "@ " : ""}${team?.location || team?.abbr || "?"}</span>`
+      : `<span class="game-card-team-stack">
+          <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
+          <span class="game-card-team-name">${isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : ""}${team?.name || ""}</span>
+        </span>`;
   const inner = `
     ${logoHtml}
-    <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
-    <span class="game-card-team-name">${homeMark}${team?.name || ""}</span>
+    ${nameHtml}
     ${showScore ? `<span class="game-card-team-score">${team?.score ?? "-"}</span>` : ""}`;
   if (!team?.abbr) return `<div class="${classes}">${inner}</div>`;
   const oppParam = opponentAbbr ? `&opp=${encodeURIComponent(opponentAbbr)}` : "";
