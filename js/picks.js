@@ -337,7 +337,17 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     // locked, the game card below already shows richer live/final status,
     // so the plain kickoff-time readout would just be redundant there.
     const summaryMainHtml = currentGameId ? `${isLocked ? "🔒 " : ""}${pickLabel(slot.entry.value)}${slot.entry.snapshot?.matchup ? " · " + slot.entry.snapshot.matchup : ""}` : "";
-    const summaryDateHtml = currentGameId && !isLocked && slot.entry.snapshot?.date ? `<span class="pick-game-summary-date">${formatKickoff(slot.entry.snapshot.date)}</span>` : "";
+    // Countdown alongside the plain day/time — reads more urgent than a
+    // static clock time, especially once lock is close (Neil). Recomputed
+    // on every render, including the periodic re-render this page now runs
+    // purely to keep this ticking down (see the setInterval near the
+    // bottom of initPicksPage) — not a true per-second clock, coarse enough
+    // that a render every 30s doesn't look stale.
+    const countdown = currentGameId && !isLocked && slot.entry.snapshot?.date ? formatCountdown(slot.entry.snapshot.date) : null;
+    const summaryDateHtml =
+      currentGameId && !isLocked && slot.entry.snapshot?.date
+        ? `<span class="pick-game-summary-date">${formatKickoff(slot.entry.snapshot.date)}${countdown ? ` · ${countdown}` : ""}</span>`
+        : "";
     const summaryHtml = currentGameId
       ? `<span class="pick-game-summary is-set"><span class="pick-game-summary-main">${summaryMainHtml}</span>${summaryDateHtml}</span>`
       : `<span class="pick-game-summary">Tap to pick a game</span>`;
@@ -958,6 +968,13 @@ async function initPicksPage() {
   });
 
   loadAndRenderStatus();
+
+  // Re-render (no re-fetch) purely to keep the "Locks in Xh Ym" countdowns
+  // ticking down while this tab stays open — doesn't touch any saved/
+  // pending pick state, just recomputes the same HTML from data already in
+  // memory. 60s cadence matches the coarsest unit the countdown ever shows
+  // (minutes), so it never visibly skips.
+  setInterval(renderAll, 60000);
 }
 
 document.addEventListener("DOMContentLoaded", initPicksPage);

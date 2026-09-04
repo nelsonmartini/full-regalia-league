@@ -2370,3 +2370,25 @@
   the streak badge would've been added as a child — moved the badge to a
   sibling `<span>` instead of nesting it inside the `<h1>`.
 - Bumped `sw.js` to `full-regalia-shell-v72`, committed, pushed, confirmed live.
+
+### 2026-09-03 (cont'd) — Countdown timers, shareable weekly recap
+- **Countdown timers** — still-upcoming picks now show "Locks in 2h 15m"
+  alongside the existing plain kickoff day/time. New `formatCountdown(iso)`
+  (`js/live-scores.js`), coarse (days+hours, or hours+minutes, or just
+  minutes — no seconds, since this isn't a true per-second tick). Added a
+  `setInterval(renderAll, 60000)` to `initPicksPage()` purely to keep the
+  countdown current while the tab's open — re-renders from data already in
+  memory, no re-fetch, doesn't touch pending/saved pick state.
+- **Shareable weekly recap** — a 📤 button on each graded week's card
+  (`renderHistoryEntry`, shared by `history.html` and `player.html`) shares
+  a plain-text recap ("Neil — NFL · Week 3\n3/4 picks hit · 4 pts\nFull
+  Regalia League") via the native share sheet (`navigator.share`) where
+  available, falling back to clipboard + a "Copied!" swap on the button
+  itself for browsers without it (mainly desktop). New
+  `historyEntryShareText()`/`shareHistoryEntry()` in `js/season-data.js`.
+- This closes out the "cool UI features" round: team logos, pick consensus,
+  streak badges, countdown timers, shareable recap — 5 of Neil's 6 picks
+  (confetti dropped per his call after discussing how it'd need to be
+  scoped to whichever player's page is on screen, not device identity,
+  since there's no login).
+- Bumped `sw.js` to `full-regalia-shell-v73`, committed, pushed, confirmed live.

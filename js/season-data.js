@@ -169,9 +169,48 @@ function historyEntryRow(pick) {
     </div>`;
 }
 
+/** Plain-text recap for sharing — kept separate from the HTML card so the
+ * share text stays clean (no markup) regardless of how the card itself
+ * renders. */
+function historyEntryShareText(entry) {
+  return `${titleCase(entry.name)} — ${entry.label}\n${entry.hits}/${entry.total} picks hit · ${entry.points} pts\nFull Regalia League`;
+}
+
+/** Shared by every "share this week" button (history.html and
+ * player.html both use renderHistoryEntry). Prefers the native share sheet
+ * (works great on mobile Safari/PWA — Messages, etc.); falls back to
+ * clipboard + a quick "Copied!" swap on the button itself for browsers
+ * without navigator.share (mainly desktop). A user backing out of the
+ * share sheet rejects the promise — not a real error, so it's swallowed
+ * rather than surfaced. */
+async function shareHistoryEntry(btn, encodedText) {
+  const text = decodeURIComponent(encodedText);
+  if (navigator.share) {
+    try {
+      await navigator.share({ text });
+    } catch {
+      // cancelled — nothing to do
+    }
+    return;
+  }
+  if (navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+    const original = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.disabled = false;
+    }, 1500);
+  }
+}
+
 function renderHistoryEntry(entry) {
   const rows = entry.picks.map(historyEntryRow).join("");
   const statsText = entry.graded ? `${entry.hits}/${entry.total} · ${entry.points} pts` : "";
+  const shareBtn = entry.graded
+    ? `<button class="share-week-btn" onclick="shareHistoryEntry(this, '${encodeURIComponent(historyEntryShareText(entry))}')" title="Share this week">📤</button>`
+    : "";
   return `
     <div class="card">
       <div class="card-title">
@@ -180,7 +219,7 @@ function renderHistoryEntry(entry) {
             ${avatarHtml(entry.name, 20)}${titleCase(entry.name)}
           </a>
         </span>
-        <span>${statsText}</span>
+        <span style="display:flex;align-items:center;gap:6px">${statsText}${shareBtn}</span>
       </div>
       ${rows || '<div style="color:var(--text-faint);font-size:13px">No picks recorded.</div>'}
     </div>`;

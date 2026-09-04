@@ -156,6 +156,26 @@ function formatKickoff(iso) {
   }
 }
 
+/** "Locks in 2h 15m" — a live countdown to kickoff, shown alongside the
+ * plain day/time on still-upcoming picks (Neil: a countdown reads more
+ * urgently than a static clock time, especially close to lock). Rounds
+ * down to the coarsest 2 units (days+hours, or hours+minutes, or just
+ * minutes) rather than showing seconds — this re-renders on a timer, not
+ * a true per-second tick, so seconds would look broken/frozen between
+ * refreshes. Returns null once the deadline's passed (caller decides what
+ * to show instead — usually nothing, since the category locks by then). */
+function formatCountdown(iso) {
+  const ms = new Date(iso) - new Date();
+  if (!(ms > 0)) return null;
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `Locks in ${days}d ${hours}h`;
+  if (hours > 0) return `Locks in ${hours}h ${minutes}m`;
+  return `Locks in ${minutes}m`;
+}
+
 /** Fuller "Thu, Aug 6 · 8:00 PM" form — used where the date alone (not just the
  * weekday) matters, e.g. picks made now for a game next week. */
 function formatFullDate(iso) {
