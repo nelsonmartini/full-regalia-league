@@ -1257,14 +1257,22 @@ a.game-card-team:active {
 .home-split-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  align-items: start;
   gap: 10px;
   margin-bottom: 14px;
+  /* align-items defaults to stretch — used deliberately here (see
+   * .standings-preview-cta below) rather than the "start" override this
+   * used to have: with Awards often taller than Standings' fixed 3 rows,
+   * stretching both to match height left an obviously blank gap under a
+   * shorter Standings card. Stretching + pinning the CTA to the bottom of
+   * the now-equal-height card turns that same gap into intentional
+   * breathing room between the list and the button instead. */
 }
 
 .home-split-row .card {
   padding: 10px 10px;
   margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .home-split-row .card-title {
@@ -1298,7 +1306,11 @@ a.game-card-team:active {
 .standings-preview-cta {
   font-size: 15px;
   padding: 9px 10px;
-  margin-top: 10px;
+  /* Pushed to the bottom of the (now stretch-height) Standings card,
+   * whatever that height ends up being once matched to Awards' — the
+   * flexible gap lives between the standings rows and this button, not as
+   * dead space trailing below everything. */
+  margin-top: auto;
   white-space: nowrap;
 }
 
