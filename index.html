@@ -71,7 +71,13 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Live scores &amp; odds <a class="link" href="live.html">See all →</a></div>
+    <div class="card-title">
+      🎯 Most Active Games
+      <span style="display:flex;align-items:center;gap:12px">
+        <a class="link" href="picks.html" title="Enter your picks" aria-label="Enter your picks">✏️</a>
+        <a class="link" href="live.html">See all →</a>
+      </span>
+    </div>
     <div id="home-games"><div class="empty-state">Loading games…</div></div>
   </div>
 
@@ -136,10 +142,13 @@
 <script src="js/season-data.js"></script>
 <script src="js/awards.js"></script>
 <script>
-  (async function loadStandingsAndAwards() {
-    // Shared fetch — Standings, Weekly Awards, and the current-week text
-    // (CTA subline + standings freshness line) all derive from the same
-    // picks/games data, no need to fetch any of it twice.
+  (async function loadHome() {
+    // One shared fetch — Standings, Weekly Awards, the current-week text,
+    // and Most Active Games all derive from the same picks/games data, no
+    // reason to fetch any of it twice (previously two separate IIFEs, the
+    // games one using a narrower ESPN window that Most Active Games didn't
+    // actually need — bet counts alone already keep it scoped to whatever
+    // week people are actually picking).
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
 
@@ -161,16 +170,17 @@
     // gap on the live site 2026-08-14.
     document.getElementById("picks-cta-week").textContent = pickableWeekText(games);
     document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);
-  })();
 
-  (async function loadHomeGames() {
-    const games = await loadAllGames();
-    const rank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
-    const top = [...games].sort((a, b) => rank(a) - rank(b) || new Date(a.date) - new Date(b.date)).slice(0, 3);
-    const el = document.getElementById("home-games");
-    el.innerHTML = top.length
-      ? top.map(renderGameCard).join("")
+    // Most Active Games — the 3 games with the most total bets across
+    // everyone, not just "what's live right now" (previous behavior).
+    // Falls back to filling any remaining slots by live-status so the card
+    // isn't sparse early in a week before most people have picked yet.
+    const active = mostActiveGames(games, picksRows, 3);
+    const homeGamesEl = document.getElementById("home-games");
+    homeGamesEl.innerHTML = active.length
+      ? active.map((g) => `<div class="game-card-group">${renderGameCard(g)}${gameBetsSummaryHtml(g, picksRows)}</div>`).join("")
       : '<div class="empty-state">No games found right now.</div>';
+    wireBetToggleDelegation(homeGamesEl);
   })();
 </script>
 </body>

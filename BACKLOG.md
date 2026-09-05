@@ -4,6 +4,13 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Home's game preview repurposed into "Most Active Games" (2 of 3 stages — betting-activity feature).** Same card slot as the old "Live scores & odds" (still 3 games, same position for now — reorder comes in stage 3), but the 3 shown are now whichever games have the most total bets across everyone, not whichever are live/soonest. Falls back to filling remaining slots by the old live-status order when fewer than 3 games have any bets yet (early in a week), so the card never looks sparse.
+  - Merged the page's two separate data-loading IIFEs into one — Standings, Awards, the week-freshness text, and Most Active Games all need the same `picksRows`/`games`, no reason to fetch twice (previously "Live scores" used a narrower separate ESPN fetch that Most Active Games doesn't actually need, since bet counts alone already keep it scoped to whatever week people are actively picking).
+  - Each shown game reuses the exact same `gameBetsSummaryHtml()` component shipped for the Games tab, so tapping a game's bet count here behaves identically.
+  - Added a small ✏️ shortcut icon next to the card header, linking straight to `picks.html`.
+  - Verified via Playwright (9/9): title changed, Picks shortcut present, the 3 shown games are genuinely top-3-by-bet-count (a game with only 1 bet correctly beat out a live game with 0 bets, and lost to games with more), and the shared expand/detail component works identically here.
+  - Bumped service worker cache to `full-regalia-shell-v89`.
+
 - **SHIPPED (2026-09-05): Games tab shows bet activity per game (1 of 3 stages — betting-activity feature).** Neil wants to see how many people (and what) have bet on a game, both on the Games tab and — in a follow-up stage — as the signal for a "Most Active Games" section on Home. This is the first stage: the Games tab itself.
   - New shared `gameBetsSummaryHtml(game, picksRows)` (`js/pick-utils.js`) — a small "🎯 N bets" toggle under each game card, hidden entirely when nobody's bet on that game. Tapping expands a list of who bet what (avatar, name, `pickLabel()`, and a Hit/Miss/Pending badge graded directly against that game) — same visual pattern `analytics.html`'s existing "Who's picked [team]" list already uses, just scoped to one specific game instead of one team's whole season.
   - `live.html` now loads `js/supabase-client.js` + `js/grading.js` + `js/season-data.js` (for `loadSeasonPicks()`) alongside its existing ESPN fetch, and wraps every rendered game card with this new component. `renderGameCard()` itself is untouched — the bet strip is a separate sibling element attached via CSS (`.game-card-group`), so `analytics.html`'s own use of `renderGameCard()` isn't affected.
