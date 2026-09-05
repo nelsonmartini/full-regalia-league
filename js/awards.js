@@ -332,7 +332,10 @@ function renderWeeklyAwards(allWeeklyAwards, { compact = false } = {}) {
   const iceColdStreak = current.iceCold[0]?.longestMissStreak ?? 0;
 
   const rows = [
-    simpleAwardRow("🤡", "Dumbass of the Week", "dumbass", current.dumbass, `${dumbassMisses} miss${dumbassMisses === 1 ? "" : "es"}`, careerCounts, allWeeklyAwards, "misses", compact),
+    // "Dumbass" not "Dumbass of the Week" -- the card title already reads
+    // "Week N Awards", so the suffix was redundant and, at cursive size,
+    // was the one label wide enough to wrap to a second line (Neil).
+    simpleAwardRow("🤡", "Dumbass", "dumbass", current.dumbass, `${dumbassMisses} miss${dumbassMisses === 1 ? "" : "es"}`, careerCounts, allWeeklyAwards, "misses", compact),
     simpleAwardRow("🔮", "Nostradamus", "nostradamus", current.nostradamus, `${nostradamusHits} hit${nostradamusHits === 1 ? "" : "s"}`, careerCounts, allWeeklyAwards, "hits", compact),
     perWinnerAwardRow(
       "🎰",

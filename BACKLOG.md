@@ -4,6 +4,9 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Award names now fit on one row.** At the new cursive size, "Dumbass of the Week" was the one label wide enough to wrap to a second line in the compact Home card. Shortened to "Dumbass" (the card title already reads "Week N Awards", so the suffix was redundant) and reduced `.award-row-label`'s font-size/gap slightly with `white-space: nowrap`. Verified via Playwright at the narrowest supported width (375px): all 5 award labels render with zero horizontal overflow.
+  - Bumped service worker cache to `full-regalia-shell-v103`.
+
 - **SHIPPED (2026-09-05): Swapped which part of the Awards row is cursive.** Neil: award names should be cursive, winner names smaller — the reverse of what shipped earlier today. `.award-row-label` (e.g. "Ice Cold") now carries the Pacifico cursive brand treatment; `.award-row-winner` (the player name) is now small plain text. Pure CSS swap in `css/style.css`, no HTML/JS structure changes needed.
   - Bumped service worker cache to `full-regalia-shell-v102`.
 
