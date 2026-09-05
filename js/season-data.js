@@ -18,12 +18,17 @@ function streakBadgeHtml(streak) {
   return streak >= 3 ? `<span class="streak-badge" title="${streak} hits in a row">🔥${streak}</span>` : "";
 }
 
-function renderStandingsRow(player, rank) {
+/** Medals only make sense for a SOLE 1st/2nd/3rd — a tie shows explicit
+ * "T-N" text instead (Neil: show ties honestly rather than letting the
+ * medal imply one clear leader when there isn't one). `player.rank`/
+ * `.tied` come from computeStandings() above. */
+function renderStandingsRow(player) {
+  const rank = player.rank;
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
-  const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
+  const rankDisplay = player.tied ? `T-${rank}` : rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
   return `
     <a class="standings-row${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
-      <div class="standings-rank">${medal}</div>
+      <div class="standings-rank${player.tied ? " standings-rank-tied" : ""}">${rankDisplay}</div>
       ${avatarHtml(player.name, 32)}
       <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
       <div class="standings-points">${player.points}</div>
@@ -43,11 +48,13 @@ function renderStandingsRow(player, rank) {
  * space (Home's side-by-side split-screen row, see css/style.css
  * .home-split-row and .standings-row-split) without a whole separate
  * render function — same data and row shape either way. */
-function renderStandingsRowCompact(player, rank, { extraClass = "", avatarSize = 24 } = {}) {
+function renderStandingsRowCompact(player, { extraClass = "", avatarSize = 24 } = {}) {
+  const rank = player.rank;
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
+  const rankDisplay = player.tied ? `T-${rank}` : rank;
   return `
     <a class="standings-row standings-row-compact${rankClass}${extraClass ? " " + extraClass : ""}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
-      <div class="standings-rank standings-rank-cursive">${rank}</div>
+      <div class="standings-rank standings-rank-cursive${player.tied ? " standings-rank-tied" : ""}">${rankDisplay}</div>
       ${avatarHtml(player.name, avatarSize)}
       <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
       <div class="standings-points">${player.points}</div>
@@ -115,9 +122,29 @@ function computeStandings(gradedPicks, players) {
     if (gp.result === "hit") entry.hits++;
     entry.picks.push(gp);
   }
-  return [...byName.values()]
+  const sorted = [...byName.values()]
     .map((e) => ({ ...e, winPct: e.graded ? (e.hits / e.graded) * 100 : 0, streak: computeCurrentStreak(e.picks) }))
     .sort((a, b) => b.points - a.points);
+
+  // Ties shown as ties ("T-1", "T-3"), not silently broken by whatever
+  // order they happen to land in — standard "competition ranking": players
+  // tied on points share one rank number, and the next DISTINCT points
+  // value's rank skips ahead by however many players shared it (two
+  // players tied for 1st means the next rank down is 3rd, not 2nd).
+  // TODO(Neil, 2026-09-05): this is deliberately NOT a real tiebreaker —
+  // ties are just displayed honestly for now. Add an actual tiebreaker
+  // (e.g. higher win %, more total hits) once ties start mattering more
+  // as the season progresses.
+  let rank = 0;
+  sorted.forEach((e, i) => {
+    if (i === 0 || e.points !== sorted[i - 1].points) rank = i + 1;
+    e.rank = rank;
+  });
+  sorted.forEach((e) => {
+    e.tied = sorted.some((o) => o !== e && o.points === e.points);
+  });
+
+  return sorted;
 }
 
 /** Current consecutive-hit streak, walking backwards from the most recently

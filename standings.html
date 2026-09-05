@@ -105,7 +105,7 @@
       const graded = gradeSeasonPicks(picksRows, games);
       const standings = computeStandings(graded, LEAGUE_PLAYERS);
       document.getElementById("standings-list").innerHTML = standings.length
-        ? standings.map((p, i) => renderStandingsRow(p, i + 1)).join("")
+        ? standings.map((p) => renderStandingsRow(p)).join("")
         : '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
 
       document.getElementById("standings-freshness").textContent = standingsFreshnessText(games);

@@ -4,6 +4,13 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Standings shows ties explicitly ("T-1", "T-3") instead of silently breaking them by roster order.** Neil asked how rank order was determined — answer was "just total points, descending, no tiebreaker at all," which meant two players tied on points got arbitrarily different rank numbers based on load order. He wants ties shown honestly for now (a real tiebreaker is a separate, deliberately-deferred task — see "Next 7 days" below).
+  - `computeStandings()` (`js/season-data.js`) now attaches a proper "competition ranking" (`.rank`/`.tied`) to each player — tied players share one rank number, and the next distinct rank skips ahead by however many shared it (two players tied for 1st means the next one down is 3rd, not 2nd).
+  - `renderStandingsRow()`/`renderStandingsRowCompact()` show `T-{rank}` when tied (medal emoji only applies to a SOLE 1st/2nd/3rd now), and both functions read `player.rank` directly instead of taking a positional index from their caller — removes a whole class of "rank is just array position" bugs.
+  - Widened the rank column slightly on all three standings layouts (full board, compact, split) so "T-1"/"T-3" fits without wrapping.
+  - Verified via Playwright (11/11) with Neil's exact example (two players at 2 points, two at 1 point, one alone at 0): confirms T-1/T-3/plain-5 render correctly on both the Home preview and the full Standings page.
+  - Bumped service worker cache to `full-regalia-shell-v101`.
+
 - **SHIPPED (2026-09-05): Big Dawg award shows the underdog's team logo + school name instead of a plain abbreviation.** Neil: "it says BALL, could just be the logo and school short name with the numerics below."
   - New `bigDawgTeamHtml()` (`js/awards.js`) figures out which side of the game the picked team actually was (home/away), then shows that team's logo + `location` name (same identity fields already used everywhere else on the site — game cards, Analytics), with the spread line on its own line below in the same small/muted style the detail text already used.
   - Scoped to the LIVE current-week row only — `perWinnerAwardRow()` gained an optional `historyDetailFor` parameter so the tap-to-expand history list keeps showing plain text (e.g. "BALL +24.5"), since repeating a logo on every past week would get visually heavy in that compact scrollable list.
@@ -1851,6 +1858,14 @@
      trends vs. player trends). **Explicitly deferred — do not start any of
      this (including the nav change) until Neil says go, expected after the
      season is underway and there's real data to show.**
+8. **Standings needs a real tiebreaker (2026-09-05, Neil).** Ties are
+   currently just displayed honestly as "T-1"/"T-3" etc. (`computeStandings()`,
+   `js/season-data.js`) rather than silently broken by roster order — that
+   was the explicit ask for now. Neil wants an actual tiebreaker added "as
+   the season progresses" (not urgent yet, few games graded so far). Likely
+   candidates when this gets picked up: higher win %, more total hits, or
+   longest current streak — needs Neil's input on which, then applied as a
+   secondary sort key before the "T-N" display logic.
 
 ## Living checklist
 
