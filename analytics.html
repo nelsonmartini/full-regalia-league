@@ -266,6 +266,30 @@
     function teamPickHistoryHtml(abbr) {
       const relevant = graded.filter((gp) => gp.result && (gp.game?.home?.abbr === abbr || gp.game?.away?.abbr === abbr));
       if (relevant.length === 0) return "";
+
+      // Quick-glance rollup (Neil: "how many times, did they win, what
+      // category") above the per-bet list below — same `relevant` array,
+      // no extra data needed. Category counts only list categories that
+      // actually have at least one bet, so a team nobody's taken the Over
+      // on yet doesn't show "0 Over" clutter.
+      const hits = relevant.filter((gp) => gp.result === "hit").length;
+      const misses = relevant.filter((gp) => gp.result === "miss").length;
+      const pushes = relevant.filter((gp) => gp.result === "push").length;
+      const categoryCounts = {};
+      for (const gp of relevant) {
+        const cat = pickCategory(gp.pick);
+        if (cat) categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      }
+      const categoryBreakdown = CATEGORIES.filter((c) => categoryCounts[c])
+        .map((c) => `${categoryCounts[c]} ${CATEGORY_LABEL[c]}`)
+        .join(" · ");
+      const record = `${hits}-${misses}${pushes ? `-${pushes}` : ""}`;
+      const metricsHtml = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:8px;background:var(--bg-elev-2);border-radius:var(--radius-sm);font-size:12px">
+          <span style="font-weight:800">${relevant.length} bet${relevant.length === 1 ? "" : "s"} · ${record}</span>
+          <span style="color:var(--text-faint);text-align:right">${categoryBreakdown}</span>
+        </div>`;
+
       const rows = [...relevant]
         .sort((a, b) => new Date(b.snapshot?.date || 0) - new Date(a.snapshot?.date || 0))
         .map(
@@ -281,6 +305,7 @@
         .join("");
       return `
         <div class="section-label" style="margin-top:14px">Who's picked ${abbr}</div>
+        ${metricsHtml}
         <div style="max-height:260px;overflow-y:auto">${rows}</div>`;
     }
 
@@ -305,11 +330,23 @@
     // game card link carries both teams (?team=X&opp=Y), render both teams'
     // history against the 4 categories in one card so they're directly
     // comparable, instead of only ever showing a single team in isolation.
-    function renderTeamDetail(abbr, oppAbbr) {
+    //
+    // ESPN's live feed drops odds once a game is live/final (see
+    // js/live-scores.js header) — computeTeamRecord() needs those odds for
+    // ATS/O-U, so backfill just THIS team's (and, for a matchup, the
+    // opponent's) finished games before computing anything. Scoped per-team
+    // rather than the whole season up front, so switching teams only ever
+    // fetches what that specific view actually needs.
+    async function renderTeamDetail(abbr, oppAbbr) {
       if (!abbr) {
         teamDetail.innerHTML = "";
         return;
       }
+      teamDetail.innerHTML = '<div class="empty-state">Loading…</div>';
+      const abbrs = oppAbbr ? [abbr, oppAbbr] : [abbr];
+      const relevantGames = games.filter((g) => abbrs.includes(g.home?.abbr) || abbrs.includes(g.away?.abbr));
+      await backfillMissingOdds(relevantGames);
+
       if (oppAbbr) {
         teamDetail.innerHTML = `
           <div class="card">

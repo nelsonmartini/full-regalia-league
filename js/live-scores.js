@@ -4,15 +4,26 @@
  * it as best-effort: if ESPN changes the response shape, this fails soft (empty
  * state), it doesn't break the rest of the site. See ROADMAP.md for the tradeoffs.
  *
- * Odds come embedded in the same response for free (confirmed via CORS-open
- * `Access-Control-Allow-Origin: *`) — no separate odds API needed. Coverage is
- * ~100% for NFL, roughly half for college football (smaller games often lack a
- * posted line yet) — that's ESPN's data, not a bug here.
+ * Odds come embedded in the same scoreboard response for free (confirmed via
+ * CORS-open `Access-Control-Allow-Origin: *`) — no separate odds API needed
+ * for a game that's still upcoming. BUT confirmed directly against real data
+ * (2026-09-05, Neil: Analytics showing "No data" for finished games):
+ * **ESPN drops the `odds` field entirely once a game leaves "pre" status** —
+ * 78 of 124 real upcoming CFB games had odds, 0 of 53 live/finished ones did.
+ * Player pick grading is unaffected (a pick stores its own line at the time
+ * it was made), but anything that needs a game's odds AFTER it's live/final
+ * (team ATS/O-U trends, the odds row on a live or finished game card) needs
+ * backfillMissingOdds() below instead.
  */
 
 const ESPN_ENDPOINTS = {
   nfl: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
   cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
+};
+
+const ESPN_SUMMARY_ENDPOINTS = {
+  nfl: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary",
+  cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary",
 };
 
 /** "YYYYMMDD-YYYYMMDD" covering `daysBack` days ago through `daysForward` days ahead —
@@ -56,6 +67,55 @@ async function fetchScoreboard(sport, { daysBack = 10, daysForward = 35 } = {}) 
       .filter(Boolean);
   } catch {
     return [];
+  }
+}
+
+// gameId -> normalized odds, or null for a game confirmed to have never had
+// a posted line. A closing line never changes once a game is final, so a
+// given game is never re-fetched twice in one page visit — caching `null`
+// too means a genuinely odds-less game doesn't get silently retried on
+// every render (live.html re-runs this on a 30s poll).
+const _oddsBackfillCache = new Map();
+
+/** Restores `.odds` on games ESPN's live scoreboard feed dropped it from
+ * (anything no longer "pre" — see the file header). ESPN's separate
+ * per-game summary endpoint retains the closing line even after a game
+ * ends; its odds shape (`homeTeamOdds`/`awayTeamOdds` + `.spread`, no
+ * `pointSpread.close.line`) is exactly what normalizeOdds()'s existing
+ * deriveSpread() fallback already parses, so no new parsing was needed —
+ * just fetching from the right place.
+ *
+ * MUTATES the given games in place (sets `.odds` directly) rather than
+ * returning a new array, so a caller can pass any subset — e.g. just the
+ * games relevant to one team — and the same underlying objects update
+ * wherever else the full games list is held (no separate arrays to
+ * reconcile). Fails soft per-game, same philosophy as fetchScoreboard: one
+ * bad fetch shouldn't block the rest. */
+async function backfillMissingOdds(games) {
+  const needsFetch = games.filter((g) => !g.odds && g.status?.state !== "pre" && !_oddsBackfillCache.has(g.id));
+  await Promise.all(
+    needsFetch.map(async (g) => {
+      const base = ESPN_SUMMARY_ENDPOINTS[g.sport];
+      if (!base) return;
+      try {
+        const res = await fetch(`${base}?event=${g.id}`, { cache: "no-store" });
+        if (!res.ok) {
+          _oddsBackfillCache.set(g.id, null);
+          return;
+        }
+        const data = await res.json();
+        const rawOdds = data.odds?.[0] || data.pickcenter?.[0] || null;
+        _oddsBackfillCache.set(g.id, rawOdds ? normalizeOdds(rawOdds) : null);
+      } catch {
+        _oddsBackfillCache.set(g.id, null);
+      }
+    })
+  );
+  for (const g of games) {
+    if (!g.odds && _oddsBackfillCache.has(g.id)) {
+      const cached = _oddsBackfillCache.get(g.id);
+      if (cached) g.odds = cached;
+    }
   }
 }
 

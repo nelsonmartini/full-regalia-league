@@ -208,7 +208,7 @@
     render();
   });
 
-  function render() {
+  async function render() {
     const loading = document.getElementById("games-loading");
     const list = document.getElementById("games-list");
     const empty = document.getElementById("games-empty");
@@ -222,6 +222,13 @@
     // floating to the top within each of those groups.
     const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
     filtered.sort((a, b) => statusRank(a) - statusRank(b) || bestRank(a) - bestRank(b) || new Date(a.date) - new Date(b.date));
+
+    // ESPN's scoreboard feed drops odds entirely once a game is live/final
+    // (see js/live-scores.js header) — backfill just the currently-visible
+    // games from the per-game summary endpoint instead, so a live/final
+    // card's spread/O-U line shows again. Session-cached, so this is only
+    // a real network call the first time each game is seen post-kickoff.
+    await backfillMissingOdds(filtered);
 
     // No cap here anymore — a `.slice(0, 40)` used to sit right here, a
     // leftover from before per-day date filtering existed (when "All
