@@ -4,6 +4,9 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Swapped which part of the Awards row is cursive.** Neil: award names should be cursive, winner names smaller — the reverse of what shipped earlier today. `.award-row-label` (e.g. "Ice Cold") now carries the Pacifico cursive brand treatment; `.award-row-winner` (the player name) is now small plain text. Pure CSS swap in `css/style.css`, no HTML/JS structure changes needed.
+  - Bumped service worker cache to `full-regalia-shell-v102`.
+
 - **SHIPPED (2026-09-05): Standings shows ties explicitly ("T-1", "T-3") instead of silently breaking them by roster order.** Neil asked how rank order was determined — answer was "just total points, descending, no tiebreaker at all," which meant two players tied on points got arbitrarily different rank numbers based on load order. He wants ties shown honestly for now (a real tiebreaker is a separate, deliberately-deferred task — see "Next 7 days" below).
   - `computeStandings()` (`js/season-data.js`) now attaches a proper "competition ranking" (`.rank`/`.tied`) to each player — tied players share one rank number, and the next distinct rank skips ahead by however many shared it (two players tied for 1st means the next one down is 3rd, not 2nd).
   - `renderStandingsRow()`/`renderStandingsRowCompact()` show `T-{rank}` when tied (medal emoji only applies to a SOLE 1st/2nd/3rd now), and both functions read `player.rank` directly instead of taking a positional index from their caller — removes a whole class of "rank is just array position" bugs.

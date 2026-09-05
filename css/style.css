@@ -1342,29 +1342,25 @@ a.game-card-team:active {
   line-height: 1.4;
 }
 
-/* Small uppercase caption — deliberately plain/muted so it reads as a
- * category tag, not content, leaving the winner's name to be the visual
- * focus of the row. */
+/* The award name — cursive brand font (Neil), same treatment used for a
+ * player's name elsewhere on the site (e.g. the Picks page heading), so
+ * the award's own branding/personality reads as the headline of the row. */
 .award-row-label {
-  font-size: 9.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--accent-2);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-/* The winner's name — cursive brand font, same treatment already used for
- * a player's name elsewhere (the Picks page heading, "{Name}'s Picks"), so
- * this reads as the actual answer/hero of the row instead of equal-weight
- * text next to its label. */
+/* The winner's name — smaller, plain text (Neil) now that the award name
+ * itself carries the cursive branding. */
 .award-row-winner {
-  font-family: "Pacifico", cursive;
-  font-weight: 400;
-  font-size: 15px;
-  color: var(--accent-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-dim);
   line-height: 1.3;
 }
 
