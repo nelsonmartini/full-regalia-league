@@ -4,6 +4,11 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Today indicator → green border; conference filter chips down to one row.**
+  - **Today's date chip** now gets a green border (`var(--positive)`, same green used for live-game accents and the Picks page's "Current" week badge) instead of a small dot underneath — same color meaning "happening now" everywhere on the site. Works even when today's chip is also the selected one (green border + blue selected fill together, via a higher-specificity selector).
+  - **Conference filter (Games tab)** — the 8 chips (All + 7 conferences) were wrapping to 2 rows because the grid forced every chip to the same column width, and "Big Ten"/"Big 12" needed more room than that fixed width gave. Switched to flexbox with content-sized chips (tighter padding/font) — all 8 now fit on one row, verified at both 375px and 390px widths with no horizontal overflow.
+  - Bumped service worker cache to `full-regalia-shell-v93`.
+
 - **SHIPPED (2026-09-05): Small polish batch — verified games don't vanish when they end, renamed to "Big Action," poker chip icon.**
   - **Verified (no code change needed)**: Neil asked whether a game disappears once it finishes on the Games tab. Confirmed via Playwright (simulating a live game transitioning to final mid-session) that it correctly moves down into the "Final" group at the bottom of that day's list — stays fully visible with its updated score, never disappears. Existing sort logic already handled this correctly.
   - **"Full →" → "Full Standings →"** on the Home Standings card link.

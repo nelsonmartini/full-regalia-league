@@ -1644,24 +1644,36 @@ a.game-card-team:active {
   padding: 9px 12px;
 }
 
-/* Subtle marker for "today" — a small dot under the label, independent of
- * whether that day is the one currently selected, so you can still tell
- * which chip is today even after tapping over to a different date. */
-.date-filter-row .chip[data-today="true"] {
-  position: relative;
-  padding-bottom: 12px;
+/* Conference filter row (Games tab) — up to 8 chips (All + 7 conferences)
+ * wrapped to 2 rows under the grid's forced-equal-column widths, since
+ * "Big Ten"/"Big 12" needed more room than short labels like "AFC" could
+ * spare in a fixed column. Flexbox lets each chip size to its own content
+ * instead, so the short ones give the long ones room and all 8 fit on one
+ * line (confirmed: their combined natural width is well under a phone's
+ * usable page width at this padding/font size). */
+.conference-filter-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
 }
 
-.date-filter-row .chip[data-today="true"]::after {
-  content: "";
-  position: absolute;
-  bottom: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
+.conference-filter-row .chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 6px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+/* Marker for "today" — a green border, same --positive green used for live
+ * game scores/status and the Picks page's "Current" week badge, so the
+ * color means the same thing everywhere on the site: "this is happening
+ * now." Higher specificity than .chip.selected's own border-color, so it
+ * wins even when today's chip is also the one currently selected — you get
+ * the blue selected fill AND the green "today" border together. */
+.date-filter-row .chip[data-today="true"] {
+  border-color: var(--positive);
+  border-width: 1.5px;
 }
 
 /* ---------- Misc ---------- */
