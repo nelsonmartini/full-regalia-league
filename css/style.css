@@ -759,6 +759,51 @@ a.game-card-team:active {
   padding-bottom: 8px;
 }
 
+/* Home's Most Active Games preview specifically (not the Games tab, where
+ * the full card is appropriate) — Neil: 3 full-size game cards "wasted
+ * real estate" on the one page meant to be scannable at a glance. Tighter
+ * padding, smaller logos/text, and the odds row dropped entirely (still
+ * one tap away via "See all →") get 3 games into noticeably less height. */
+.game-card-compact .game-card {
+  padding: 8px 10px;
+}
+
+.game-card-compact .game-card-top {
+  margin-bottom: 5px;
+}
+
+.game-card-compact .game-card-teams {
+  gap: 3px;
+}
+
+.game-card-compact .game-card-team-logo {
+  width: 18px;
+  height: 18px;
+}
+
+.game-card-compact .game-card-team-abbr,
+.game-card-compact .game-card-team-fullname {
+  font-size: 12px;
+}
+
+.game-card-compact .game-card-team-name {
+  font-size: 11px;
+}
+
+.game-card-compact .game-card-team-score {
+  font-size: 14px;
+  min-width: 18px;
+}
+
+.game-card-compact .game-card-odds {
+  display: none;
+}
+
+.game-card-compact .game-bet-toggle {
+  padding: 5px 0;
+  font-size: 11px;
+}
+
 /* ---------- Week picker (Picks page) ---------- */
 /* One "Regalia Week" links an NFL week to its nearest NCAA week by date
  * (js/picks.js buildRegaliaWeeks) — this is the collapsible selector for it,
@@ -1212,6 +1257,7 @@ a.game-card-team:active {
 .home-split-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -1243,6 +1289,17 @@ a.game-card-team:active {
 
 .standings-row-split .standings-rank-cursive {
   font-size: 13px;
+}
+
+/* "Enter Picks" CTA, resized to live inside the half-width Standings card
+ * (see .home-split-row) instead of as its own full-width element — the
+ * roomier .enter-picks-cursive sizing it inherits from was tuned for the
+ * full page width and wrapped badly at half that. */
+.standings-preview-cta {
+  font-size: 15px;
+  padding: 9px 10px;
+  margin-top: 10px;
+  white-space: nowrap;
 }
 
 /* Compact award row (Home split-screen, see renderWeeklyAwards({compact})
