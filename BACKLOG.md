@@ -4,6 +4,9 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Picks page heading now uses the site's cursive brand font.** Neil's original ask ("the name is in the white font format like the rest of the site") wasn't clear enough to act on safely — I checked and the heading/badge were already rendering in the correct bright text color, so color wasn't the issue. He later clarified he meant the *cursive* Pacifico font used elsewhere (wordmark, home page quote, standings rank numbers) — applied that to `#picks-heading` ("Picks" / "{Name}'s Picks") via a new `.picks-heading-cursive` class in `css/style.css`.
+  - Bumped service worker cache to `full-regalia-shell-v87`.
+
 - **SHIPPED (2026-09-05): Weekly Awards now group by Regalia Week, not calendar week.** Immediate follow-up to the tie-handling fix below — Neil asked "shouldn't awards be tied to the pick'em week?" and he's right: calendar week was the ORIGINAL fix for NFL/NCAA week-number mismatch, invented before Regalia Week existed to solve that exact same problem in a way that's now used everywhere else (Picks page, Standings freshness line, Home CTA). Awards was the one place still using a different, older definition of "week."
   - `buildRegaliaWeeks` (`js/pick-utils.js`) gained an `includeCompleted` option (default `false`, every existing caller unaffected) — Awards needs the most recently *finished* week, which the Picks-page-oriented default (pickable weeks only) would filter out entirely.
   - `computeWeeklyAwards` (`js/awards.js`) now takes the same combined games list `loadSeasonGames()` already fetches for Standings, builds Regalia Weeks from it, maps each graded pick to whichever week claims its sport+week+seasonType bucket, and finds the latest week with any graded pick — same linking logic the Picks page uses to treat an NFL game and that week's CFB games as one unit.

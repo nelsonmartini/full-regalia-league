@@ -1257,6 +1257,17 @@ a.game-card-team:active {
   padding: 13px 16px;
 }
 
+/* Picks page heading — plain "Picks" before a player's picked, then
+ * "{Name}'s Picks" once one is — in the same cursive brand font used
+ * elsewhere (wordmark, quote, standings rank), per Neil. */
+.picks-heading-cursive {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: normal;
+  color: var(--accent-2);
+}
+
 /* ---------- Pick selector chips ---------- */
 
 .pick-game {
