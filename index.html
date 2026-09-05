@@ -71,10 +71,7 @@
     </div>
 
     <div class="card">
-      <div class="card-title">
-        🏅 Awards
-        <span id="awards-week-label" style="display:none"></span>
-      </div>
+      <div class="card-title" id="awards-card-title">🏅 Awards</div>
       <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
     </div>
   </div>
@@ -171,8 +168,11 @@
       ? top3.map((p, i) => renderStandingsRowCompact(p, i + 1, { extraClass: "standings-row-split", avatarSize: 20 })).join("")
       : '<div class="empty-state">No graded picks yet this season.</div>';
 
-    const awards = computeWeeklyAwards(graded, games);
-    document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(awards, { compact: true });
+    const allAwards = computeAllWeeklyAwards(graded, games);
+    document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(allAwards, { compact: true });
+    const currentWeek = allAwards[allAwards.length - 1];
+    document.getElementById("awards-card-title").textContent = currentWeek ? `🏅 Week ${currentWeek.regaliaWeekNumber} Awards` : "🏅 Awards";
+    wireAwardToggleDelegation(document.getElementById("weekly-awards"));
 
     // Current pickable NFL week (NFL, not NCAA — NFL's the default/primary
     // sport throughout the site) — reused for both the picks CTA subline and

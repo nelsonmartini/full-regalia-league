@@ -1305,20 +1305,85 @@ a.game-card-team:active {
 /* Compact award row (Home split-screen, see renderWeeklyAwards({compact})
  * in js/awards.js) — dense 2-line block instead of the roomy side-by-side
  * default, since there's no room for a separate blurb line at this width. */
-.award-row-compact {
-  padding: 4px 0;
-  font-size: 11px;
-  line-height: 1.4;
+/* One award block, compact (Home split-screen) or full-width — three tiers
+ * instead of one same-weight block, so the award NAME and the WINNER'S
+ * name read as clearly different things at a glance (Neil: "hard to tell
+ * the difference"). */
+.award-toggle-wrap {
+  padding: 5px 0;
   border-bottom: 1px solid var(--border);
 }
 
-.award-row-compact:last-child {
+.award-toggle-wrap:last-child {
   border-bottom: none;
 }
 
-.award-row-compact strong {
-  color: var(--text-dim);
-  font-size: 11.5px;
+.award-row-compact {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Small uppercase caption — deliberately plain/muted so it reads as a
+ * category tag, not content, leaving the winner's name to be the visual
+ * focus of the row. */
+.award-row-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The winner's name — cursive brand font, same treatment already used for
+ * a player's name elsewhere (the Picks page heading, "{Name}'s Picks"), so
+ * this reads as the actual answer/hero of the row instead of equal-weight
+ * text next to its label. */
+.award-row-winner {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--accent-2);
+  line-height: 1.3;
+}
+
+.award-row-detail {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.award-count {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.award-chevron {
+  font-size: 9px;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+.award-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.award-history-list {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.award-history-line {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  padding: 2px 0;
 }
 
 /* Matches .card-title .link's look (accent color, bold, small) — this link
