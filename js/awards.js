@@ -259,14 +259,37 @@ function simpleAwardRow(icon, label, category, winners, detail, careerCounts, al
   return awardToggleWrapper(category, headerHtml, history);
 }
 
+/** Team logo + school/city name (falls back to the abbreviation) for the
+ * live Big Dawg row, instead of a plain abbreviation — Neil: show the
+ * underdog's actual logo, same identity treatment used everywhere else on
+ * the site (game cards, Analytics), with the line score on its own line
+ * below in the same small/muted style the detail text already used.
+ * `pickRow` is a graded pick (has both `.game` and `.pick`); figures out
+ * which side of the game the picked team actually was to grab its logo. */
+function bigDawgTeamHtml(pickRow) {
+  const { game, pick } = pickRow;
+  const side = game?.home?.abbr === pick.team ? game.home : game?.away?.abbr === pick.team ? game.away : null;
+  const logoHtml = side?.logo ? `<img src="${side.logo}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px" />` : "";
+  const name = side?.location || pick.team;
+  return `<span style="display:inline-flex;align-items:center;gap:2px;font-weight:700;font-size:12px;color:var(--text-dim)">${logoHtml}${name}</span><br /><span class="award-row-detail">+${pick.line}</span>`;
+}
+
 /** Awards where tied winners can each have a DIFFERENT specific detail (two
  * players both taking the biggest underdog line, but different teams) — one
  * row per winner instead of a single shared detail line, so nothing tied
- * gets flattened into a misleading combined caption. */
-function perWinnerAwardRow(icon, label, category, winners, detailFor, careerCounts, allWeeklyAwards, compact = false) {
+ * gets flattened into a misleading combined caption. `historyDetailFor`
+ * (defaults to `detailFor`) lets a caller use a richer live-row detail
+ * (e.g. Big Dawg's team logo) while keeping the scrollable history list
+ * plain text — a logo repeated on every past week would get visually heavy
+ * in that compact a list. */
+function perWinnerAwardRow(icon, label, category, winners, detailFor, careerCounts, allWeeklyAwards, compact = false, historyDetailFor = detailFor) {
   if (winners.length === 0) return null;
 
-  const history = awardHistoryLines(allWeeklyAwards, category, (week, catWinners) => catWinners.map((w) => `${titleCase(w.name)} (${detailFor(w)})`).join(", "));
+  // Just the detail per winner here — awardHistoryLines already prepends
+  // the joined winner name(s) itself, so including the name again here
+  // produced a duplicate ("Sean — Sean (BALL +24.5)", confirmed while
+  // testing the Big Dawg logo change below).
+  const history = awardHistoryLines(allWeeklyAwards, category, (week, catWinners) => catWinners.map((w) => historyDetailFor(w)).join(", "));
 
   if (compact) {
     const lines = winners.map((w) => `${nameWithCareerCount(w.name, careerCounts[w.name]?.[category] ?? 0)} — ${detailFor(w)}`).join("<br />");
@@ -311,7 +334,17 @@ function renderWeeklyAwards(allWeeklyAwards, { compact = false } = {}) {
   const rows = [
     simpleAwardRow("🤡", "Dumbass of the Week", "dumbass", current.dumbass, `${dumbassMisses} miss${dumbassMisses === 1 ? "" : "es"}`, careerCounts, allWeeklyAwards, "misses", compact),
     simpleAwardRow("🔮", "Nostradamus", "nostradamus", current.nostradamus, `${nostradamusHits} hit${nostradamusHits === 1 ? "" : "s"}`, careerCounts, allWeeklyAwards, "hits", compact),
-    perWinnerAwardRow("🎰", "Big Dawg", "bigDawg", current.bigDawg, (w) => `took ${w.biggestDog.pick.team} +${w.biggestDog.pick.line}`, careerCounts, allWeeklyAwards, compact),
+    perWinnerAwardRow(
+      "🎰",
+      "Big Dawg",
+      "bigDawg",
+      current.bigDawg,
+      (w) => bigDawgTeamHtml(w.biggestDog),
+      careerCounts,
+      allWeeklyAwards,
+      compact,
+      (w) => `${w.biggestDog.pick.team} +${w.biggestDog.pick.line}` // plain text for the history list
+    ),
     perWinnerAwardRow("⏰", "Buzzer Beater", "buzzerBeater", current.buzzerBeater, (w) => formatBuzzerGap(w.buzzer.gapMs), careerCounts, allWeeklyAwards, compact),
     simpleAwardRow("🥶", "Ice Cold", "iceCold", current.iceCold, `${iceColdStreak} in a row`, careerCounts, allWeeklyAwards, "longestMissStreak", compact),
   ].filter(Boolean);

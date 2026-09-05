@@ -4,6 +4,13 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Big Dawg award shows the underdog's team logo + school name instead of a plain abbreviation.** Neil: "it says BALL, could just be the logo and school short name with the numerics below."
+  - New `bigDawgTeamHtml()` (`js/awards.js`) figures out which side of the game the picked team actually was (home/away), then shows that team's logo + `location` name (same identity fields already used everywhere else on the site — game cards, Analytics), with the spread line on its own line below in the same small/muted style the detail text already used.
+  - Scoped to the LIVE current-week row only — `perWinnerAwardRow()` gained an optional `historyDetailFor` parameter so the tap-to-expand history list keeps showing plain text (e.g. "BALL +24.5"), since repeating a logo on every past week would get visually heavy in that compact scrollable list.
+  - Found and fixed a small pre-existing bug while verifying this: the history line was showing the winner's name twice ("Sean — Sean (BALL +24.5)") — `awardHistoryLines` already prepends the joined name(s) itself.
+  - Verified via Playwright (8/8): logo renders and matches the actual current-week underdog, school name replaces the abbreviation, numeric line stays below it, and the history list stays logo-free and no longer duplicates the name.
+  - Bumped service worker cache to `full-regalia-shell-v100`.
+
 - **SHIPPED (2026-09-05): Standings preview shows top 5, not top 3 — Neil's own fix for the remaining gap.** After pinning the CTA to the bottom of the (now stretch-height) Standings card, the gap just moved to between 3rd place and the button whenever Awards had more content that week. Neil's suggestion: fill it with more real content instead. Bumped `index.html`'s Home preview from `.slice(0, 3)` to `.slice(0, 5)` — same compact row rendering, just more of them.
   - Verified via Playwright with 7 real players: 5 rows now render, cards still share the same bottom edge, and the gap between the last row and the button is effectively gone.
   - Bumped service worker cache to `full-regalia-shell-v99`.
