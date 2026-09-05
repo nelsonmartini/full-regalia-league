@@ -163,9 +163,15 @@
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
 
-    const top3 = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 3);
-    document.getElementById("top-standings").innerHTML = top3.length
-      ? top3.map((p, i) => renderStandingsRowCompact(p, i + 1, { extraClass: "standings-row-split", avatarSize: 20 })).join("")
+    // 5, not 3 — with the CTA button now pinned to the bottom of this card
+    // (matching Awards' height, see .standings-preview-cta), showing only
+    // 3 rows next to a taller Awards card left a visible gap between 3rd
+    // place and the button. More real standings rows fills that space with
+    // useful content instead (Neil) — still short enough for a "top of the
+    // board" teaser, full list is one tap away either way.
+    const topStandings = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 5);
+    document.getElementById("top-standings").innerHTML = topStandings.length
+      ? topStandings.map((p, i) => renderStandingsRowCompact(p, i + 1, { extraClass: "standings-row-split", avatarSize: 20 })).join("")
       : '<div class="empty-state">No graded picks yet this season.</div>';
 
     const allAwards = computeAllWeeklyAwards(graded, games);

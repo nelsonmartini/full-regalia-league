@@ -4,6 +4,10 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Standings preview shows top 5, not top 3 — Neil's own fix for the remaining gap.** After pinning the CTA to the bottom of the (now stretch-height) Standings card, the gap just moved to between 3rd place and the button whenever Awards had more content that week. Neil's suggestion: fill it with more real content instead. Bumped `index.html`'s Home preview from `.slice(0, 3)` to `.slice(0, 5)` — same compact row rendering, just more of them.
+  - Verified via Playwright with 7 real players: 5 rows now render, cards still share the same bottom edge, and the gap between the last row and the button is effectively gone.
+  - Bumped service worker cache to `full-regalia-shell-v99`.
+
 - **SHIPPED (2026-09-05): Picks tab's locked-category consensus now matches the Games/Home poker-chip format.** Neil: a locked category showed its own "X of Y picked this side" text (`computeConsensusForPick`), inconsistent with the poker-chip "N bets" toggle already shipped on the Games tab and Home's Big Action card, and scoped only to players who picked the *same side* rather than showing everyone's actual pick on the game.
   - Removed `computeConsensusForPick()` and the `.pick-consensus` element entirely — replaced with the exact same shared `gameBetsSummaryHtml()` (`js/pick-utils.js`) already used everywhere else, wrapped in the same `.game-card-group` so it visually attaches under the game card the same way. Wired `wireBetToggleDelegation()` once in `initPicksPage()`, same pattern as the other two pages.
   - Net effect: tapping the chip on a locked category now shows every player's actual pick on that game (not just who agrees with you), consistent with Games/Home.
