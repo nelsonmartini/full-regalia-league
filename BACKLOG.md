@@ -4,6 +4,11 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): FIXED — final games silently disappearing from a busy day on the Games tab.** Neil reported finished games "disappearing" instead of moving to the bottom, which I couldn't reproduce with a small synthetic test earlier — turned out to need real scale to trigger. Root cause: `render()` sorted live-first/upcoming/final (correct) but then applied a `.slice(0, 40)` cap left over from before per-day date filtering existed. On a busy real Saturday (confirmed via live ESPN data: today alone had 68 CFB games — 34 upcoming + 17 live + 17 final), the 51 live+upcoming games alone already filled the entire 40-game cap, so **all 17 final games were being cut off completely**, not just sorted to the bottom — a real, confirmed bug, not a misunderstanding.
+  - Fix: removed the cap entirely. The date filter already scopes most views to a single day, so there's no unbounded-list problem left to guard against.
+  - Verified against real production ESPN data (not synthetic): re-fetched today's actual 68-game CFB slate, confirmed all 68 now render including all 17 finals (previously only 40 total rendered, 0 finals). Re-ran the existing small-scale Games-tab tests (7/7 and 12/12) to confirm no regression.
+  - Bumped service worker cache to `full-regalia-shell-v94`.
+
 - **SHIPPED (2026-09-05): Today indicator → green border; conference filter chips down to one row.**
   - **Today's date chip** now gets a green border (`var(--positive)`, same green used for live-game accents and the Picks page's "Current" week badge) instead of a small dot underneath — same color meaning "happening now" everywhere on the site. Works even when today's chip is also the selected one (green border + blue selected fill together, via a higher-specificity selector).
   - **Conference filter (Games tab)** — the 8 chips (All + 7 conferences) were wrapping to 2 rows because the grid forced every chip to the same column width, and "Big Ten"/"Big 12" needed more room than that fixed width gave. Switched to flexbox with content-sized chips (tighter padding/font) — all 8 now fit on one row, verified at both 375px and 390px widths with no horizontal overflow.

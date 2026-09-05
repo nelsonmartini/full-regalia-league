@@ -223,8 +223,18 @@
     const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
     filtered.sort((a, b) => statusRank(a) - statusRank(b) || bestRank(a) - bestRank(b) || new Date(a.date) - new Date(b.date));
 
+    // No cap here anymore — a `.slice(0, 40)` used to sit right here, a
+    // leftover from before per-day date filtering existed (when "All
+    // dates" could mean hundreds of games across a 45-day window). With
+    // live-first sorting, that cap silently truncated whichever games
+    // sorted LAST, which on a busy day is exactly the finished ones —
+    // confirmed real, reported by Neil (2026-09-05): a Saturday with 68
+    // CFB games (34 pre + 17 live + 17 final) already had 51 live/upcoming
+    // games ahead of the cap, so all 17 finals were being cut off
+    // entirely, not just sorted to the bottom. Since the date filter now
+    // already scopes most views to a single day, there's no real list-size
+    // problem left to guard against.
     list.innerHTML = filtered
-      .slice(0, 40)
       .map((g) => `<div class="game-card-group">${renderGameCard(g)}${gameBetsSummaryHtml(g, allPicksRows)}</div>`)
       .join("");
     empty.style.display = filtered.length === 0 ? "block" : "none";
