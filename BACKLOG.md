@@ -4,6 +4,13 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Small polish batch — verified games don't vanish when they end, renamed to "Big Action," poker chip icon.**
+  - **Verified (no code change needed)**: Neil asked whether a game disappears once it finishes on the Games tab. Confirmed via Playwright (simulating a live game transitioning to final mid-session) that it correctly moves down into the "Final" group at the bottom of that day's list — stays fully visible with its updated score, never disappears. Existing sort logic already handled this correctly.
+  - **"Full →" → "Full Standings →"** on the Home Standings card link.
+  - **"Most Active Games" → "Big Action"** — real sports-betting slang for bet volume, matching the site's existing playful voice (Dumbass of the Week, Nostradamus, Big Dawg).
+  - **Bet-count icon**: replaced the 🎯 emoji with a line-drawn poker chip SVG (double ring + edge ticks), matching the stroke-based icon style used everywhere else on the site (nav icons, Games tab icon) instead of an emoji.
+  - Bumped service worker cache to `full-regalia-shell-v92`.
+
 - **SHIPPED (2026-09-05): Home layout follow-up — Standings/Awards to the very top, dead-space fix, compact game cards, icon cleanup.** Neil's immediate feedback after the first reorg shipped: Standings/Awards should be above Most Active Games (not below it), there was a "huge gap" wasting space in the Standings card, and the game cards themselves were still too big.
   - **Reordered again**: Standings + Awards split row now sits at the very top (right after the header quote), Most Active Games moved below it.
   - **Fixed the dead-space bug**: the gap was CSS Grid's default `align-items: stretch` forcing the shorter Standings card to match the taller Awards card's height, leaving empty space below its 3 rows. Added `align-items: start` to `.home-split-row` so each card sizes to its own content — and, per Neil's preference, moved the "Enter Your Picks" CTA button *into* that reclaimed space inside the Standings card (resized/shortened to "Enter Picks →" to fit the half-width column) instead of leaving it as its own full-width element above.

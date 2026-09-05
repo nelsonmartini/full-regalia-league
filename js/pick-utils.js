@@ -372,10 +372,14 @@ function gameBetsSummaryHtml(game, picksRows) {
         </div>`;
     })
     .join("");
+  // Poker chip icon (not an emoji, per Neil) — same stroke-based line-icon
+  // style as the rest of the site's nav/section icons, sized to sit inline
+  // with the small toggle text.
+  const chipIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v2.5M12 18.5v2.5M21 12h-2.5M5.5 12H3"/></svg>`;
   return `
     <div class="game-bet-activity">
       <button class="game-bet-toggle" type="button" data-bet-toggle="${game.id}">
-        🎯 ${bets.length} bet${bets.length === 1 ? "" : "s"}
+        ${chipIcon} ${bets.length} bet${bets.length === 1 ? "" : "s"}
         <span class="game-bet-chevron">▼</span>
       </button>
       <div class="game-bet-list" id="game-bet-list-${game.id}" style="display:none">${rows}</div>
