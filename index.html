@@ -148,7 +148,7 @@
       ? top3.map((p, i) => renderStandingsRowCompact(p, i + 1)).join("")
       : '<div class="empty-state">No graded picks yet this season.</div>';
 
-    const awards = computeWeeklyAwards(graded);
+    const awards = computeWeeklyAwards(graded, games);
     document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(awards);
     document.getElementById("awards-week-label").textContent = awards ? awards.weekLabel : "";
 

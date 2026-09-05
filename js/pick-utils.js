@@ -130,7 +130,14 @@ function filterPickableGames(games) {
  * (Neil, 2026-08-30): Home showed an NFL-only week number/range while Picks
  * showed this Regalia one, so "Week 1" meant two different date ranges
  * depending which page you were on. */
-function buildRegaliaWeeks(allGamesBySport) {
+/** `includeCompleted`: false (default, every existing caller) returns only
+ * weeks with at least one game still left to pick — right for the Picks
+ * page's own selector and "current week" freshness lines, where a
+ * fully-finished week isn't "current" or "upcoming." Weekly Awards
+ * (js/awards.js) needs the opposite — the most recently *completed* week —
+ * so it passes true to keep those weeks in the list instead of filtering
+ * them out. */
+function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
   // Date range comes from EVERY game sharing that week key, not just the
   // still-pickable ones — a "week" can include games already played (e.g.
   // CFB's Week 1 covers late-August season-openers days before the bulk of
@@ -155,11 +162,7 @@ function buildRegaliaWeeks(allGamesBySport) {
   function sortedWeeks(games) {
     return [...new Set(games.map(weekBucketKey))]
       .map((key) => weekInfo(games, key))
-      // Only weeks with at least one game still left to pick belong in this
-      // list (a fully-finished week is done, not "current" or "upcoming")
-      // — same effective behavior as before, just computed after building
-      // the full-week date range above instead of by pre-filtering games.
-      .filter((w) => w.hasPickable)
+      .filter((w) => includeCompleted || w.hasPickable)
       .sort((a, b) => a.startDate - b.startDate);
   }
 

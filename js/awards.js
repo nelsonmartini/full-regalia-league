@@ -2,40 +2,57 @@
  * Weekly Awards — fun, lightweight callouts computed from the same graded
  * picks Standings/History already use (js/season-data.js). Home-page only.
  *
- * Deliberately grouped by CALENDAR week (Monday-start, from each pick's
- * actual kickoff date), not by NFL's or NCAA's own week numbering — those
- * two are independently selected per sport (see js/picks.js) and don't line
- * up on the calendar, which caused real confusion when the Picks page's
- * progress counter blended them together (fixed earlier this project). A
- * calendar week sidesteps that entirely: every pick, from either sport,
- * naturally falls into exactly one real-world week.
+ * Grouped by REGALIA WEEK (js/pick-utils.js's buildRegaliaWeeks) — the same
+ * unified week concept the Picks page, Standings freshness line, and Home
+ * CTA already use, which pairs NFL's week with whichever NCAA week starts
+ * closest in time. This used to group by plain calendar week (Monday-start)
+ * instead, from before Regalia Week existed — that was its own fix for the
+ * same underlying problem (NFL and NCAA's own week numbers don't share a
+ * calendar), but it meant Awards answered "which week" differently than
+ * every other page, and a player's picks near a Sunday/Monday boundary
+ * could get split across two different calendar weeks even though they
+ * were all part of the same pick'em week everywhere else on the site.
+ * Confirmed real confusion (Neil, 2026-09-05): a player's season-leading hit
+ * count didn't match their Nostradamus eligibility because one of their
+ * hits had landed in the "wrong" calendar week by this old definition.
  */
 
-/** Monday (UTC) of the week containing `dateStr`, as "YYYY-MM-DD" — used as
- * a sortable/groupable key. */
-function calendarWeekKey(dateStr) {
-  const d = new Date(dateStr);
-  const day = (d.getUTCDay() + 6) % 7; // Mon=0 .. Sun=6
-  const monday = new Date(d);
-  monday.setUTCDate(d.getUTCDate() - day);
-  return monday.toISOString().slice(0, 10);
-}
-
-function calendarWeekLabel(weekKey) {
-  const d = new Date(`${weekKey}T00:00:00Z`);
-  return `Week of ${d.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}`;
-}
-
-/** Picks the most recent calendar week with at least one graded pick, and
- * computes each award within it. Returns null if nothing's graded yet
- * (e.g. very start of the season). */
-function computeWeeklyAwards(gradedPicks) {
+/** Picks the most recent Regalia Week with at least one graded pick, and
+ * computes each award within it. `games` is the same combined NFL+CFB list
+ * loadSeasonGames() already fetches for Standings — reused here (via
+ * buildRegaliaWeeks) rather than fetched again. Returns null if nothing's
+ * graded yet (e.g. very start of the season). */
+function computeWeeklyAwards(gradedPicks, games) {
   const graded = gradedPicks.filter((gp) => gp.result && gp.snapshot?.date);
   if (graded.length === 0) return null;
 
-  const weekKeys = [...new Set(graded.map((gp) => calendarWeekKey(gp.snapshot.date)))].sort();
-  const latestWeek = weekKeys[weekKeys.length - 1];
-  const weekPicks = graded.filter((gp) => calendarWeekKey(gp.snapshot.date) === latestWeek);
+  // NFL preseason (seasonType 1) excluded up front, same as the Picks page —
+  // otherwise includeCompleted below would let 4 preseason weeks count as
+  // real Regalia Weeks here (Picks never offers them as pickable, so they
+  // never appear over there), shifting this page's "Week N" numbering out
+  // of sync with the Picks page's for the exact same real week.
+  const bySport = { nfl: games.filter((g) => g.sport === "nfl" && g.seasonType !== 1), cfb: games.filter((g) => g.sport === "cfb") };
+  // includeCompleted: true — unlike the Picks page's own use of this
+  // function, Awards specifically wants the most recently FINISHED week,
+  // which the default (pickable-only) mode would filter out entirely.
+  const regaliaWeeks = buildRegaliaWeeks(bySport, { includeCompleted: true });
+
+  // A pick's own sport+week+seasonType maps to whichever Regalia Week claims
+  // that bucket on either side (NFL or CFB) — mirrors how the Picks page
+  // links the two sports' weeks together, so e.g. a Thursday NFL game and
+  // that same week's Saturday CFB games both land in the same Regalia Week
+  // here too, not two different ones.
+  function regaliaWeekForPick(gp) {
+    const key = weekBucketKeyFromSnapshot(gp.snapshot);
+    return regaliaWeeks.find((w) => w.nflWeekKey === key || w.cfbWeekKey === key) ?? null;
+  }
+
+  const gradedWithWeek = graded.map((gp) => ({ ...gp, regaliaWeek: regaliaWeekForPick(gp) })).filter((gp) => gp.regaliaWeek);
+  if (gradedWithWeek.length === 0) return null;
+
+  const latestWeekNumber = Math.max(...gradedWithWeek.map((gp) => gp.regaliaWeek.regaliaWeekNumber));
+  const weekPicks = gradedWithWeek.filter((gp) => gp.regaliaWeek.regaliaWeekNumber === latestWeekNumber);
+  const latestRegaliaWeek = weekPicks[0].regaliaWeek;
 
   const byPlayer = new Map();
   for (const gp of weekPicks) {
@@ -98,7 +115,9 @@ function computeWeeklyAwards(gradedPicks) {
   const iceCold = topTied("longestMissStreak", 2);
 
   return {
-    weekLabel: calendarWeekLabel(latestWeek),
+    // "Week 3 · Aug 25–31" — same numbering as the Picks page's own week
+    // picker, so this week can be cross-checked against it directly.
+    weekLabel: `Week ${latestRegaliaWeek.regaliaWeekNumber} · ${regaliaWeekDateRange(latestRegaliaWeek)}`,
     dumbass: topTied("misses"),
     nostradamus: topTied("hits"),
     bigDawg,
