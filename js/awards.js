@@ -73,22 +73,34 @@ function computeWeeklyAwards(gradedPicks) {
     return { name, hits, misses, biggestDog, buzzer, longestMissStreak };
   });
 
-  const top = (key) => [...stats].sort((a, b) => b[key] - a[key])[0];
+  // Every award returns an ARRAY of tied winners, not a single pick — a
+  // small weekly sample size makes ties genuinely common (e.g. two players
+  // both landing exactly 1 hit), and silently picking whoever happened to
+  // come first in an unordered list (the previous behavior) meant the
+  // "winner" shown could be arbitrary and wrong, with no sign it was even a
+  // tie. Confirmed real case (Neil): Sean, Emma, and Michaela tied at 1 hit
+  // each for Nostradamus, but only one name ever showed.
+  function topTied(key, minValue = 1) {
+    const max = Math.max(0, ...stats.map((s) => s[key]));
+    if (max < minValue) return [];
+    return stats.filter((s) => s[key] === max);
+  }
 
   const withDog = stats.filter((s) => s.biggestDog);
-  const bigDawg = withDog.length ? withDog.sort((a, b) => b.biggestDog.pick.line - a.biggestDog.pick.line)[0] : null;
+  const maxDogLine = withDog.length ? Math.max(...withDog.map((s) => s.biggestDog.pick.line)) : null;
+  const bigDawg = maxDogLine != null ? withDog.filter((s) => s.biggestDog.pick.line === maxDogLine) : [];
 
   const withBuzzer = stats.filter((s) => s.buzzer);
-  const buzzerBeater = withBuzzer.length ? withBuzzer.sort((a, b) => a.buzzer.gapMs - b.buzzer.gapMs)[0] : null;
+  const minBuzzerGap = withBuzzer.length ? Math.min(...withBuzzer.map((s) => s.buzzer.gapMs)) : null;
+  const buzzerBeater = minBuzzerGap != null ? withBuzzer.filter((s) => s.buzzer.gapMs === minBuzzerGap) : [];
 
   // A single miss isn't a "streak" — require at least 2 in a row.
-  const withStreak = stats.filter((s) => s.longestMissStreak >= 2);
-  const iceCold = withStreak.length ? withStreak.sort((a, b) => b.longestMissStreak - a.longestMissStreak)[0] : null;
+  const iceCold = topTied("longestMissStreak", 2);
 
   return {
     weekLabel: calendarWeekLabel(latestWeek),
-    dumbass: top("misses"),
-    nostradamus: top("hits"),
+    dumbass: topTied("misses"),
+    nostradamus: topTied("hits"),
     bigDawg,
     buzzerBeater,
     iceCold,
@@ -102,32 +114,21 @@ function formatBuzzerGap(gapMs) {
   return `${hours} hr before kickoff`;
 }
 
-function renderWeeklyAwards(awards) {
-  if (!awards) return '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
+/** "Sean", "Sean & Emma", or "Sean, Emma & Michaela" — used wherever an
+ * award has more than one tied winner. */
+function joinNames(names) {
+  const titled = names.map(titleCase);
+  if (titled.length === 1) return titled[0];
+  if (titled.length === 2) return `${titled[0]} & ${titled[1]}`;
+  return `${titled.slice(0, -1).join(", ")} & ${titled[titled.length - 1]}`;
+}
 
-  const rows = [
-    awards.dumbass && awards.dumbass.misses > 0
-      ? ["🤡", "Dumbass of the Week", "Most misses this week", awards.dumbass.name, `${awards.dumbass.misses} miss${awards.dumbass.misses === 1 ? "" : "es"}`]
-      : null,
-    awards.nostradamus && awards.nostradamus.hits > 0
-      ? ["🔮", "Nostradamus", "Most hits this week", awards.nostradamus.name, `${awards.nostradamus.hits} hit${awards.nostradamus.hits === 1 ? "" : "s"}`]
-      : null,
-    awards.bigDawg
-      ? ["🎰", "Big Dawg", "Biggest underdog taken", awards.bigDawg.name, `took ${awards.bigDawg.biggestDog.pick.team} +${awards.bigDawg.biggestDog.pick.line}`]
-      : null,
-    awards.buzzerBeater
-      ? ["⏰", "Buzzer Beater", "Picked closest to kickoff", awards.buzzerBeater.name, formatBuzzerGap(awards.buzzerBeater.buzzer.gapMs)]
-      : null,
-    awards.iceCold
-      ? ["🥶", "Ice Cold", "Longest miss streak this week", awards.iceCold.name, `${awards.iceCold.longestMissStreak} in a row`]
-      : null,
-  ].filter(Boolean);
-
-  if (rows.length === 0) return '<div class="empty-state">Not enough graded picks yet to hand out awards.</div>';
-
-  return rows
-    .map(
-      ([icon, label, blurb, name, detail]) => `
+/** Awards where every tied winner shares the exact same number by definition
+ * (miss count, hit count, streak length) — one shared detail line covers
+ * all of them, so names just join together under it. */
+function simpleAwardRow(icon, label, blurb, winners, detail) {
+  if (winners.length === 0) return null;
+  return `
     <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
       <span style="font-size:20px">${icon}</span>
       <span style="flex:1">
@@ -135,10 +136,49 @@ function renderWeeklyAwards(awards) {
         <div style="font-size:10.5px;color:var(--text-faint)">${blurb}</div>
       </span>
       <span style="text-align:right">
-        <div style="font-weight:800">${titleCase(name)}</div>
+        <div style="font-weight:800">${joinNames(winners.map((w) => w.name))}</div>
         <div style="font-size:11px;color:var(--text-faint)">${detail}</div>
       </span>
-    </div>`
-    )
+    </div>`;
+}
+
+/** Awards where tied winners can each have a DIFFERENT specific detail (two
+ * players both taking the biggest underdog line, but different teams) — one
+ * row per winner instead of a single shared detail line, so nothing tied
+ * gets flattened into a misleading combined caption. */
+function perWinnerAwardRow(icon, label, blurb, winners, detailFor) {
+  if (winners.length === 0) return null;
+  const names = winners
+    .map((w) => `<div style="font-weight:800">${titleCase(w.name)}</div><div style="font-size:11px;color:var(--text-faint);margin-bottom:2px">${detailFor(w)}</div>`)
+    .join("");
+  return `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+      <span style="font-size:20px">${icon}</span>
+      <span style="flex:1">
+        <div style="font-size:13px;color:var(--text-dim);font-weight:700">${label}</div>
+        <div style="font-size:10.5px;color:var(--text-faint)">${blurb}</div>
+      </span>
+      <span style="text-align:right">${names}</span>
+    </div>`;
+}
+
+function renderWeeklyAwards(awards) {
+  if (!awards) return '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
+
+  const dumbassMisses = awards.dumbass[0]?.misses ?? 0;
+  const nostradamusHits = awards.nostradamus[0]?.hits ?? 0;
+  const iceColdStreak = awards.iceCold[0]?.longestMissStreak ?? 0;
+
+  const rows = [
+    simpleAwardRow("🤡", "Dumbass of the Week", "Most misses this week", awards.dumbass, `${dumbassMisses} miss${dumbassMisses === 1 ? "" : "es"}`),
+    simpleAwardRow("🔮", "Nostradamus", "Most hits this week", awards.nostradamus, `${nostradamusHits} hit${nostradamusHits === 1 ? "" : "s"}`),
+    perWinnerAwardRow("🎰", "Big Dawg", "Biggest underdog taken", awards.bigDawg, (w) => `took ${w.biggestDog.pick.team} +${w.biggestDog.pick.line}`),
+    perWinnerAwardRow("⏰", "Buzzer Beater", "Picked closest to kickoff", awards.buzzerBeater, (w) => formatBuzzerGap(w.buzzer.gapMs)),
+    simpleAwardRow("🥶", "Ice Cold", "Longest miss streak this week", awards.iceCold, `${iceColdStreak} in a row`),
+  ].filter(Boolean);
+
+  if (rows.length === 0) return '<div class="empty-state">Not enough graded picks yet to hand out awards.</div>';
+
+  return rows
     .join("");
 }
