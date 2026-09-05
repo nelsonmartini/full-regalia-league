@@ -709,6 +709,56 @@ a.game-card-team:active {
   font-weight: 700;
 }
 
+/* Bet-activity strip — attaches directly under a .game-card as its footer
+ * (shares the wrapper's own bottom margin instead of the card's own, so
+ * there's no visible gap between the two). Shared by live.html (every
+ * card) and index.html's Most Active Games preview. */
+.game-card-group {
+  margin-bottom: 10px;
+}
+
+.game-card-group .game-card {
+  margin-bottom: 0;
+}
+
+.game-bet-activity {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: 0 14px;
+}
+
+.game-bet-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 7px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-bet-chevron {
+  margin-left: auto;
+  font-size: 9px;
+  transition: transform 0.15s ease;
+}
+
+.game-bet-toggle.expanded .game-bet-chevron {
+  transform: rotate(180deg);
+}
+
+.game-bet-list {
+  padding-bottom: 8px;
+}
+
 /* ---------- Week picker (Picks page) ---------- */
 /* One "Regalia Week" links an NFL week to its nearest NCAA week by date
  * (js/picks.js buildRegaliaWeeks) — this is the collapsible selector for it,

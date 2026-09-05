@@ -69,10 +69,15 @@
 </nav>
 
 <script src="js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
 <script src="js/live-scores.js"></script>
 <script src="js/pick-utils.js"></script>
+<script src="js/grading.js"></script>
+<script src="js/season-data.js"></script>
 <script>
   let allGames = [];
+  let allPicksRows = []; // every player's picks, for the bet-activity indicator on each card
   let sportFilter = ""; // "" = All, "nfl", "cfb"
   let conferenceFilter = "";
   let nflDivisions = new Map();
@@ -218,9 +223,14 @@
     const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
     filtered.sort((a, b) => statusRank(a) - statusRank(b) || bestRank(a) - bestRank(b) || new Date(a.date) - new Date(b.date));
 
-    list.innerHTML = filtered.slice(0, 40).map(renderGameCard).join("");
+    list.innerHTML = filtered
+      .slice(0, 40)
+      .map((g) => `<div class="game-card-group">${renderGameCard(g)}${gameBetsSummaryHtml(g, allPicksRows)}</div>`)
+      .join("");
     empty.style.display = filtered.length === 0 ? "block" : "none";
   }
+
+  wireBetToggleDelegation(document.getElementById("games-list"));
 
   document.getElementById("conference-filter").addEventListener("click", (e) => {
     const chip = e.target.closest("[data-conference]");
@@ -232,7 +242,7 @@
   });
 
   async function load() {
-    [allGames, nflDivisions] = await Promise.all([loadAllGames(), fetchNflDivisions()]);
+    [allGames, nflDivisions, allPicksRows] = await Promise.all([loadAllGames(), fetchNflDivisions(), loadSeasonPicks()]);
     rebuildDateFilter();
     render();
   }

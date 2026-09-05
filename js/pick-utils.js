@@ -344,3 +344,84 @@ function computeWeekStatus(allPicksRows, sportWeeks) {
 function expectedPickTotal(sportWeeks) {
   return (sportWeeks.nfl != null ? 4 : 0) + (sportWeeks.cfb != null ? 4 : 0);
 }
+
+/** Compact "🎯 N bets" toggle + hidden expand-list of who bet what on ONE
+ * game — shared between the Games tab (every card) and Home's Most Active
+ * Games preview so both look and behave identically. Grades each bet
+ * directly against the passed-in `game` (gradePick needs nothing else,
+ * since it's already the exact game in scope) rather than pulling in the
+ * full season-wide gradeSeasonPicks — same row format as analytics.html's
+ * existing teamPickHistoryHtml (avatar/name/pick/result), so this reads as
+ * the same feature, not a new one. Returns "" when nobody's bet on this
+ * game yet, so the toggle simply doesn't appear rather than showing "0".
+ * Caller must delegate a click listener for [data-bet-toggle] to actually
+ * open/close the list (see wireBetToggleDelegation below). */
+function gameBetsSummaryHtml(game, picksRows) {
+  const bets = picksRows.filter((p) => p.game_id === game.id);
+  if (bets.length === 0) return "";
+  const rows = bets
+    .map((p) => {
+      const result = gradePick(p.pick, game);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:12px">
+          <span style="display:flex;align-items:center;gap:6px;min-width:0">
+            ${avatarHtml(p.player_name, 18)}
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleCase(p.player_name)}</span>
+          </span>
+          <span style="flex:none;white-space:nowrap">${pickLabel(p.pick)} ${statusBadge(result)}</span>
+        </div>`;
+    })
+    .join("");
+  return `
+    <div class="game-bet-activity">
+      <button class="game-bet-toggle" type="button" data-bet-toggle="${game.id}">
+        🎯 ${bets.length} bet${bets.length === 1 ? "" : "s"}
+        <span class="game-bet-chevron">▼</span>
+      </button>
+      <div class="game-bet-list" id="game-bet-list-${game.id}" style="display:none">${rows}</div>
+    </div>`;
+}
+
+/** One delegated click listener covers every bet toggle on the page, even
+ * ones rendered after this runs (re-renders on a timer on both pages this
+ * is used from) — same delegation pattern already used for live.html's
+ * date/conference chips, since re-rendering innerHTML would otherwise
+ * detach any listener bound directly to an individual toggle button. */
+function wireBetToggleDelegation(container) {
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-bet-toggle]");
+    if (!btn) return;
+    const list = document.getElementById(`game-bet-list-${btn.getAttribute("data-bet-toggle")}`);
+    if (!list) return;
+    const opening = list.style.display === "none";
+    list.style.display = opening ? "block" : "none";
+    btn.classList.toggle("expanded", opening);
+  });
+}
+
+/** Top `limit` games by total bet count across every player — the signal
+ * for Home's "Most Active Games" card (which games people actually care
+ * about right now, not just what's live). Falls back to filling remaining
+ * slots by the old live-status-priority order when fewer than `limit`
+ * games have any bets at all (e.g. very early in a week, before most
+ * players have picked) — otherwise the card would look sparse or empty
+ * right when it'd otherwise be most useful for reminding people to pick. */
+function mostActiveGames(games, picksRows, limit = 3) {
+  const countByGameId = new Map();
+  for (const p of picksRows) countByGameId.set(p.game_id, (countByGameId.get(p.game_id) || 0) + 1);
+
+  const withCounts = games.map((g) => ({ game: g, count: countByGameId.get(g.id) || 0 }));
+  const active = withCounts.filter((x) => x.count > 0).sort((a, b) => b.count - a.count);
+  const chosen = active.slice(0, limit).map((x) => x.game);
+
+  if (chosen.length < limit) {
+    const statusRank = (g) => (g.status.state === "in" ? 0 : g.status.state === "pre" ? 1 : 2);
+    const chosenIds = new Set(chosen.map((g) => g.id));
+    const filler = games
+      .filter((g) => !chosenIds.has(g.id))
+      .sort((a, b) => statusRank(a) - statusRank(b) || new Date(a.date) - new Date(b.date))
+      .slice(0, limit - chosen.length);
+    chosen.push(...filler);
+  }
+  return chosen;
+}

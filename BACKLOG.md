@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Games tab shows bet activity per game (1 of 3 stages — betting-activity feature).** Neil wants to see how many people (and what) have bet on a game, both on the Games tab and — in a follow-up stage — as the signal for a "Most Active Games" section on Home. This is the first stage: the Games tab itself.
+  - New shared `gameBetsSummaryHtml(game, picksRows)` (`js/pick-utils.js`) — a small "🎯 N bets" toggle under each game card, hidden entirely when nobody's bet on that game. Tapping expands a list of who bet what (avatar, name, `pickLabel()`, and a Hit/Miss/Pending badge graded directly against that game) — same visual pattern `analytics.html`'s existing "Who's picked [team]" list already uses, just scoped to one specific game instead of one team's whole season.
+  - `live.html` now loads `js/supabase-client.js` + `js/grading.js` + `js/season-data.js` (for `loadSeasonPicks()`) alongside its existing ESPN fetch, and wraps every rendered game card with this new component. `renderGameCard()` itself is untouched — the bet strip is a separate sibling element attached via CSS (`.game-card-group`), so `analytics.html`'s own use of `renderGameCard()` isn't affected.
+  - Verified via Playwright (12/12): correct bet count per game, singular/plural wording, zero-bet games show no strip at all, expand/collapse works, and the expanded list shows the right names/picks/results.
+  - Bumped service worker cache to `full-regalia-shell-v88`.
+
 - **SHIPPED (2026-09-05): Picks page heading now uses the site's cursive brand font.** Neil's original ask ("the name is in the white font format like the rest of the site") wasn't clear enough to act on safely — I checked and the heading/badge were already rendering in the correct bright text color, so color wasn't the issue. He later clarified he meant the *cursive* Pacifico font used elsewhere (wordmark, home page quote, standings rank numbers) — applied that to `#picks-heading` ("Picks" / "{Name}'s Picks") via a new `.picks-heading-cursive` class in `css/style.css`.
   - Bumped service worker cache to `full-regalia-shell-v87`.
 
