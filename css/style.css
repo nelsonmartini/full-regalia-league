@@ -1205,6 +1205,65 @@ a.game-card-team:active {
   font-size: 16px;
 }
 
+/* Home's side-by-side split-screen row (Standings | Awards, see
+ * .home-split-row below) — even tighter than the already-compact teaser
+ * row above, since it's now sharing half the page width instead of the
+ * full card. */
+.home-split-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.home-split-row .card {
+  padding: 10px 10px;
+  margin-bottom: 0;
+}
+
+.home-split-row .card-title {
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.standings-row-split {
+  grid-template-columns: 14px 18px 1fr auto;
+  gap: 5px;
+  padding: 4px 0;
+}
+
+.standings-row-split .standings-name {
+  font-size: 11px;
+}
+
+.standings-row-split .standings-points {
+  font-size: 11.5px;
+  min-width: auto;
+}
+
+.standings-row-split .standings-rank-cursive {
+  font-size: 13px;
+}
+
+/* Compact award row (Home split-screen, see renderWeeklyAwards({compact})
+ * in js/awards.js) — dense 2-line block instead of the roomy side-by-side
+ * default, since there's no room for a separate blurb line at this width. */
+.award-row-compact {
+  padding: 4px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--border);
+}
+
+.award-row-compact:last-child {
+  border-bottom: none;
+}
+
+.award-row-compact strong {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
 /* Matches .card-title .link's look (accent color, bold, small) — this link
  * moved out of the card-title row to make room for the column header above
  * it, but plain `.link` has no styling of its own outside that context, so

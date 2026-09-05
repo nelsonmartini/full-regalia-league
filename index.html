@@ -51,25 +51,12 @@
     <span class="quote-pop">Full Regalia</span>
   </p>
 
-  <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
-
-  <div class="card" style="padding:12px 14px">
-    <div class="card-title" style="margin:0 0 6px">
-      <span>Top of the standings</span>
-      <span class="standings-header-label" style="font-size:11px">Season Total</span>
-    </div>
-    <div id="top-standings"><div class="empty-state">Loading standings…</div></div>
-    <div class="standings-preview-footer"><a class="link" href="standings.html">Full board →</a></div>
-  </div>
-
   <a class="btn btn-primary btn-block enter-picks-cursive" href="picks.html" id="picks-cta" style="margin:14px 0 2px">Enter Your Picks →</a>
   <div id="picks-cta-week" class="footer-note" style="padding-top:2px;padding-bottom:14px"></div>
 
-  <div class="card">
-    <div class="card-title">🏅 Last Week Awards <span id="awards-week-label" style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)"></span></div>
-    <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
-  </div>
-
+  <!-- Most Active Games sits right after the CTA (Neil: users aren't
+       scrolling far, this is the thing most worth seeing early) — Standings
+       + Awards move below it, compacted side by side to make room. -->
   <div class="card">
     <div class="card-title">
       🎯 Most Active Games
@@ -79,6 +66,27 @@
       </span>
     </div>
     <div id="home-games"><div class="empty-state">Loading games…</div></div>
+  </div>
+
+  <div id="standings-freshness" class="footer-note" style="padding-top:0;padding-bottom:6px"></div>
+
+  <div class="home-split-row">
+    <div class="card">
+      <div class="card-title">
+        <span>Standings</span>
+        <span class="standings-header-label">PTS</span>
+      </div>
+      <div id="top-standings"><div class="empty-state">Loading…</div></div>
+      <div class="standings-preview-footer"><a class="link" href="standings.html">Full →</a></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        🏅 Awards
+        <span id="awards-week-label" style="display:none"></span>
+      </div>
+      <div id="weekly-awards"><div class="empty-state">Loading…</div></div>
+    </div>
   </div>
 
   <div class="card" style="padding:14px 16px">
@@ -154,12 +162,11 @@
 
     const top3 = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 3);
     document.getElementById("top-standings").innerHTML = top3.length
-      ? top3.map((p, i) => renderStandingsRowCompact(p, i + 1)).join("")
+      ? top3.map((p, i) => renderStandingsRowCompact(p, i + 1, { extraClass: "standings-row-split", avatarSize: 20 })).join("")
       : '<div class="empty-state">No graded picks yet this season.</div>';
 
     const awards = computeWeeklyAwards(graded, games);
-    document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(awards);
-    document.getElementById("awards-week-label").textContent = awards ? awards.weekLabel : "";
+    document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(awards, { compact: true });
 
     // Current pickable NFL week (NFL, not NCAA — NFL's the default/primary
     // sport throughout the site) — reused for both the picks CTA subline and

@@ -144,9 +144,19 @@ function joinNames(names) {
 
 /** Awards where every tied winner shares the exact same number by definition
  * (miss count, hit count, streak length) — one shared detail line covers
- * all of them, so names just join together under it. */
-function simpleAwardRow(icon, label, blurb, winners, detail) {
+ * all of them, so names just join together under it. `compact` (Home's
+ * side-by-side split-screen row, see css/style.css .home-split-row) swaps
+ * the roomy side-by-side layout for a dense 2-line block — same
+ * information, no blurb line, since there isn't room for one at that width. */
+function simpleAwardRow(icon, label, blurb, winners, detail, compact = false) {
   if (winners.length === 0) return null;
+  if (compact) {
+    return `
+      <div class="award-row-compact">
+        <strong>${icon} ${label}</strong><br />
+        ${joinNames(winners.map((w) => w.name))} — ${detail}
+      </div>`;
+  }
   return `
     <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
       <span style="font-size:20px">${icon}</span>
@@ -165,8 +175,16 @@ function simpleAwardRow(icon, label, blurb, winners, detail) {
  * players both taking the biggest underdog line, but different teams) — one
  * row per winner instead of a single shared detail line, so nothing tied
  * gets flattened into a misleading combined caption. */
-function perWinnerAwardRow(icon, label, blurb, winners, detailFor) {
+function perWinnerAwardRow(icon, label, blurb, winners, detailFor, compact = false) {
   if (winners.length === 0) return null;
+  if (compact) {
+    const lines = winners.map((w) => `${titleCase(w.name)} — ${detailFor(w)}`).join("<br />");
+    return `
+      <div class="award-row-compact">
+        <strong>${icon} ${label}</strong><br />
+        ${lines}
+      </div>`;
+  }
   const names = winners
     .map((w) => `<div style="font-weight:800">${titleCase(w.name)}</div><div style="font-size:11px;color:var(--text-faint);margin-bottom:2px">${detailFor(w)}</div>`)
     .join("");
@@ -181,7 +199,11 @@ function perWinnerAwardRow(icon, label, blurb, winners, detailFor) {
     </div>`;
 }
 
-function renderWeeklyAwards(awards) {
+/** `compact: true` — Home's side-by-side split-screen row (see
+ * css/style.css .home-split-row) needs a much denser format than the
+ * roomy default, since it's sharing half the page width with Standings.
+ * Same underlying data either way, just fewer pixels per award. */
+function renderWeeklyAwards(awards, { compact = false } = {}) {
   if (!awards) return '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';
 
   const dumbassMisses = awards.dumbass[0]?.misses ?? 0;
@@ -189,15 +211,14 @@ function renderWeeklyAwards(awards) {
   const iceColdStreak = awards.iceCold[0]?.longestMissStreak ?? 0;
 
   const rows = [
-    simpleAwardRow("🤡", "Dumbass of the Week", "Most misses this week", awards.dumbass, `${dumbassMisses} miss${dumbassMisses === 1 ? "" : "es"}`),
-    simpleAwardRow("🔮", "Nostradamus", "Most hits this week", awards.nostradamus, `${nostradamusHits} hit${nostradamusHits === 1 ? "" : "s"}`),
-    perWinnerAwardRow("🎰", "Big Dawg", "Biggest underdog taken", awards.bigDawg, (w) => `took ${w.biggestDog.pick.team} +${w.biggestDog.pick.line}`),
-    perWinnerAwardRow("⏰", "Buzzer Beater", "Picked closest to kickoff", awards.buzzerBeater, (w) => formatBuzzerGap(w.buzzer.gapMs)),
-    simpleAwardRow("🥶", "Ice Cold", "Longest miss streak this week", awards.iceCold, `${iceColdStreak} in a row`),
+    simpleAwardRow("🤡", "Dumbass of the Week", "Most misses this week", awards.dumbass, `${dumbassMisses} miss${dumbassMisses === 1 ? "" : "es"}`, compact),
+    simpleAwardRow("🔮", "Nostradamus", "Most hits this week", awards.nostradamus, `${nostradamusHits} hit${nostradamusHits === 1 ? "" : "s"}`, compact),
+    perWinnerAwardRow("🎰", "Big Dawg", "Biggest underdog taken", awards.bigDawg, (w) => `took ${w.biggestDog.pick.team} +${w.biggestDog.pick.line}`, compact),
+    perWinnerAwardRow("⏰", "Buzzer Beater", "Picked closest to kickoff", awards.buzzerBeater, (w) => formatBuzzerGap(w.buzzer.gapMs), compact),
+    simpleAwardRow("🥶", "Ice Cold", "Longest miss streak this week", awards.iceCold, `${iceColdStreak} in a row`, compact),
   ].filter(Boolean);
 
   if (rows.length === 0) return '<div class="empty-state">Not enough graded picks yet to hand out awards.</div>';
 
-  return rows
-    .join("");
+  return rows.join("");
 }

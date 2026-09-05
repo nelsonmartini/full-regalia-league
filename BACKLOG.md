@@ -4,6 +4,13 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Home layout reorg — Most Active Games moved up, Standings + Awards compacted side by side (3 of 3 — betting-activity feature).** Neil: users aren't scrolling far, so the highest-value content should sit as close to the top as possible.
+  - **Most Active Games moved** to right after the "Enter Your Picks" CTA — previously it sat below both Standings and Awards.
+  - **Standings + Awards go side by side** in a new two-column `.home-split-row`, each using new denser row formats: `renderStandingsRowCompact()` (`js/season-data.js`) gained `extraClass`/`avatarSize` options for an even tighter variant than its existing "compact" mode; `renderWeeklyAwards()` (`js/awards.js`) gained a `{ compact: true }` mode producing 2-line-per-award blocks (icon+label, then winner+detail) instead of the roomy side-by-side default — same underlying data either way, nothing dropped, just denser. The per-award "Week N" caption was removed from the compact Awards card specifically, since the shared "Standings as of..." line directly above the split row already states the week for both cards — was redundant, not lost.
+  - Shortened a few labels to fit the narrower columns: "Top of the standings" → "Standings", "Season Total" → "PTS", "Full board →" → "Full →".
+  - Verified via Playwright (10/10): correct section order, Standings/Awards genuinely share one row (same top, side-by-side left offset) rather than stacking, and every original piece of information (all 3 possible awards, both players' points) still renders correctly in the compact form.
+  - Bumped service worker cache to `full-regalia-shell-v90`.
+
 - **SHIPPED (2026-09-05): Home's game preview repurposed into "Most Active Games" (2 of 3 stages — betting-activity feature).** Same card slot as the old "Live scores & odds" (still 3 games, same position for now — reorder comes in stage 3), but the 3 shown are now whichever games have the most total bets across everyone, not whichever are live/soonest. Falls back to filling remaining slots by the old live-status order when fewer than 3 games have any bets yet (early in a week), so the card never looks sparse.
   - Merged the page's two separate data-loading IIFEs into one — Standings, Awards, the week-freshness text, and Most Active Games all need the same `picksRows`/`games`, no reason to fetch twice (previously "Live scores" used a narrower separate ESPN fetch that Most Active Games doesn't actually need, since bet counts alone already keep it scoped to whatever week people are actively picking).
   - Each shown game reuses the exact same `gameBetsSummaryHtml()` component shipped for the Games tab, so tapping a game's bet count here behaves identically.

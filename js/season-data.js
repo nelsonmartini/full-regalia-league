@@ -39,12 +39,16 @@ function renderStandingsRow(player, rank) {
  * preview is always exactly the top 3, so a medal for every single row
  * added nothing a numeral doesn't already say, once it's styled to feel
  * like part of the brand rather than plain body text. */
-function renderStandingsRowCompact(player, rank) {
+/** `extraClass`/`avatarSize` let a caller squeeze this into a narrower
+ * space (Home's side-by-side split-screen row, see css/style.css
+ * .home-split-row and .standings-row-split) without a whole separate
+ * render function — same data and row shape either way. */
+function renderStandingsRowCompact(player, rank, { extraClass = "", avatarSize = 24 } = {}) {
   const rankClass = rank <= 3 ? ` rank-${rank}` : "";
   return `
-    <a class="standings-row standings-row-compact${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
+    <a class="standings-row standings-row-compact${rankClass}${extraClass ? " " + extraClass : ""}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank standings-rank-cursive">${rank}</div>
-      ${avatarHtml(player.name, 24)}
+      ${avatarHtml(player.name, avatarSize)}
       <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
       <div class="standings-points">${player.points}</div>
     </a>`;
