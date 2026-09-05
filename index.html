@@ -163,22 +163,49 @@
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
 
-    // 5, not 3 — with the CTA button now pinned to the bottom of this card
-    // (matching Awards' height, see .standings-preview-cta), showing only
-    // 3 rows next to a taller Awards card left a visible gap between 3rd
-    // place and the button. More real standings rows fills that space with
-    // useful content instead (Neil) — still short enough for a "top of the
-    // board" teaser, full list is one tap away either way.
-    const topStandings = computeStandings(graded, LEAGUE_PLAYERS).slice(0, 5);
-    document.getElementById("top-standings").innerHTML = topStandings.length
-      ? topStandings.map((p) => renderStandingsRowCompact(p, { extraClass: "standings-row-split", avatarSize: 20 })).join("")
-      : '<div class="empty-state">No graded picks yet this season.</div>';
-
+    // Awards renders FIRST so its real height can be measured below —
+    // Standings then shows as many rows as actually fit that height,
+    // instead of a fixed count that leaves a gap on a heavy-awards week or
+    // runs short on a light one (Neil).
     const allAwards = computeAllWeeklyAwards(graded, games);
     document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(allAwards, { compact: true });
     const currentWeek = allAwards[allAwards.length - 1];
     document.getElementById("awards-card-title").textContent = currentWeek ? `🏅 Week ${currentWeek.regaliaWeekNumber} Awards` : "🏅 Awards";
     wireAwardToggleDelegation(document.getElementById("weekly-awards"));
+
+    // Render every player first (needed to measure a real row's height and
+    // the card's fixed chrome accurately), then trim back to however many
+    // actually fit next to Awards' natural height — never fewer than 3
+    // (still reads as a "top of the board" teaser), never more than the
+    // roster, and never so many that Standings ends up TALLER than Awards.
+    const fullStandings = computeStandings(graded, LEAGUE_PLAYERS);
+    const standingsListEl = document.getElementById("top-standings");
+    const renderRows = (list) =>
+      list.length
+        ? list.map((p) => renderStandingsRowCompact(p, { extraClass: "standings-row-split", avatarSize: 20 })).join("")
+        : '<div class="empty-state">No graded picks yet this season.</div>';
+    standingsListEl.innerHTML = renderRows(fullStandings);
+
+    const rowEls = standingsListEl.querySelectorAll(".standings-row");
+    if (rowEls.length >= 2) {
+      const rowHeight = rowEls[1].getBoundingClientRect().top - rowEls[0].getBoundingClientRect().top;
+      const standingsCard = standingsListEl.closest(".card");
+      const awardsCard = document.getElementById("weekly-awards").closest(".card");
+      // Each measured directly (not "card height minus row list height")
+      // so this stays correct even if the grid's align-items:stretch has
+      // already forced one card taller than its own natural content.
+      const chromeHeight =
+        standingsCard.querySelector(".card-title").getBoundingClientRect().height +
+        standingsCard.querySelector(".standings-preview-cta").getBoundingClientRect().height +
+        document.getElementById("picks-cta-week").getBoundingClientRect().height +
+        standingsCard.querySelector(".standings-preview-footer").getBoundingClientRect().height;
+      const awardsNaturalHeight =
+        awardsCard.querySelector(".card-title").getBoundingClientRect().height + document.getElementById("weekly-awards").getBoundingClientRect().height;
+
+      const maxRowsThatFit = Math.floor((awardsNaturalHeight - chromeHeight) / rowHeight);
+      const finalCount = Math.min(fullStandings.length, Math.max(3, maxRowsThatFit));
+      if (finalCount < fullStandings.length) standingsListEl.innerHTML = renderRows(fullStandings.slice(0, finalCount));
+    }
 
     // Current pickable NFL week (NFL, not NCAA — NFL's the default/primary
     // sport throughout the site) — reused for both the picks CTA subline and

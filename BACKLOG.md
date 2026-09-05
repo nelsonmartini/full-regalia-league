@@ -4,6 +4,11 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Standings preview now shows as many rows as actually fit next to Awards, instead of a fixed 5.** Neil: fill the gap with "as many names as will fit" and make the two cards equal size, rather than a hardcoded row count that's sometimes too many, sometimes too few.
+  - `index.html` now renders Awards first, measures its real natural height (title + content, independent of the grid's stretch), then renders EVERY player into Standings temporarily to measure one real row's height and the card's fixed chrome (title, CTA button, week subline, footer link), and finally trims back to however many rows actually fit that target height — never fewer than 3 (still reads as a "top of the board" teaser) and never more than the roster.
+  - Verified via Playwright across two opposite scenarios: a small 4-player roster with a heavy awards week (shows all 4, heights match exactly) and a large 15-player roster with a single light award (shows just the 3-row floor rather than all 15, keeping any residual gap small and on the Awards side instead of a large one on the Standings side).
+  - Bumped service worker cache to `full-regalia-shell-v104`.
+
 - **SHIPPED (2026-09-05): Award names now fit on one row.** At the new cursive size, "Dumbass of the Week" was the one label wide enough to wrap to a second line in the compact Home card. Shortened to "Dumbass" (the card title already reads "Week N Awards", so the suffix was redundant) and reduced `.award-row-label`'s font-size/gap slightly with `white-space: nowrap`. Verified via Playwright at the narrowest supported width (375px): all 5 award labels render with zero horizontal overflow.
   - Bumped service worker cache to `full-regalia-shell-v103`.
 
