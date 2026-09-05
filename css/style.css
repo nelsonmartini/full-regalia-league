@@ -1626,17 +1626,6 @@ a.game-card-team:active {
   padding: 0 12px 12px;
 }
 
-.pick-consensus {
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: var(--bg-elev-2);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dim);
-  text-align: center;
-}
-
 .chip-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

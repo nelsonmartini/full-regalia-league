@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-09-05): Picks tab's locked-category consensus now matches the Games/Home poker-chip format.** Neil: a locked category showed its own "X of Y picked this side" text (`computeConsensusForPick`), inconsistent with the poker-chip "N bets" toggle already shipped on the Games tab and Home's Big Action card, and scoped only to players who picked the *same side* rather than showing everyone's actual pick on the game.
+  - Removed `computeConsensusForPick()` and the `.pick-consensus` element entirely — replaced with the exact same shared `gameBetsSummaryHtml()` (`js/pick-utils.js`) already used everywhere else, wrapped in the same `.game-card-group` so it visually attaches under the game card the same way. Wired `wireBetToggleDelegation()` once in `initPicksPage()`, same pattern as the other two pages.
+  - Net effect: tapping the chip on a locked category now shows every player's actual pick on that game (not just who agrees with you), consistent with Games/Home.
+  - Verified via Playwright (6/6): old consensus element confirmed gone, chip shows the correct total bet count across 3 players, and expanding shows each player's distinct actual pick.
+  - Bumped service worker cache to `full-regalia-shell-v98`.
+
 - **SHIPPED (2026-09-05): Fixed the blank space between Standings and Awards on Home.** Neil noticed a gap below the Standings card in the split-screen row and asked if the "Enter Picks" button could be "more dynamic" to fill it. Root cause: `.home-split-row` had `align-items: start` (added specifically to stop the two cards being force-stretched to equal height, back when nothing filled the shorter one) — but Awards is usually taller than Standings' fixed 3 rows, so the shorter Standings card just left a visible blank gap below it instead.
   - Fix: reverted to `align-items: stretch` (the grid default) so both cards share the same height again, made each `.card` in the row a flex column, and pinned the "Enter Picks" button to the bottom via `margin-top: auto`. The flexible gap now lives *between* the standings rows and the button — intentional breathing room — instead of as dead space trailing below everything.
   - Verified via Playwright: both cards now share an identical bottom edge regardless of how many awards are showing that week, with a real gap above the button and no leftover dead space below the footer link.

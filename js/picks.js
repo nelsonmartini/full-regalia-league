@@ -270,21 +270,6 @@ function sortGroupKeys(sport, keys) {
  * toggled between). Each category/chip element carries data-sport so the
  * click handler in initPicksPage can tell which sport a click belongs to
  * without a single global "selected sport" to fall back on. */
-/** How many of the WHOLE group (every player, not just the current one)
- * picked the same side of this bet as the pick being shown — e.g. "4 of 6
- * picked ALA -3" once a spread game locks. Compares against every pick for
- * this exact game+bet-type, spanning both categories a spread can land in
- * (minus/plus are just the two sides of the same line, not independent
- * bets) so the count reflects the whole group's read on the game, not just
- * whichever category happens to be rendering. */
-function computeConsensusForPick(allPicksRows, gameId, betType, chosenValue) {
-  const relevant = allPicksRows.filter((r) => r.snapshot?.gameId === gameId && r.pick?.type === betType);
-  if (relevant.length === 0) return null;
-  const matches = (r) => (betType === "spread" ? r.pick.team === chosenValue.team : r.pick.direction === chosenValue.direction);
-  const same = relevant.filter(matches).length;
-  return { same, total: relevant.length };
-}
-
 function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames, groupExpanded, allPicksRows) {
   if (games.length === 0) {
     return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
@@ -373,15 +358,17 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
     // the real game, not just its own line score, and updates live while
     // the game's still in progress.
     if (isLocked) {
+      // Same poker-chip "N bets" component the Games tab and Home's Big
+      // Action use (js/pick-utils.js) — replaced the old bet-type-scoped
+      // "X of Y picked this side" text so a locked category matches that
+      // same visual language and lets you expand to see every player's
+      // actual pick on this game, not just a same-side tally (Neil).
       const gameCardHtml = lockedGame ? renderGameCard(lockedGame) : "";
-      const consensus = computeConsensusForPick(allPicksRows, currentGameId, slot.entry.value.type, slot.entry.value);
-      const consensusHtml = consensus
-        ? `<div class="pick-consensus">👥 ${consensus.same} of ${consensus.total} in the group picked this side</div>`
-        : "";
+      const betsHtml = lockedGame ? gameBetsSummaryHtml(lockedGame, allPicksRows) : "";
       return `
         <div class="pick-game is-locked" data-category="${cat}" data-sport="${sport}">
           ${headerHtml}
-          ${gameCardHtml ? `<div class="pick-game-body">${gameCardHtml}${consensusHtml}</div>` : ""}
+          ${gameCardHtml ? `<div class="pick-game-body"><div class="game-card-group">${gameCardHtml}${betsHtml}</div></div>` : ""}
         </div>`;
     }
 
@@ -587,6 +574,7 @@ async function initPicksPage() {
   const weekPickerChevron = document.getElementById("week-picker-chevron");
   const weekPickerList = document.getElementById("week-picker-list");
   const container = document.getElementById("games-list");
+  wireBetToggleDelegation(container); // poker-chip "N bets" expand on locked categories (js/pick-utils.js)
   const progressEl = document.getElementById("picks-progress");
   const saveStatus = document.getElementById("save-status");
   const saveBtn = document.getElementById("save-btn");
