@@ -65,11 +65,12 @@ function pickCategory(pick) {
   return null;
 }
 
-/** One player's hit/miss/push record broken out by the 4 betting categories,
- * across a set of already-graded picks. Optionally scoped to one sport (pass
- * null/omit to combine NFL+NCAA). Shared by analytics.html's player-vs-player
- * comparison table and player.html's own per-player category breakdown. */
-function computePlayerCategoryRecord(name, gradedPicks, sport) {
+/** hit/miss/push record broken out by the 4 betting categories, across a set
+ * of already-graded picks. Optionally scoped to one sport (pass null/omit to
+ * combine NFL+NCAA). Shared by analytics.html's player-vs-player comparison
+ * table, its league-wide landing snapshot, and player.html's own per-player
+ * category breakdown. */
+function computeCategoryRecord(gradedPicks, sport) {
   const record = {
     minus: { hit: 0, miss: 0, push: 0 },
     plus: { hit: 0, miss: 0, push: 0 },
@@ -77,12 +78,37 @@ function computePlayerCategoryRecord(name, gradedPicks, sport) {
     under: { hit: 0, miss: 0, push: 0 },
   };
   for (const gp of gradedPicks) {
-    if (gp.player_name !== name || !gp.result) continue;
+    if (!gp.result) continue;
     if (sport && gp.snapshot?.sport !== sport) continue;
     const cat = pickCategory(gp.pick);
     if (cat) record[cat][gp.result]++;
   }
   return record;
+}
+
+/** Same as computeCategoryRecord, scoped to one player's picks. */
+function computePlayerCategoryRecord(name, gradedPicks, sport) {
+  return computeCategoryRecord(gradedPicks.filter((gp) => gp.player_name === name), sport);
+}
+
+/** 4-tile KPI row (Minus/Plus/Over/Under win% + record) for a
+ * computeCategoryRecord()/computePlayerCategoryRecord() result — same
+ * ".player-kpi-row" visual language everywhere it's used: player.html's
+ * per-player breakdown and analytics.html's league-wide snapshot. */
+function categoryKpiHtml(record) {
+  const tile = (cat) => {
+    const b = record[cat];
+    const total = b.hit + b.miss + b.push;
+    const pct = total ? Math.round((b.hit / total) * 100) : null;
+    const tone = pct == null ? "var(--text-faint)" : `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
+    return `
+      <div class="player-kpi-tile">
+        <div class="player-kpi-pct" style="color:${tone}">${pct == null ? "–" : pct + "%"}</div>
+        <div class="player-kpi-record">${total ? `${b.hit}-${b.miss}${b.push ? `-${b.push}` : ""}` : "No picks"}</div>
+        <div class="player-kpi-label">${CATEGORY_LABEL[cat]}</div>
+      </div>`;
+  };
+  return `<div class="player-kpi-row">${CATEGORIES.map(tile).join("")}</div>`;
 }
 
 function pickLabel(pick) {
@@ -277,6 +303,31 @@ function regaliaWeekDateRange(week) {
  * numbers still show in the row subline). */
 function regaliaWeekTitle(week) {
   return `👑 Week ${week.regaliaWeekNumber}`;
+}
+
+/** Tags every already-graded pick with `.regaliaWeek` (or null if it can't be
+ * placed — e.g. NFL preseason, or a week that's rolled out of the fetch
+ * window). `games` is the same combined NFL+CFB list loadSeasonGames()
+ * already fetches. includeCompleted defaults true here (unlike
+ * buildRegaliaWeeks' own default) since both callers of this — Weekly Awards
+ * and the Analytics league snapshot — specifically want finished weeks kept,
+ * not filtered out the way the Picks page's own "what's still pickable"
+ * selector wants.
+ *
+ * A pick's own sport+week+seasonType maps to whichever Regalia Week claims
+ * that bucket on either side (NFL or CFB) — mirrors how the Picks page links
+ * the two sports' weeks together, so e.g. a Thursday NFL game and that same
+ * week's Saturday CFB games both land in the same Regalia Week here too, not
+ * two different ones. Shared by js/awards.js (career-count history) and
+ * analytics.html (the league-wide week filter). */
+function attachRegaliaWeeks(gradedPicks, games, { includeCompleted = true } = {}) {
+  const bySport = { nfl: games.filter((g) => g.sport === "nfl" && g.seasonType !== 1), cfb: games.filter((g) => g.sport === "cfb") };
+  const regaliaWeeks = buildRegaliaWeeks(bySport, { includeCompleted });
+  function regaliaWeekForPick(gp) {
+    const key = weekBucketKeyFromSnapshot(gp.snapshot);
+    return regaliaWeeks.find((w) => w.nflWeekKey === key || w.cfbWeekKey === key) ?? null;
+  }
+  return gradedPicks.map((gp) => ({ ...gp, regaliaWeek: regaliaWeekForPick(gp) }));
 }
 
 /** The current Regalia Week (same unified numbering as the Picks page) from

@@ -110,28 +110,11 @@ function computeAllWeeklyAwards(gradedPicks, games) {
   const graded = gradedPicks.filter((gp) => gp.result && gp.snapshot?.date);
   if (graded.length === 0) return [];
 
-  // NFL preseason (seasonType 1) excluded up front, same as the Picks page —
-  // otherwise includeCompleted below would let 4 preseason weeks count as
-  // real Regalia Weeks here (Picks never offers them as pickable, so they
-  // never appear over there), shifting this page's "Week N" numbering out
-  // of sync with the Picks page's for the exact same real week.
-  const bySport = { nfl: games.filter((g) => g.sport === "nfl" && g.seasonType !== 1), cfb: games.filter((g) => g.sport === "cfb") };
-  // includeCompleted: true — unlike the Picks page's own use of this
-  // function, Awards specifically wants every FINISHED week too, which the
-  // default (pickable-only) mode would filter out entirely.
-  const regaliaWeeks = buildRegaliaWeeks(bySport, { includeCompleted: true });
-
-  // A pick's own sport+week+seasonType maps to whichever Regalia Week claims
-  // that bucket on either side (NFL or CFB) — mirrors how the Picks page
-  // links the two sports' weeks together, so e.g. a Thursday NFL game and
-  // that same week's Saturday CFB games both land in the same Regalia Week
-  // here too, not two different ones.
-  function regaliaWeekForPick(gp) {
-    const key = weekBucketKeyFromSnapshot(gp.snapshot);
-    return regaliaWeeks.find((w) => w.nflWeekKey === key || w.cfbWeekKey === key) ?? null;
-  }
-
-  const gradedWithWeek = graded.map((gp) => ({ ...gp, regaliaWeek: regaliaWeekForPick(gp) })).filter((gp) => gp.regaliaWeek);
+  // attachRegaliaWeeks (js/pick-utils.js) does the NFL-preseason exclusion +
+  // includeCompleted:true + per-pick week lookup — same logic this function
+  // used to duplicate inline, now shared with analytics.html's league
+  // snapshot so both stay in sync.
+  const gradedWithWeek = attachRegaliaWeeks(graded, games).filter((gp) => gp.regaliaWeek);
   if (gradedWithWeek.length === 0) return [];
 
   const weekNumbers = [...new Set(gradedWithWeek.map((gp) => gp.regaliaWeek.regaliaWeekNumber))].sort((a, b) => a - b);

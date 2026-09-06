@@ -128,28 +128,13 @@
     document.getElementById("player-avatar").innerHTML = avatarHtml(name, 56);
 
     // ---------- By category / by conference / by team ----------
-    // Category breakdown covers all 4 pick types (spread + total) via the
-    // same shared helper the Analytics player-comparison table uses.
-    // Conference/team breakdowns are scoped to SPREAD picks only — a
-    // total (Over/Under) pick belongs to the game, not one team, so there's
-    // no single team/conference to attribute it to (same reasoning
-    // js/team-stats.js uses for why a team's own O/U is a split, not a
-    // per-team stat).
-    function categoryKpiHtml(record) {
-      const tile = (cat) => {
-        const b = record[cat];
-        const total = b.hit + b.miss + b.push;
-        const pct = total ? Math.round((b.hit / total) * 100) : null;
-        const tone = pct == null ? "var(--text-faint)" : `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
-        return `
-          <div class="player-kpi-tile">
-            <div class="player-kpi-pct" style="color:${tone}">${pct == null ? "–" : pct + "%"}</div>
-            <div class="player-kpi-record">${total ? `${b.hit}-${b.miss}${b.push ? `-${b.push}` : ""}` : "No picks"}</div>
-            <div class="player-kpi-label">${CATEGORY_LABEL[cat]}</div>
-          </div>`;
-      };
-      return `<div class="player-kpi-row">${CATEGORIES.map(tile).join("")}</div>`;
-    }
+    // Category breakdown covers all 4 pick types (spread + total) via
+    // categoryKpiHtml/computeCategoryRecord (js/pick-utils.js), shared with
+    // the Analytics league-wide snapshot. Conference/team breakdowns below
+    // are scoped to SPREAD picks only — a total (Over/Under) pick belongs to
+    // the game, not one team, so there's no single team/conference to
+    // attribute it to (same reasoning js/team-stats.js uses for why a team's
+    // own O/U is a split, not a per-team stat).
 
     // Groups this player's graded SPREAD picks by whatever key keyFn
     // resolves (a conference name, or a team abbr), tallying hit/miss/push
