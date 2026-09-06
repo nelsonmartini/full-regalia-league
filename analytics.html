@@ -174,21 +174,8 @@
       </div>`;
   }
 
-  function computePlayerCategoryRecord(name, gradedPicks, sport) {
-    const record = {
-      minus: { hit: 0, miss: 0, push: 0 },
-      plus: { hit: 0, miss: 0, push: 0 },
-      over: { hit: 0, miss: 0, push: 0 },
-      under: { hit: 0, miss: 0, push: 0 },
-    };
-    for (const gp of gradedPicks) {
-      if (gp.player_name !== name || !gp.result) continue;
-      if (sport && gp.snapshot?.sport !== sport) continue;
-      const cat = pickCategory(gp.pick);
-      if (cat) record[cat][gp.result]++;
-    }
-    return record;
-  }
+  // computePlayerCategoryRecord() now lives in js/pick-utils.js (shared with
+  // player.html's own per-player category breakdown).
 
   // Both sections start collapsed — Player Comparison and Team Trends can
   // each get long (a full roster of players, or a matchup card with two
@@ -450,7 +437,7 @@
         return `
           <tr>
             <td class="compare-table-player">
-              <a href="player.html?name=${encodeURIComponent(p.name)}">${avatarHtml(p.name, 22)}<span>${titleCase(p.name)}</span></a>
+              <a href="player.html?name=${encodeURIComponent(p.name)}">${titleCase(p.name)}</a>
             </td>
             ${compareCell(record.minus)}
             ${compareCell(record.plus)}

@@ -73,6 +73,21 @@
       <div id="trend" class="week-chart"></div>
     </div>
 
+    <div class="card">
+      <div class="card-title">By category</div>
+      <div id="category-breakdown"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">By conference</div>
+      <div id="conference-breakdown"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">By team</div>
+      <div id="team-breakdown"></div>
+    </div>
+
     <div id="weeks-list"></div>
   </div>
 </main>
@@ -106,11 +121,114 @@
       return;
     }
 
-    await Promise.all([loadPlayers(), loadScoringConfig()]);
+    const [, , nflDivisions] = await Promise.all([loadPlayers(), loadScoringConfig(), fetchNflDivisions()]);
 
     document.getElementById("player-title").textContent = titleCase(name);
     document.getElementById("player-sub").textContent = "Season history";
     document.getElementById("player-avatar").innerHTML = avatarHtml(name, 56);
+
+    // ---------- By category / by conference / by team ----------
+    // Category breakdown covers all 4 pick types (spread + total) via the
+    // same shared helper the Analytics player-comparison table uses.
+    // Conference/team breakdowns are scoped to SPREAD picks only — a
+    // total (Over/Under) pick belongs to the game, not one team, so there's
+    // no single team/conference to attribute it to (same reasoning
+    // js/team-stats.js uses for why a team's own O/U is a split, not a
+    // per-team stat).
+    function categoryKpiHtml(record) {
+      const tile = (cat) => {
+        const b = record[cat];
+        const total = b.hit + b.miss + b.push;
+        const pct = total ? Math.round((b.hit / total) * 100) : null;
+        const tone = pct == null ? "var(--text-faint)" : `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
+        return `
+          <div class="player-kpi-tile">
+            <div class="player-kpi-pct" style="color:${tone}">${pct == null ? "–" : pct + "%"}</div>
+            <div class="player-kpi-record">${total ? `${b.hit}-${b.miss}${b.push ? `-${b.push}` : ""}` : "No picks"}</div>
+            <div class="player-kpi-label">${CATEGORY_LABEL[cat]}</div>
+          </div>`;
+      };
+      return `<div class="player-kpi-row">${CATEGORIES.map(tile).join("")}</div>`;
+    }
+
+    // Groups this player's graded SPREAD picks by whatever key keyFn
+    // resolves (a conference name, or a team abbr), tallying hit/miss/push
+    // per group — the raw material for both horizontal-bar sections below.
+    function groupSpreadPicks(gradedPicks, keyFn) {
+      const map = new Map();
+      for (const gp of gradedPicks) {
+        if (!gp.result || gp.pick?.type !== "spread" || !gp.game) continue;
+        const key = keyFn(gp);
+        if (!key) continue;
+        if (!map.has(key)) map.set(key, { key, hit: 0, miss: 0, push: 0, count: 0 });
+        const entry = map.get(key);
+        entry[gp.result]++;
+        entry.count++;
+      }
+      return [...map.values()].sort((a, b) => b.count - a.count);
+    }
+
+    // A picked team's display name/logo isn't stored on the pick itself —
+    // scan this player's own graded games for a matching side, same
+    // no-separate-lookup approach as analytics.html's findTeamLogo.
+    function findTeamMeta(gradedPicks, abbr) {
+      for (const gp of gradedPicks) {
+        if (gp.game?.home?.abbr === abbr) return { logo: gp.game.home.logo, name: gp.game.home.name };
+        if (gp.game?.away?.abbr === abbr) return { logo: gp.game.away.logo, name: gp.game.away.name };
+      }
+      return { logo: null, name: abbr };
+    }
+
+    function hbarRowHtml(label, entry, logo) {
+      const total = entry.hit + entry.miss + entry.push;
+      const pct = total ? Math.round((entry.hit / total) * 100) : 0;
+      const tone = `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
+      const record = `${entry.hit}-${entry.miss}${entry.push ? `-${entry.push}` : ""}`;
+      const logoHtml = logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:16px;height:16px;object-fit:contain;flex-shrink:0" />` : "";
+      return `
+        <div class="hbar-row">
+          <div class="hbar-label">${logoHtml}<span style="overflow:hidden;text-overflow:ellipsis">${label}</span></div>
+          <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${tone}"></div></div>
+          <div class="hbar-value">${pct}% · ${record}</div>
+        </div>`;
+    }
+
+    function conferenceBreakdownHtml(gradedPicks) {
+      const groups = groupSpreadPicks(gradedPicks, (gp) => teamGroupLabel(gp.game.sport, gp.pick.team, nflDivisions));
+      if (groups.length === 0) return `<div class="empty-state">No spread picks yet.</div>`;
+      return groups.map((g) => hbarRowHtml(g.key, g)).join("");
+    }
+
+    // Full list can grow long over a season — starts capped at 8 (most-bet
+    // teams first, so the meaningful sample sizes surface before a
+    // one-off pick), with the rest behind a tap-to-expand toggle, same
+    // pattern used for Awards history / team-pick lists elsewhere in the app.
+    const TEAM_BREAKDOWN_VISIBLE = 8;
+    function teamBreakdownHtml(gradedPicks) {
+      const groups = groupSpreadPicks(gradedPicks, (gp) => gp.pick.team).map((g) => ({ ...g, ...findTeamMeta(gradedPicks, g.key) }));
+      if (groups.length === 0) return `<div class="empty-state">No spread picks yet.</div>`;
+      const visible = groups.slice(0, TEAM_BREAKDOWN_VISIBLE);
+      const hidden = groups.slice(TEAM_BREAKDOWN_VISIBLE);
+      const visibleHtml = visible.map((g) => hbarRowHtml(g.key, g, g.logo)).join("");
+      if (hidden.length === 0) return visibleHtml;
+      const hiddenHtml = hidden.map((g) => hbarRowHtml(g.key, g, g.logo)).join("");
+      const moreLabel = `Show ${hidden.length} more team${hidden.length === 1 ? "" : "s"} ▾`;
+      return `${visibleHtml}<div id="team-breakdown-hidden" style="display:none">${hiddenHtml}</div><span class="hbar-show-more" id="team-breakdown-toggle" data-more-label="${moreLabel}">${moreLabel}</span>`;
+    }
+
+    // Delegated once on the stable container — team-breakdown's innerHTML
+    // gets replaced wholesale on every 30s poll, same reason every other
+    // tap-to-expand toggle in this app binds on a stable parent instead of
+    // the element itself.
+    document.getElementById("team-breakdown").addEventListener("click", (e) => {
+      const toggle = e.target.closest("#team-breakdown-toggle");
+      if (!toggle) return;
+      const hiddenEl = document.getElementById("team-breakdown-hidden");
+      if (!hiddenEl) return;
+      const opening = hiddenEl.style.display === "none";
+      hiddenEl.style.display = opening ? "block" : "none";
+      toggle.textContent = opening ? "Show less ▴" : toggle.dataset.moreLabel;
+    });
 
     // Polled every 30s (same cadence as the Games page) so a game finishing
     // while this tab is open updates the totals/trend without a manual reload.
@@ -176,6 +294,10 @@
         .join("");
 
       document.getElementById("weeks-list").innerHTML = [...rows].reverse().map(renderHistoryEntry).join("");
+
+      document.getElementById("category-breakdown").innerHTML = categoryKpiHtml(computePlayerCategoryRecord(name, graded, null));
+      document.getElementById("conference-breakdown").innerHTML = conferenceBreakdownHtml(graded);
+      document.getElementById("team-breakdown").innerHTML = teamBreakdownHtml(graded);
     }
 
     await load();

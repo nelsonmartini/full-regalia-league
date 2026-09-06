@@ -65,6 +65,26 @@ function pickCategory(pick) {
   return null;
 }
 
+/** One player's hit/miss/push record broken out by the 4 betting categories,
+ * across a set of already-graded picks. Optionally scoped to one sport (pass
+ * null/omit to combine NFL+NCAA). Shared by analytics.html's player-vs-player
+ * comparison table and player.html's own per-player category breakdown. */
+function computePlayerCategoryRecord(name, gradedPicks, sport) {
+  const record = {
+    minus: { hit: 0, miss: 0, push: 0 },
+    plus: { hit: 0, miss: 0, push: 0 },
+    over: { hit: 0, miss: 0, push: 0 },
+    under: { hit: 0, miss: 0, push: 0 },
+  };
+  for (const gp of gradedPicks) {
+    if (gp.player_name !== name || !gp.result) continue;
+    if (sport && gp.snapshot?.sport !== sport) continue;
+    const cat = pickCategory(gp.pick);
+    if (cat) record[cat][gp.result]++;
+  }
+  return record;
+}
+
 function pickLabel(pick) {
   if (pick.type === "total") return `${pick.direction === "over" ? "Over" : "Under"} ${pick.line}`;
   return `${pick.team}${pick.line != null ? " " + fmtLine(pick.line) : " ML"}`;
