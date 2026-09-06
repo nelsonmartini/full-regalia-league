@@ -4,9 +4,14 @@
 
 ## Status
 
+- **SHIPPED (2026-09-06): Reverted the `v107` Awards-gap fix — it looked worse in practice.** `v107` added `.awards-preview-card { justify-content: center }` to close the trailing gap at the bottom of the Awards card on a light-awards week. Neil's feedback after seeing it live: this just shifted the title down and looked worse than the original trailing gap. Removed the rule (and the now-unused `awards-preview-card` class from `index.html`) to restore the pre-`v107` look. The original "gap at the bottom of Awards" problem is intentionally NOT re-addressed here — reopening that is a separate follow-up if/when Neil wants another pass at it.
+  - Verified via Playwright (large-roster/light-awards scenario): Awards title now sits back at the top of the card, cards still match height (stretch behavior unchanged).
+  - Bumped service worker cache to `full-regalia-shell-v108`.
+
 - **SHIPPED (2026-09-06): Fixed the flip-side gap — now at the bottom of the Awards card on a light-awards week.** The dynamic Standings/Awards height-matching (`v104`) fixed the original gap but could push it to the OTHER side: when Standings' 3-row floor is naturally taller than a sparse Awards week's content, the grid stretches Awards to match, leaving blank space trailing at its bottom. Awards has no natural "pin to bottom" anchor the way Standings' CTA button does, so added `.awards-preview-card { justify-content: center }` — centers the title+content as a group, distributing any leftover space evenly above and below instead of dumping it all at the bottom.
   - Verified via Playwright against the same large-roster/light-awards scenario that originally exposed this — cards still match height exactly, content now visibly centered rather than gapped at the bottom.
   - Bumped service worker cache to `full-regalia-shell-v107`.
+  - **REVERTED in the next entry above** — Neil found this looked worse (title visually shifted down) than the gap it fixed.
 
 - **SHIPPED (2026-09-06): Analytics team page's "Who's picked" list starts collapsed.** Neil: as the season goes on this list only grows, and having it open by default meant scrolling past it every time just to see the rest of the team's stats.
   - The metrics summary row (bet count/record/category breakdown, shipped earlier) is now itself the tap-to-expand toggle — same interaction pattern as the Games tab's bet-count chip and the Awards history, so it reads as the same feature rather than a new one. The detailed per-bet list stays hidden until tapped.

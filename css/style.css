@@ -1282,17 +1282,6 @@ a.game-card-team:active {
   flex-direction: column;
 }
 
-/* On a light-awards week, Standings' 3-row floor can end up naturally
- * TALLER than Awards' own content — the grid then stretches Awards to
- * match, leaving blank space trailing at ITS bottom instead (the flip
- * side of the gap this same stretch approach originally fixed for
- * Standings). Awards has no natural "pin to bottom" anchor the way
- * Standings' CTA button does, so center its content as a group instead —
- * a small, even gap above and below reads as intentional, not leftover. */
-.awards-preview-card {
-  justify-content: center;
-}
-
 .home-split-row .card-title {
   font-size: 12.5px;
   margin-bottom: 6px;
