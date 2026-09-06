@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-09-06): Analytics team page's "Who's picked" list starts collapsed.** Neil: as the season goes on this list only grows, and having it open by default meant scrolling past it every time just to see the rest of the team's stats.
+  - The metrics summary row (bet count/record/category breakdown, shipped earlier) is now itself the tap-to-expand toggle — same interaction pattern as the Games tab's bet-count chip and the Awards history, so it reads as the same feature rather than a new one. The detailed per-bet list stays hidden until tapped.
+  - Delegated once on the stable `#team-detail` container so it keeps working across team switches (which replace the whole container's HTML).
+  - Verified via Playwright (6/6): list starts collapsed, metrics summary still shows without expanding, tapping reveals both players' actual picks, tapping again re-collapses.
+  - Bumped service worker cache to `full-regalia-shell-v106`.
+
 - **SHIPPED (2026-09-06): Standings card cleanup — "Full Standings" moved above a smaller Enter Picks button.** Neil: clean up the CTA button and reduce remaining gap. Reordered to title → rows → "Full Standings →" → Enter Picks button → week subline, and shrunk the button (15px→13px font, tighter padding). Smaller chrome means the dynamic row-fill logic (shipped `v104`) automatically fits more real standings rows into the same target height, since it measures the button directly rather than assuming a fixed size.
   - Verified via Playwright: dynamic-fill still keeps both cards equal height in both the small-roster/heavy-awards and large-roster/light-awards scenarios.
   - Bumped service worker cache to `full-regalia-shell-v105`.

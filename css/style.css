@@ -1399,6 +1399,16 @@ a.game-card-team:active {
   border-top: 1px solid var(--border);
 }
 
+.team-history-chevron {
+  font-size: 9px;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+.team-history-chevron.expanded {
+  transform: rotate(180deg);
+}
+
 .award-history-line {
   font-size: 10.5px;
   color: var(--text-faint);
