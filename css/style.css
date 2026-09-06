@@ -1311,12 +1311,15 @@ a.game-card-team:active {
  * roomier .enter-picks-cursive sizing it inherits from was tuned for the
  * full page width and wrapped badly at half that. */
 .standings-preview-cta {
-  font-size: 15px;
-  padding: 9px 10px;
+  font-size: 13px;
+  padding: 7px 8px;
   /* Pushed to the bottom of the (now stretch-height) Standings card,
    * whatever that height ends up being once matched to Awards' — the
-   * flexible gap lives between the standings rows and this button, not as
-   * dead space trailing below everything. */
+   * flexible gap lives between "Full Standings" and this button, not as
+   * dead space trailing below everything. Shrunk (Neil) so more of the
+   * card's height budget goes to actual standings rows instead of a big
+   * button — the dynamic row-fill logic (index.html) picks up the smaller
+   * footprint automatically since it measures this element directly. */
   margin-top: auto;
   white-space: nowrap;
 }
@@ -1409,7 +1412,7 @@ a.game-card-team:active {
  * every other card's trailing action link. */
 .standings-preview-footer {
   text-align: right;
-  margin-top: 10px;
+  margin: 6px 0 10px;
 }
 
 .standings-preview-footer .link {

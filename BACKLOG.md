@@ -4,6 +4,10 @@
 
 ## Status
 
+- **SHIPPED (2026-09-06): Standings card cleanup — "Full Standings" moved above a smaller Enter Picks button.** Neil: clean up the CTA button and reduce remaining gap. Reordered to title → rows → "Full Standings →" → Enter Picks button → week subline, and shrunk the button (15px→13px font, tighter padding). Smaller chrome means the dynamic row-fill logic (shipped `v104`) automatically fits more real standings rows into the same target height, since it measures the button directly rather than assuming a fixed size.
+  - Verified via Playwright: dynamic-fill still keeps both cards equal height in both the small-roster/heavy-awards and large-roster/light-awards scenarios.
+  - Bumped service worker cache to `full-regalia-shell-v105`.
+
 - **SHIPPED (2026-09-05): Standings preview now shows as many rows as actually fit next to Awards, instead of a fixed 5.** Neil: fill the gap with "as many names as will fit" and make the two cards equal size, rather than a hardcoded row count that's sometimes too many, sometimes too few.
   - `index.html` now renders Awards first, measures its real natural height (title + content, independent of the grid's stretch), then renders EVERY player into Standings temporarily to measure one real row's height and the card's fixed chrome (title, CTA button, week subline, footer link), and finally trims back to however many rows actually fit that target height — never fewer than 3 (still reads as a "top of the board" teaser) and never more than the roster.
   - Verified via Playwright across two opposite scenarios: a small 4-player roster with a heavy awards week (shows all 4, heights match exactly) and a large 15-player roster with a single light award (shows just the 3-row floor rather than all 15, keeping any residual gap small and on the Awards side instead of a large one on the Standings side).
