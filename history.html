@@ -91,12 +91,14 @@
     // "All players" out from under them.
     //
     // Filters/groups on entry.label ("NFL · Week 1", "NCAA · Week 1"), NOT
-    // entry.weekKey — weekBucketKeyFromSnapshot() only encodes seasonType+
-    // week number, not sport, so NFL Week 1 and NCAA Week 1 share the exact
-    // same weekKey. Grouping by weekKey silently merged both sports' entries
-    // into one section (real bug, caught before shipping by feeding actual
-    // production data through this exact page). label is already unique per
-    // sport+week, so it's both correct and simpler.
+    // entry.weekKey. Originally because weekBucketKeyFromSnapshot() didn't
+    // encode sport at all — NFL Week 1 and NCAA Week 1 shared the exact same
+    // weekKey, silently merging both sports' entries into one section (real
+    // bug, caught before shipping by feeding actual production data through
+    // this exact page). weekBucketKeyFromSnapshot() now includes sport in
+    // the key too (fixed at the source, 2026-09-08, after the same collision
+    // resurfaced elsewhere), but label was already unique per sport+week and
+    // reads better in a dropdown regardless, so grouping stays on label.
     function populateFilters() {
       const currentPlayer = playerFilter.value;
       const currentWeek = weekFilter.value;

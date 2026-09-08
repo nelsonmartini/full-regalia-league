@@ -118,10 +118,22 @@ function pickLabel(pick) {
 
 /** Same as picks.js's weekBucketKey but built from a saved pick's snapshot
  * instead of a live game object, so it works even after a game rolls out of
- * the live fetch window. */
+ * the live fetch window.
+ *
+ * Includes the SPORT in the key — real bug (Neil, 2026-09-08): without it,
+ * NFL Week 1 and CFB Week 1 (or any same seasonType+week pairing) produce
+ * the IDENTICAL key string, since neither sport nor week number alone is
+ * unique. history.html independently hit and worked around this same
+ * collision (grouping by label instead of key) rather than fixing it here;
+ * the real-world trigger this time was Home's "Big Action" — scoping to the
+ * current week matched NFL Week 1's key against CFB's already-finished,
+ * unrelated Week 1 too, so Big Action kept showing old finished CFB games
+ * instead of the actually-current NFL/CFB pairing. Every caller that already
+ * compares within one known sport (the vast majority) is unaffected by this
+ * change; it only fixes the callers that were comparing across sports. */
 function weekBucketKeyFromSnapshot(snapshot) {
   if (!snapshot) return null;
-  return snapshot.week != null ? `w${snapshot.seasonType ?? "x"}-${snapshot.week}` : `d${snapshot.date?.slice(0, 10)}`;
+  return snapshot.week != null ? `${snapshot.sport}-w${snapshot.seasonType ?? "x"}-${snapshot.week}` : `${snapshot.sport}-d${snapshot.date?.slice(0, 10)}`;
 }
 
 function weekGroupLabel(snapshot) {
@@ -145,8 +157,10 @@ function statusBadge(result) {
   return `<span style="color:var(--text-faint);font-weight:700">Pending</span>`;
 }
 
+/** Sport-prefixed for the same reason as weekBucketKeyFromSnapshot above —
+ * keep both in sync if either changes. */
 function weekBucketKey(game) {
-  return game.week != null ? `w${game.seasonType ?? "x"}-${game.week}` : `d${game.date?.slice(0, 10)}`;
+  return game.week != null ? `${game.sport}-w${game.seasonType ?? "x"}-${game.week}` : `${game.sport}-d${game.date?.slice(0, 10)}`;
 }
 
 /** Games actually offerable as picks: not yet kicked off, odds posted, and
