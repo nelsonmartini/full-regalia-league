@@ -92,6 +92,12 @@ function computeAwardsForWeek(weekPicks, regaliaWeek) {
     // "Week 3 · Aug 25–31" — same numbering as the Picks page's own week
     // picker, so this week can be cross-checked against it directly.
     weekLabel: `Week ${regaliaWeek.regaliaWeekNumber} · ${regaliaWeekDateRange(regaliaWeek)}`,
+    // Carried through so callers can decide whether this week is officially
+    // over yet (see isRegaliaWeekFinal, js/pick-utils.js) — e.g. Home's
+    // Awards card badges the current week "Final" starting the day after
+    // its last game, since results shown before then could still shift as
+    // that day's games keep grading.
+    endDate: regaliaWeek.endDate,
     dumbass: topTied("misses"),
     nostradamus: topTied("hits"),
     bigDawg,

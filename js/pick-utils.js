@@ -182,7 +182,18 @@ function filterPickableGames(games) {
  * fully-finished week isn't "current" or "upcoming." Weekly Awards
  * (js/awards.js) needs the opposite — the most recently *completed* week —
  * so it passes true to keep those weeks in the list instead of filtering
- * them out. */
+ * them out.
+ *
+ * IMPORTANT: this filtering happens LAST, after regaliaWeekNumber has
+ * already been assigned to the full, unfiltered chronological sequence —
+ * never before it. Real bug (Neil, 2026-09-08): the filter used to run
+ * BEFORE numbering, so the moment Week 1's last game finished (dropping it
+ * out of the "still pickable" set), Week 2 slid into array index 0 and
+ * inherited number 1 — every page showing "the current week" suddenly
+ * relabeled the REAL Week 2 (correct dates) as "👑 Week 1" (stale number).
+ * Numbering the full set first, then filtering, makes a week's number a
+ * permanent identity — it never gets reassigned just because an earlier
+ * week finished. */
 function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
   // Date range comes from EVERY game sharing that week key, not just the
   // still-pickable ones — a "week" can include games already played (e.g.
@@ -205,15 +216,16 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
     };
   }
 
-  function sortedWeeks(games) {
+  // Always the FULL set here (no pickability filtering) — that filtering is
+  // applied once, at the very end, after numbering (see comment above).
+  function allSortedWeeks(games) {
     return [...new Set(games.map(weekBucketKey))]
       .map((key) => weekInfo(games, key))
-      .filter((w) => includeCompleted || w.hasPickable)
       .sort((a, b) => a.startDate - b.startDate);
   }
 
-  const nflWeeks = sortedWeeks(allGamesBySport.nfl);
-  const cfbWeeks = sortedWeeks(allGamesBySport.cfb);
+  const nflWeeks = allSortedWeeks(allGamesBySport.nfl);
+  const cfbWeeks = allSortedWeeks(allGamesBySport.cfb);
   const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
   // One-to-one nearest-match pairing (greedy on smallest date gap first), not
@@ -251,6 +263,10 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
       cfbWeekNumber: cfbMatch?.weekNumber ?? null,
       startDate: nfl.startDate,
       endDate: nfl.endDate,
+      // A Regalia Week still counts as "pickable" as long as EITHER leg
+      // does — one sport's leg finishing shouldn't hide the whole paired
+      // week while the other sport's games haven't even kicked off yet.
+      hasPickable: nfl.hasPickable || (cfbMatch?.hasPickable ?? false),
     };
   });
 
@@ -273,6 +289,7 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
       cfbWeekNumber: cfb.weekNumber,
       startDate: cfb.startDate,
       endDate: cfb.endDate,
+      hasPickable: cfb.hasPickable,
     }));
 
   // "Crown Week" numbering is purely positional (1, 2, 3, ... in chronological
@@ -283,9 +300,33 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
   // sequence sidesteps that entirely — the NFL/NCAA-specific numbers still
   // show in the row's subline (see renderWeekPickerList), just not in the
   // headline number.
-  return [...nflEntries, ...cfbOnlyEntries]
+  //
+  // Numbering happens on the FULL set (every week, finished or not) BEFORE
+  // any pickability filtering — see the big comment on this function. That
+  // filtering, when requested, is the very last step, so it can only ever
+  // remove entries, never shift anyone else's already-assigned number.
+  const numbered = [...nflEntries, ...cfbOnlyEntries]
     .sort((a, b) => a.startDate - b.startDate)
     .map((week, i) => ({ ...week, regaliaWeekNumber: i + 1 }));
+
+  return includeCompleted ? numbered : numbered.filter((w) => w.hasPickable);
+}
+
+/** Whether a Regalia Week is officially over — true starting the calendar
+ * day AFTER its last game's date, not the instant that game ends. Neil
+ * wanted a full grace day before a week's Awards get called "Final," since
+ * a week's last game can still be grading (or a late correction could still
+ * land) the same day it finishes — only once a new calendar day has
+ * started is a week's result treated as locked in. Takes anything with an
+ * `endDate` (a buildRegaliaWeeks entry, or an awards.js weekly-award result,
+ * which carries the same `endDate` through). */
+function isRegaliaWeekFinal(week) {
+  if (!week?.endDate) return false;
+  const endDay = new Date(week.endDate);
+  endDay.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today > endDay;
 }
 
 function regaliaWeekDateRange(week) {

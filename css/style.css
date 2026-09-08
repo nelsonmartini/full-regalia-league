@@ -544,6 +544,14 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
+/* Neutral/settled, not an alert color like .live or .next — a week being
+ * "Final" is just a fact, not something drawing attention. */
+.badge.final {
+  background: color-mix(in srgb, var(--text-faint) 16%, transparent);
+  color: var(--text-faint);
+  border: 1px solid color-mix(in srgb, var(--text-faint) 35%, transparent);
+}
+
 /* ---------- Live page game cards ---------- */
 /* Distinct from .pick-game (which is the Picks page's category-pool chip UI)
  * — this is purely a read-only result/odds display, so it gets its own

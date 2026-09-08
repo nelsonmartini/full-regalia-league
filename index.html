@@ -170,7 +170,10 @@
     const allAwards = computeAllWeeklyAwards(graded, games);
     document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(allAwards, { compact: true });
     const currentWeek = allAwards[allAwards.length - 1];
-    document.getElementById("awards-card-title").textContent = currentWeek ? `🏅 Week ${currentWeek.regaliaWeekNumber} Awards` : "🏅 Awards";
+    const currentWeekFinal = currentWeek && isRegaliaWeekFinal(currentWeek);
+    document.getElementById("awards-card-title").innerHTML = currentWeek
+      ? `🏅 Week ${currentWeek.regaliaWeekNumber} Awards${currentWeekFinal ? ` <span class="badge final">Final</span>` : ""}`
+      : "🏅 Awards";
     wireAwardToggleDelegation(document.getElementById("weekly-awards"));
 
     // Render every player first (needed to measure a real row's height and
