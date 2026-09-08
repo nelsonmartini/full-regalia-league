@@ -224,7 +224,19 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
       .sort((a, b) => a.startDate - b.startDate);
   }
 
-  const nflWeeks = allSortedWeeks(allGamesBySport.nfl);
+  // NFL preseason (seasonType 1) is exhibition football — never a real
+  // Regalia Week, no matter which caller passes it in. Excluded HERE,
+  // inside the shared function, rather than trusted to every call site:
+  // real bug (Neil, 2026-09-08), two callers (currentRegaliaWeek, and the
+  // Picks page's own week-numbering fetch) passed preseason games straight
+  // through. That used to be harmless purely by accident — the old
+  // filter-before-numbering order silently dropped preseason weeks (they
+  // never have a pickable game once the season starts) before they could
+  // consume a number. Now that numbering runs on the full season FIRST (see
+  // the big comment above), those 4 already-finished preseason weeks
+  // permanently claimed Regalia Week numbers 1-4, pushing the real current
+  // week — Week 1's actual games, Sep 9-14 — to a mislabeled "👑 Week 5".
+  const nflWeeks = allSortedWeeks(allGamesBySport.nfl.filter((g) => g.seasonType !== 1));
   const cfbWeeks = allSortedWeeks(allGamesBySport.cfb);
   const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
@@ -362,7 +374,9 @@ function regaliaWeekTitle(week) {
  * two different ones. Shared by js/awards.js (career-count history) and
  * analytics.html (the league-wide week filter). */
 function attachRegaliaWeeks(gradedPicks, games, { includeCompleted = true } = {}) {
-  const bySport = { nfl: games.filter((g) => g.sport === "nfl" && g.seasonType !== 1), cfb: games.filter((g) => g.sport === "cfb") };
+  // NFL preseason exclusion now lives inside buildRegaliaWeeks itself, so
+  // every caller gets it for free — no need to pre-filter here.
+  const bySport = { nfl: games.filter((g) => g.sport === "nfl"), cfb: games.filter((g) => g.sport === "cfb") };
   const regaliaWeeks = buildRegaliaWeeks(bySport, { includeCompleted });
   function regaliaWeekForPick(gp) {
     const key = weekBucketKeyFromSnapshot(gp.snapshot);

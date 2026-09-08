@@ -158,8 +158,7 @@
     // and Most Active Games all derive from the same picks/games data, no
     // reason to fetch any of it twice (previously two separate IIFEs, the
     // games one using a narrower ESPN window that Most Active Games didn't
-    // actually need — bet counts alone already keep it scoped to whatever
-    // week people are actually picking).
+    // actually need).
     const [, picksRows, games] = await Promise.all([loadPlayers(), loadSeasonPicks(), loadSeasonGames(), loadScoringConfig()]);
     const graded = gradeSeasonPicks(picksRows, games);
 
@@ -224,7 +223,22 @@
     // everyone, not just "what's live right now" (previous behavior).
     // Falls back to filling any remaining slots by live-status so the card
     // isn't sparse early in a week before most people have picked yet.
-    const active = mostActiveGames(games, picksRows, 3);
+    //
+    // Scoped to the CURRENT Regalia Week's games only — the original
+    // assumption was that raw bet counts alone would naturally stay on the
+    // current week (that's when people are actively picking), but that only
+    // holds while a week is still in progress. Real gap (Neil, 2026-09-08):
+    // once a week ends, its final accumulated bet total sticks around and
+    // can easily outrank a brand-new week's just-started picks, so the card
+    // would keep showing last week's games instead of rotating forward.
+    // Restricting the candidate pool to this week's games up front makes the
+    // rotation automatic — a new week always starts from its own games, no
+    // matter how many bets an old week racked up.
+    const activeRegaliaWeek = currentRegaliaWeek(games);
+    const currentWeekGames = activeRegaliaWeek
+      ? games.filter((g) => weekBucketKey(g) === activeRegaliaWeek.nflWeekKey || weekBucketKey(g) === activeRegaliaWeek.cfbWeekKey)
+      : games; // no current week resolvable (e.g. offseason gap) — fall back to everything rather than an empty card
+    const active = mostActiveGames(currentWeekGames, picksRows, 3);
     const homeGamesEl = document.getElementById("home-games");
     homeGamesEl.innerHTML = active.length
       ? active.map((g) => `<div class="game-card-group game-card-compact">${renderGameCard(g)}${gameBetsSummaryHtml(g, picksRows)}</div>`).join("")
