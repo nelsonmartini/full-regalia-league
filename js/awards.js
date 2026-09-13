@@ -36,10 +36,17 @@ function computeAwardsForWeek(weekPicks, regaliaWeek) {
   const stats = [...byPlayer.entries()].map(([name, picks]) => {
     const hits = picks.filter((p) => p.result === "hit").length;
     const misses = picks.filter((p) => p.result === "miss").length;
-    // Biggest underdog taken: the largest positive spread line among this
-    // player's Plus Spread picks that week.
+    // Biggest underdog taken AND covered: the largest positive spread line
+    // among this player's Plus Spread picks that week that actually hit.
+    // Originally didn't check the result at all — Neil (2026-09-13):
+    // "shouldn't you have to get that bet correct in order to win it?"
+    // Taking a wild underdog that lost badly shouldn't out-rank someone who
+    // took a smaller dog and was actually right. A push doesn't count as
+    // "covered" either, same as everywhere else results are graded. If
+    // nobody's underdog pick hit that week, nobody wins Big Dawg — same
+    // "nobody qualified" behavior Nostradamus/Ice Cold already have.
     const biggestDog = picks
-      .filter((p) => p.pick.type === "spread" && p.pick.line > 0)
+      .filter((p) => p.pick.type === "spread" && p.pick.line > 0 && p.result === "hit")
       .reduce((best, p) => (!best || p.pick.line > best.pick.line ? p : best), null);
     // Closest save to kickoff: smallest positive gap between when the pick
     // was saved (updated_at) and the game's kickoff (snapshot.date).
