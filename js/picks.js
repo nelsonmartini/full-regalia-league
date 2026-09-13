@@ -115,16 +115,24 @@ function gameSnapshot(game) {
 // a saved pick's snapshot instead of a live game object, so slot-fill works
 // even after a game rolls out of the live fetch window.
 
+// `games` must be the FULL (any-status) list, not pickable-only — real bug
+// (Neil, 2026-09-13): once every game in a week has kicked off, a
+// pickable-only list has nothing left matching `key`, and this fell through
+// to returning the raw internal key string ("cfb-w2-2") straight into the
+// UI instead of a real label ("Week 2"). weekBucketKey() including sport
+// now (see its own comment) makes searching the full mixed-sport list safe
+// — no risk of matching the wrong sport's same-numbered week.
 function weekBucketLabel(key, games) {
   const game = games.find((g) => weekBucketKey(g) === key);
   if (game?.week != null) {
     const prefix = SEASON_PHASE_PREFIX[game.seasonType] ?? "";
     return `${prefix}Week ${game.week}`;
   }
+  if (!game) return "Week";
   try {
     return `Week of ${new Date(game.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
   } catch {
-    return key;
+    return "Week";
   }
 }
 
@@ -217,21 +225,23 @@ function slotsForSportWeek(picks, sport, weekKey) {
  * can be null now that weeks are Regalia-Week-linked (js/picks.js's
  * buildRegaliaWeeks) — happens when that sport's odds for the linked week
  * haven't posted yet, not an error state. */
-function computeProgress(picks, sportWeeks, gamesBySport) {
+function computeProgress(picks, sportWeeks, allGames) {
   const perSport = {};
   let total = 0;
   for (const sport of SPORTS) {
     const slots = slotsForSportWeek(picks, sport, sportWeeks[sport]);
     const filled = CATEGORIES.filter((c) => slots[c]).length;
-    const weekLabel = sportWeeks[sport] ? weekBucketLabel(sportWeeks[sport], gamesBySport[sport]) : "Not posted yet";
+    // allGames (every status, not just still-pickable) — a week whose games
+    // have all already kicked off still needs a real "Week N" label here.
+    const weekLabel = sportWeeks[sport] ? weekBucketLabel(sportWeeks[sport], allGames) : "Not posted yet";
     perSport[sport] = { filled, weekLabel };
     total += filled;
   }
   return { perSport, total };
 }
 
-function renderProgress(el, picks, sportWeeks, gamesBySport) {
-  const { perSport } = computeProgress(picks, sportWeeks, gamesBySport);
+function renderProgress(el, picks, sportWeeks, allGames) {
+  const { perSport } = computeProgress(picks, sportWeeks, allGames);
   el.innerHTML = SPORTS.map((sport) => {
     const { filled, weekLabel } = perSport[sport];
     const complete = filled === 4;
@@ -271,7 +281,22 @@ function sortGroupKeys(sport, keys) {
  * click handler in initPicksPage can tell which sport a click belongs to
  * without a single global "selected sport" to fall back on. */
 function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpanded, query, conferenceFilter, allGames, groupExpanded, allPicksRows) {
-  if (games.length === 0) {
+  // A category with a LOCKED pick (game already kicked off) still needs to
+  // render — its result/game card comes from `slots`+`allGames`, not from
+  // `games` (still-pickable only) — so the "nothing to show" shortcut below
+  // only fires when there's truly nothing: no pickable games left to offer
+  // AND no already-made pick to show results for either. Real gap (Neil,
+  // 2026-09-13): once every game in a sport's current week has kicked off
+  // (common for NCAA, whose Thu-Sat slate finishes days before NFL's
+  // Thu-Mon one), `games` goes to 0 and this used to bail out before ever
+  // reaching the per-category locked-result rendering below — hiding every
+  // player's already-graded picks (hit/miss, final score) behind a blanket
+  // "no games" message, even though that info was fully computed and ready.
+  const hasAnyLockedPick = CATEGORIES.some((cat) => {
+    const slot = slots[cat];
+    return !!(slot && slot.entry.snapshot?.date && new Date(slot.entry.snapshot.date) <= new Date());
+  });
+  if (games.length === 0 && !hasAnyLockedPick) {
     return { html: '<div class="empty-state">No games with odds available for this week yet — check back closer to kickoff.</div>', anyMatched: true };
   }
 
@@ -690,7 +715,7 @@ async function initPicksPage() {
 
   function renderAll() {
     renderSportSections(container, gamesBySport, currentPicks, sportWeeks, nflDivisions, categoryExpanded, sportExpanded, searchQuery, conferenceFilter, allGames, groupExpanded, allPicksRows);
-    renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
+    renderProgress(progressEl, currentPicks, sportWeeks, allGames);
   }
 
   teamSearch.addEventListener("input", () => {
@@ -917,11 +942,11 @@ async function initPicksPage() {
     pendingDeletes.clear();
 
     loadAndRenderStatus();
-    renderProgress(progressEl, currentPicks, sportWeeks, gamesBySport);
+    renderProgress(progressEl, currentPicks, sportWeeks, allGames);
     // Both sports shown per-line, same as the persistent progress card —
     // there's no single "the sport being edited" anymore now that both are
     // visible/editable together (no more NFL/NCAA toggle).
-    const { perSport } = computeProgress(currentPicks, sportWeeks, gamesBySport);
+    const { perSport } = computeProgress(currentPicks, sportWeeks, allGames);
     const weekTag = regaliaWeeks[selectedRegaliaIndex] ? `, ${regaliaWeekTitle(regaliaWeeks[selectedRegaliaIndex]).replace(/^👑 /, "").replace(/ Picks ·.*$/, "")}` : "";
     saveStatus.textContent = `Saved for ${titleCase(player)}${weekTag} — NFL ${perSport.nfl.filled}/4 · NCAA ${perSport.cfb.filled}/4.`;
   }
