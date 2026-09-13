@@ -258,13 +258,15 @@ function formatFullDate(iso) {
  * final) is brought up to full text color so the result reads at a glance
  * without needing to compare two numbers.
  *
- * NFL: abbreviation+mascot-name stack (KC / Chiefs), home team marked with
- * a house icon — unchanged, those abbreviations are widely recognized on
- * their own. NCAA: just the school's own name (Alabama, not ALA) — tried
- * showing the mascot too, but landed back on school-name-only per Neil.
- * Home team gets a leading "@" — standard sports shorthand ("@" marks the
- * site of the game, i.e. the home team's place). A #N prefix shows up for
- * either sport when that team is currently AP/Coaches top-25 ranked. */
+ * NFL: abbreviation+mascot-name stack (KC / Chiefs). NCAA: just the
+ * school's own name (Alabama, not ALA) — tried showing the mascot too, but
+ * landed back on school-name-only per Neil. Both sports mark the home team
+ * with a leading "@" — standard sports shorthand ("@" marks the site of the
+ * game, i.e. the home team's place) — NFL used a house emoji for this
+ * instead until Neil asked for the same "@" treatment on both sports
+ * (2026-09-13), for one consistent convention across the whole app instead
+ * of two different home-team markers depending on sport. A #N prefix shows
+ * up for either sport when that team is currently AP/Coaches top-25 ranked. */
 function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome) {
   const classes = `game-card-team${isWinner ? " is-winner" : ""}`;
   // Loading="lazy" + onerror hide — a missing/broken logo (some smaller
@@ -283,7 +285,7 @@ function gameCardTeamRow(team, opponentAbbr, sport, showScore, isWinner, isHome)
       ? `<span class="game-card-team-fullname">${isHome ? "@ " : ""}${rankHtml}${team?.location || team?.abbr || "?"}</span>`
       : `<span class="game-card-team-stack">
           <span class="game-card-team-abbr">${team?.abbr || "?"}</span>
-          <span class="game-card-team-name">${isHome ? `<span class="game-card-home-icon" title="Home team">🏠</span>` : ""}${team?.name || ""}</span>
+          <span class="game-card-team-name">${isHome ? "@ " : ""}${team?.name || ""}</span>
         </span>`;
   const inner = `
     ${logoHtml}
