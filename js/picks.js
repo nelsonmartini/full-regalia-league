@@ -888,6 +888,18 @@ async function initPicksPage() {
 
     renderAll();
     saveStatus.textContent = "";
+
+    // Confirming a CHANGE (the modal above) now saves immediately instead of
+    // just staging it — real gap (Neil, 2026-09-13): the modal already asks
+    // "are you sure," so requiring a separate "Save my picks" tap afterward
+    // just risked someone believing their change was saved when it wasn't.
+    // A first-time pick into an empty slot (no confirmation shown) still
+    // batches into the normal Save flow, unchanged — this only fires for
+    // actual replacements. doSave() saves everything currently pending, not
+    // just this one change, same as tapping "Save my picks" always has.
+    if (isChange) {
+      await doSave();
+    }
   });
 
   async function doSave() {

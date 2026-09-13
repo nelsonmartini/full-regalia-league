@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-09-13): Confirming a pick change now saves it immediately instead of just staging it.** Neil: "is [Change my pick] actually saving? ... once 'change my pick' is selected, it should save." Confirmed by reading the code: tapping "Change pick" in the confirm modal only updated local state (`currentPicks`/`pendingUpserts`/`pendingDeletes`) and re-rendered — the actual Supabase write only ever happened via the separate "Save my picks" button. Someone could confirm a change, believe it was done, and never actually persist it.
+  - Fix: confirming a change (`isChange` true) now calls the same `doSave()` the "Save my picks" button uses, right after staging the change — saves everything currently pending, not just the one change, same scope as a normal manual save. A first-time pick into an empty slot (no confirmation shown) is unaffected — still batches into the normal Save flow.
+  - Also relabeled the confirm button from "Change pick" to "Change & save" so the immediate-save behavior is clear at the moment of the tap, not just implied.
+  - Verified via Playwright: picking a first value stages locally with no write (unchanged); changing that pick shows the confirm modal, and confirming it fires a real save request immediately (correct new pick, real "Saved for..." status update) with no separate Save tap needed.
+  - Bumped service worker cache to `full-regalia-shell-v117`.
+
 - **SHIPPED (2026-09-13): Big Dawg now requires the underdog bet to actually hit.** Neil: "what is the big dawg award tracking? shouldnt you have to get that bet correct in order to win it?" Checked the actual logic in `computeAwardsForWeek()` (`js/awards.js`) — confirmed he was right: `biggestDog` only ever filtered on `pick.line > 0` (took an underdog), with no check on the pick's result at all. Someone could take a wild +24.5 dog that got blown out and still win Big Dawg over someone who took a smaller dog and was actually right.
   - Asked Neil directly whether Big Dawg should require a hit or stay a pure boldness award regardless of outcome — he confirmed: require the hit.
   - Fix: `biggestDog` now also requires `p.result === "hit"` (a push doesn't count as covering, same as everywhere else results are graded). If nobody's underdog pick hit that week, nobody wins Big Dawg — same "nobody qualified" behavior Nostradamus/Ice Cold already have.
