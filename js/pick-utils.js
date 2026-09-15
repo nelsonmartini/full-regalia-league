@@ -191,12 +191,27 @@ function filterPickableGames(games) {
  * showed this Regalia one, so "Week 1" meant two different date ranges
  * depending which page you were on. */
 /** `includeCompleted`: false (default, every existing caller) returns only
- * weeks with at least one game still left to pick — right for the Picks
- * page's own selector and "current week" freshness lines, where a
- * fully-finished week isn't "current" or "upcoming." Weekly Awards
- * (js/awards.js) needs the opposite — the most recently *completed* week —
- * so it passes true to keep those weeks in the list instead of filtering
- * them out.
+ * weeks that haven't fully wrapped up yet — right for the Picks page's own
+ * selector and "current week" freshness lines, where a fully-finished week
+ * isn't "current" or "upcoming." Weekly Awards (js/awards.js) needs the
+ * opposite — the most recently *completed* week — so it passes true to keep
+ * those weeks in the list instead of filtering them out.
+ *
+ * "Hasn't fully wrapped up" means at least one game in the week isn't
+ * COMPLETED yet — not merely "still has a game left to pick." Real bug
+ * (Neil, 2026-09-14): a week's very last game (that Monday Night Football
+ * finale) going LIVE used to immediately flip the whole site to the next
+ * week the instant it kicked off, hours before it actually finished —
+ * Picks, Home's Big Action, and the freshness text all jumped to "Week 3"
+ * while that Week 2 game was still being played, and users could no longer
+ * see or reference their own Week 2 picks without manually switching back.
+ * Awards was never affected (it already only advances once picks actually
+ * GRADE, i.e. once games are final) — this brings the rest of the site in
+ * line with that same "wait for it to actually finish" behavior, per Neil's
+ * explicit ask that the whole site should move together. Individual pick
+ * LOCKING at kickoff (js/picks.js's own isLocked check) is unrelated and
+ * unchanged — you still can't edit a pick once its game starts; this is
+ * purely about which week counts as "current" for defaulting/scoping.
  *
  * IMPORTANT: this filtering happens LAST, after regaliaWeekNumber has
  * already been assigned to the full, unfiltered chronological sequence —
@@ -220,6 +235,10 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
     const weekGames = games.filter((g) => weekBucketKey(g) === key);
     const dates = weekGames.map((g) => new Date(g.date));
     const hasPickable = filterPickableGames(weekGames).length > 0;
+    // Broader than hasPickable — a LIVE game (kicked off, not yet final)
+    // isn't pickable anymore but the week it belongs to isn't "done" either.
+    // This is what actually drives the "still current" determination below.
+    const hasUnconcludedGame = weekGames.some((g) => !g.status?.completed);
     return {
       key,
       weekNumber: weekGames[0]?.week ?? null,
@@ -227,6 +246,7 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
       startDate: new Date(Math.min(...dates)),
       endDate: new Date(Math.max(...dates)),
       hasPickable,
+      hasUnconcludedGame,
     };
   }
 
@@ -289,10 +309,12 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
       cfbWeekNumber: cfbMatch?.weekNumber ?? null,
       startDate: nfl.startDate,
       endDate: nfl.endDate,
-      // A Regalia Week still counts as "pickable" as long as EITHER leg
-      // does — one sport's leg finishing shouldn't hide the whole paired
-      // week while the other sport's games haven't even kicked off yet.
+      // A Regalia Week still counts as current as long as EITHER leg
+      // hasn't fully concluded — one sport's leg finishing shouldn't hide
+      // the whole paired week while the other sport still has an unplayed
+      // OR still-live game.
       hasPickable: nfl.hasPickable || (cfbMatch?.hasPickable ?? false),
+      hasUnconcludedGame: nfl.hasUnconcludedGame || (cfbMatch?.hasUnconcludedGame ?? false),
     };
   });
 
@@ -316,6 +338,7 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
       startDate: cfb.startDate,
       endDate: cfb.endDate,
       hasPickable: cfb.hasPickable,
+      hasUnconcludedGame: cfb.hasUnconcludedGame,
     }));
 
   // "Crown Week" numbering is purely positional (1, 2, 3, ... in chronological
@@ -335,7 +358,7 @@ function buildRegaliaWeeks(allGamesBySport, { includeCompleted = false } = {}) {
     .sort((a, b) => a.startDate - b.startDate)
     .map((week, i) => ({ ...week, regaliaWeekNumber: i + 1 }));
 
-  return includeCompleted ? numbered : numbered.filter((w) => w.hasPickable);
+  return includeCompleted ? numbered : numbered.filter((w) => w.hasUnconcludedGame);
 }
 
 /** Whether a Regalia Week is officially over — true starting the calendar
