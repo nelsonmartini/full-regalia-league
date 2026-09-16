@@ -154,7 +154,7 @@
     const avgFor = (record.pointsFor / record.scoringGamesCounted).toFixed(1);
     const avgAgainst = (record.pointsAgainst / record.scoringGamesCounted).toFixed(1);
     return `
-      <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="display:flex;gap:10px">
         <div style="flex:1;text-align:center;background:var(--bg-elev-2);border-radius:8px;padding:8px 6px">
           <div style="font-size:17px;font-weight:800">${avgFor}</div>
           <div style="font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em">Pts Scored/G</div>
@@ -225,7 +225,7 @@
     const home = aggregateTeamGameLog(gameLog.filter((e) => e.isHome));
     const away = aggregateTeamGameLog(gameLog.filter((e) => !e.isHome));
     return `
-      <div class="section-label" style="margin-top:14px;font-size:11.5px">ATS: Home vs Away</div>
+      <div class="section-label" style="margin-top:0;font-size:11.5px">ATS: Home vs Away</div>
       ${statRowHtml(`${HOME_ICON_SVG}Home`, combineSpreadBuckets(home))}
       ${statRowHtml(`${AWAY_ICON_SVG}Away`, combineSpreadBuckets(away))}`;
   }
@@ -261,32 +261,64 @@
   /** Collapsed by default, same tap-to-expand pattern (and CSS classes) as
    * "Who's picked X" below it — a team deep into the season can have a lot
    * of games, and this shouldn't be the thing pushing that list further
-   * down the page by default. */
+   * down the page by default. The aggregate percentage this list rolls up
+   * to now lives in the donut pair above it (see atsGlanceHtml) instead of
+   * being repeated here as text. */
   function teamGameLogHtml(abbr, gameLog) {
     if (gameLog.length === 0) return "";
     const rows = [...gameLog].reverse().map(teamGameLogRowHtml).join("");
-    // Aggregate ATS% and O/U split for exactly the games in this log — shown
-    // right on the (still collapsed) toggle row, so the "what's the overall
-    // percentage" answer doesn't require expanding the list first (Neil:
-    // "is there a way to aggregate the week-by-week data -- see percentage
-    // of Hit/Miss for points and O/U?"). Same combineSpreadBuckets()
-    // reasoning as the Home/Away split — minus+plus blended into one overall
-    // cover number, since this summary is about the team's spread record
-    // overall, not broken out by favorite/underdog.
+    return `
+      <div class="team-history-toggle" data-game-log-toggle="${abbr}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-elev-2);border-radius:var(--radius-sm);font-size:12px;cursor:pointer">
+        <span style="font-weight:800">Week-by-week (${gameLog.length} game${gameLog.length === 1 ? "" : "s"})</span>
+        <span class="team-history-chevron">▼</span>
+      </div>
+      <div class="team-history-list" id="team-game-log-${abbr}" style="display:none;max-height:280px;overflow-y:auto">${rows}</div>`;
+  }
+
+  /** A small ring "meter" — same magnitude-mapped color (color-mix from
+   * --positive to --negative) already used everywhere else a percentage
+   * renders in this app (compare-pct, player-kpi-pct), just drawn as a ring
+   * instead of a pill, per the dataviz skill's meter spec: the fill carries
+   * the value, the track is a calmer neutral step, never a second
+   * competing color. Direct-labeled (the % sits in the center) rather than
+   * relying on the ring alone, so the value is never color-only. */
+  function ringMeterHtml(pct, label) {
+    const r = 16;
+    const circumference = 2 * Math.PI * r;
+    const color = pct == null ? "var(--text-faint)" : `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
+    const arc =
+      pct != null
+        ? `<circle cx="20" cy="20" r="${r}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"
+             stroke-dasharray="${circumference}" stroke-dashoffset="${circumference * (1 - pct / 100)}" transform="rotate(-90 20 20)" />`
+        : "";
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <svg viewBox="0 0 40 40" width="52" height="52">
+          <circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--border)" stroke-width="5" />
+          ${arc}
+          <text x="20" y="21" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="800" fill="var(--text)">${pct == null ? "–" : pct + "%"}</text>
+        </svg>
+        <span style="font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;font-weight:700">${label}</span>
+      </div>`;
+  }
+
+  /** The week-by-week log's own aggregate, as two donuts instead of text —
+   * Neil: "is there a way to aggregate the week-by-week data -- see
+   * percentage of Hit/Miss for points and O/U?" then "could there be like a
+   * donut graphic?" ATS combines Minus+Plus (same combineSpreadBuckets()
+   * used for the Home/Away split); O/U reports Over% of decided games —
+   * there's no "hit" side to a total, but Over-as-the-tracked-share reads
+   * naturally next to an ATS ring. Sits directly above the Week-by-week
+   * toggle so the answer is visible without expanding anything. */
+  function atsGlanceHtml(gameLog) {
+    if (gameLog.length === 0) return "";
     const record = aggregateTeamGameLog(gameLog);
     const atsBucket = combineSpreadBuckets(record);
     const atsPct = coverPct(atsBucket);
     const ouTotal = record.over + record.under + record.ouPush;
-    const summaryParts = [];
-    if (atsPct != null) summaryParts.push(`ATS ${atsPct}%`);
-    if (ouTotal) summaryParts.push(`${record.over}O-${record.under}U`);
-    const summaryHtml = summaryParts.length ? `<span style="color:var(--text-faint)">${summaryParts.join(" · ")}</span>` : "";
-    return `
-      <div class="team-history-toggle" data-game-log-toggle="${abbr}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:14px;background:var(--bg-elev-2);border-radius:var(--radius-sm);font-size:12px;cursor:pointer">
-        <span style="font-weight:800">Week-by-week (${gameLog.length} game${gameLog.length === 1 ? "" : "s"})</span>
-        <span style="display:flex;align-items:center;gap:6px">${summaryHtml}<span class="team-history-chevron">▼</span></span>
-      </div>
-      <div class="team-history-list" id="team-game-log-${abbr}" style="display:none;max-height:280px;overflow-y:auto">${rows}</div>`;
+    const overPct = ouTotal ? Math.round((record.over / ouTotal) * 100) : null;
+    if (atsPct == null && overPct == null) return "";
+    return `<div style="display:flex;justify-content:center;gap:28px;margin-bottom:10px">${ringMeterHtml(atsPct, "ATS")}${ringMeterHtml(overPct, "Over")}</div>`;
   }
 
   /** "Recent form" — a dot per game (last 5, oldest to newest) plus the
@@ -313,7 +345,7 @@
           : `<span style="font-weight:800;color:var(--negative)">❄️ Missed ${streak.count} straight</span>`
         : "";
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;font-size:11.5px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px">
         <span style="color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:10px">Recent form (ATS)</span>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="display:flex;gap:4px">${dots}</div>
@@ -552,7 +584,7 @@
         )
         .join("");
       return `
-        <div class="section-label" style="margin-top:14px">Who's picked ${abbr}</div>
+        <div class="section-label" style="margin-top:0">Who's picked ${abbr}</div>
         ${metricsHtml}
         <div class="team-history-list" id="team-history-list-${abbr}" style="display:none;max-height:260px;overflow-y:auto">${rows}</div>`;
     }
@@ -570,16 +602,25 @@
       // plus spread and the over/under." The real per-game trail is the
       // thing worth seeing first; the blended season percentages are the
       // summary of it, not the other way around.
+      //
+      // Every logical group below is wrapped in its own margin-bottom:14px
+      // container instead of each piece carrying its own ad hoc
+      // margin-top/margin-bottom — Neil: "ensure spacing looks clean between
+      // sections." One consistent gap between groups, and .stat-row's own
+      // :last-child rule (css/style.css) now correctly zeroes out the LAST
+      // row within each group's own wrapper instead of wherever it happened
+      // to fall in one long flat sibling list.
+      const sections = [
+        recentFormHtml(gameLog),
+        pointsSummaryHtml(record),
+        `${atsGlanceHtml(gameLog)}${teamGameLogHtml(abbr, gameLog)}`,
+        `${statRowHtml("Minus Spread", record.minus)}${statRowHtml("Plus Spread", record.plus)}${teamOuSplitHtml(record)}`,
+        homeAwaySplitHtml(gameLog),
+        teamPickHistoryHtml(abbr),
+      ].filter(Boolean);
       return `
         <div class="section-label" style="margin-top:0">${logoHtml}${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
-        ${recentFormHtml(gameLog)}
-        ${pointsSummaryHtml(record)}
-        ${teamGameLogHtml(abbr, gameLog)}
-        ${statRowHtml("Minus Spread", record.minus)}
-        ${statRowHtml("Plus Spread", record.plus)}
-        ${teamOuSplitHtml(record)}
-        ${homeAwaySplitHtml(gameLog)}
-        ${teamPickHistoryHtml(abbr)}`;
+        ${sections.map((html) => `<div style="margin-bottom:14px">${html}</div>`).join("")}`;
     }
 
     // A game is a matchup between two teams — showing just the one you
