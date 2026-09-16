@@ -622,15 +622,12 @@ async function initPicksPage() {
   avatarPreview.innerHTML = avatarHtml(select.value, 48);
 
   container.innerHTML = '<div class="empty-state">Loading the season\'s games…</div>';
-  // NFL odds are posted for essentially the whole season in advance; college odds lag
-  // (only appear close to kickoff), but fetch the same wide window anyway — future
-  // college weeks just won't have pickable games yet until books actually post lines,
-  // which is correct/expected, not a bug.
-  const [nfl, cfb, nflDivisions] = await Promise.all([
-    fetchScoreboard("nfl", { daysForward: 200 }),
-    fetchScoreboard("cfb", { daysForward: 200 }),
-    fetchNflDivisions(),
-  ]);
+  // fetchScoreboard always returns the whole season now (js/live-scores.js) —
+  // NFL odds are posted for essentially the whole season in advance; college
+  // odds lag (only appear close to kickoff), but future college weeks just
+  // won't have pickable games yet until books actually post lines, which is
+  // correct/expected, not a bug.
+  const [nfl, cfb, nflDivisions] = await Promise.all([fetchScoreboard("nfl"), fetchScoreboard("cfb"), fetchNflDivisions()]);
   const allGames = [...nfl, ...cfb];
   // NFL preseason (seasonType 1) is exhibition football — backups and roster
   // battles, nothing that should count for a real pick'em league — excluded

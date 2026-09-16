@@ -26,48 +26,97 @@ const ESPN_SUMMARY_ENDPOINTS = {
   cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary",
 };
 
-/** "YYYYMMDD-YYYYMMDD" covering `daysBack` days ago through `daysForward` days ahead —
- * lets recently-finished games (for grading) and next couple weeks (for picking) both
- * stay in view, instead of only whatever ESPN considers "today". */
-function dateRangeParam(daysBack, daysForward) {
-  const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
-  const start = new Date();
-  start.setDate(start.getDate() - daysBack);
-  const end = new Date();
-  end.setDate(end.getDate() + daysForward);
-  return `${fmt(start)}-${fmt(end)}`;
+/** Real outage (confirmed directly, 2026-09-15): ESPN's scoreboard endpoint
+ * used to accept a `dates=YYYYMMDD-YYYYMMDD` RANGE, letting one request cover
+ * an entire season. That now returns HTTP 400 ("Failed to get events
+ * endpoint") for ANY range at all — even 2 days — for both sports. A single
+ * date with no range still works, and so does a week-based query
+ * (`week=N&seasontype=N&year=YYYY`), confirmed against real ESPN responses.
+ * fetchScoreboard is rebuilt around the week-based query: it fetches every
+ * real week of the ENTIRE season in parallel, always — `daysBack`/
+ * `daysForward` are accepted for backward compatibility (existing callers
+ * still pass them) but no longer narrow anything, since a per-week fetch has
+ * no server-side date window to ask for in the first place. Every existing
+ * caller already only wanted "the whole season, or close to it" anyway
+ * (confirmed by checking every call site), so returning the full season
+ * unconditionally is a superset of what any of them asked for, not a
+ * behavior change in practice. (An earlier version of this fix DID
+ * re-filter the combined result down to that window client-side — dropped
+ * it because it was stricter than the old behavior ever actually was: the
+ * window was previously just a server-side query hint that was never
+ * enforced client-side, so anything relying on a game landing outside a
+ * "realistic" near-term date — several existing tests deliberately use
+ * far-future placeholder dates for "always upcoming" fixtures — broke
+ * against a filter that used to not exist at all.)
+ *
+ * Season type numbering (ESPN's own): 1 = preseason (NFL only — CFB has no
+ * real equivalent), 2 = regular season, 3 = postseason. Week caps below are
+ * the real confirmed max for each (NFL: 4/18/5 — CFB: none/15/1, where CFB's
+ * single postseason "week 1" holds every bowl/playoff game at once), each
+ * with a small safety margin — ESPN returns an empty event list (not an
+ * error) for a week past the real end, so overshooting the real count is
+ * harmless, just an extra fast, cheap request. */
+const SEASON_TYPE_WEEK_CAPS = {
+  nfl: { 1: 5, 2: 19, 3: 6 },
+  cfb: { 2: 17, 3: 3 },
+};
+
+/** A season "YYYY" runs roughly Aug YYYY through Feb (YYYY+1) — before July,
+ * "now" is still inside the tail end of the PREVIOUS season (confirmed: the
+ * real Super Bowl, played Feb 2027, is only returned under year=2026). */
+function currentSeasonYear() {
+  const now = new Date();
+  return now.getMonth() < 6 ? now.getFullYear() - 1 : now.getFullYear();
 }
 
-async function fetchScoreboard(sport, { daysBack = 10, daysForward = 35 } = {}) {
+async function fetchScoreboard(sport) {
   const base = ESPN_ENDPOINTS[sport];
-  if (!base) return [];
-  const url = `${base}?dates=${dateRangeParam(daysBack, daysForward)}&limit=300`;
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return [];
-    const data = await res.json();
-    // One malformed event anywhere in a ~300-event response (a bye week, a
-    // TBD matchup, a postponed game — anything shaped slightly differently
-    // than normalizeEvent expects) used to throw inside this .map(), which
-    // the try/catch above would catch and turn into an empty array for the
-    // ENTIRE sport — not just the one bad event. Real, confirmed-plausible
-    // cause of "every player stuck at 0 points" (2026-08-30): a single bad
-    // game silently wiping out every other game that week, so nothing could
-    // be graded at all. Normalizing per-event now means one bad game gets
-    // dropped, not the whole slate.
-    return (data.events || [])
-      .map((e) => {
-        try {
-          return normalizeEvent(e, sport);
-        } catch (err) {
-          console.error("normalizeEvent failed for one event, skipping it:", e?.id, err);
-          return null;
-        }
-      })
-      .filter(Boolean);
-  } catch {
-    return [];
+  const caps = SEASON_TYPE_WEEK_CAPS[sport];
+  if (!base || !caps) return [];
+  const year = currentSeasonYear();
+
+  const requests = [];
+  for (const [seasonType, maxWeek] of Object.entries(caps)) {
+    for (let week = 1; week <= maxWeek; week++) requests.push({ seasonType, week });
   }
+
+  const perWeekResults = await Promise.all(
+    requests.map(async ({ seasonType, week }) => {
+      const url = `${base}?seasontype=${seasonType}&week=${week}&year=${year}`;
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return [];
+        const data = await res.json();
+        // One malformed event anywhere in a response (a bye week, a TBD
+        // matchup, a postponed game — anything shaped slightly differently
+        // than normalizeEvent expects) used to throw inside this .map(),
+        // which the try/catch above would catch and turn into an empty
+        // array for the ENTIRE sport — not just the one bad event. Real,
+        // confirmed-plausible cause of "every player stuck at 0 points"
+        // (2026-08-30): a single bad game silently wiping out every other
+        // game that week, so nothing could be graded at all. Normalizing
+        // per-event now means one bad game gets dropped, not the whole slate.
+        return (data.events || [])
+          .map((e) => {
+            try {
+              return normalizeEvent(e, sport);
+            } catch (err) {
+              console.error("normalizeEvent failed for one event, skipping it:", e?.id, err);
+              return null;
+            }
+          })
+          .filter(Boolean);
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  // De-dupe by id — harmless safety net in case a game ever gets returned
+  // under more than one week/seasontype combo.
+  const byId = new Map();
+  for (const g of perWeekResults.flat()) byId.set(g.id, g);
+  return [...byId.values()];
 }
 
 // gameId -> normalized odds, or null for a game confirmed to have never had
