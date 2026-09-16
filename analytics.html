@@ -265,10 +265,26 @@
   function teamGameLogHtml(abbr, gameLog) {
     if (gameLog.length === 0) return "";
     const rows = [...gameLog].reverse().map(teamGameLogRowHtml).join("");
+    // Aggregate ATS% and O/U split for exactly the games in this log — shown
+    // right on the (still collapsed) toggle row, so the "what's the overall
+    // percentage" answer doesn't require expanding the list first (Neil:
+    // "is there a way to aggregate the week-by-week data -- see percentage
+    // of Hit/Miss for points and O/U?"). Same combineSpreadBuckets()
+    // reasoning as the Home/Away split — minus+plus blended into one overall
+    // cover number, since this summary is about the team's spread record
+    // overall, not broken out by favorite/underdog.
+    const record = aggregateTeamGameLog(gameLog);
+    const atsBucket = combineSpreadBuckets(record);
+    const atsPct = coverPct(atsBucket);
+    const ouTotal = record.over + record.under + record.ouPush;
+    const summaryParts = [];
+    if (atsPct != null) summaryParts.push(`ATS ${atsPct}%`);
+    if (ouTotal) summaryParts.push(`${record.over}O-${record.under}U`);
+    const summaryHtml = summaryParts.length ? `<span style="color:var(--text-faint)">${summaryParts.join(" · ")}</span>` : "";
     return `
       <div class="team-history-toggle" data-game-log-toggle="${abbr}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:14px;background:var(--bg-elev-2);border-radius:var(--radius-sm);font-size:12px;cursor:pointer">
         <span style="font-weight:800">Week-by-week (${gameLog.length} game${gameLog.length === 1 ? "" : "s"})</span>
-        <span class="team-history-chevron">▼</span>
+        <span style="display:flex;align-items:center;gap:6px">${summaryHtml}<span class="team-history-chevron">▼</span></span>
       </div>
       <div class="team-history-list" id="team-game-log-${abbr}" style="display:none;max-height:280px;overflow-y:auto">${rows}</div>`;
   }

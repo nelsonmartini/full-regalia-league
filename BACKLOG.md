@@ -4,6 +4,10 @@
 
 ## Status
 
+- **SHIPPED (2026-09-16): Week-by-week toggle now shows the aggregate ATS%/O-U split right on the collapsed row.** Neil: "is there a way to aggregate the week-by-week data -- see percentage of Hit/Miss for points and O/U?" Added to `teamGameLogHtml()` (`analytics.html`) — the "Week-by-week (N games)" toggle now also shows e.g. "ATS 71% · 4O-6U" beside the chevron, computed from the exact same games in that log (Minus+Plus Spread combined into one overall cover %, same `combineSpreadBuckets()` used for the Home/Away split), so the answer is visible without expanding the list first.
+  - Verified via Playwright: a 3-game cover streak scenario shows "ATS 100% · 0O-3U" on the collapsed toggle; full existing team-detail regression suite unaffected.
+  - Bumped service worker cache to `full-regalia-shell-v124`.
+
 - **SHIPPED (2026-09-16): Team pages get a "Recent form (ATS)" indicator — a dot per game plus the current cover/miss streak.** First pick from a brainstorm on further Analytics improvements (recent form/streak, cover margin, conference splits, league-wide trend chart, player head-to-head — the rest stay on the list for later).
   - `computeTeamStreak(gameLog)` (`js/team-stats.js`): walks the game log backward from most recent, counting a run of the same cover/miss result. A push is treated as a neutral no-decision (doesn't break or extend a streak, same reasoning `teamOuSplitHtml` already uses for why a total isn't a hit/miss); a game with no posted line is skipped the same way.
   - `recentFormHtml(gameLog)` (`analytics.html`): last 5 games as small colored dots (green = covered, red = missed, gray = push, hollow = no line), plus a 🔥/❄️ streak line once there are 2+ in a row. Placed at the very top of a team's card, above even the points tiles — the same "the trail matters more than the summary number" reasoning that put Week-by-week ahead of Minus/Plus Spread.
