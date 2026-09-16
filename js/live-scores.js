@@ -80,9 +80,19 @@ async function fetchScoreboard(sport) {
     for (let week = 1; week <= maxWeek; week++) requests.push({ seasonType, week });
   }
 
+  // Real bug (Neil, 2026-09-15, caught within hours of the week-based
+  // rewrite shipping): CFB's week-based query defaults to a curated ~25-game
+  // subset, not the full slate — confirmed directly (real CFB Week 1: 25
+  // games with no groups param vs. the real 99-game FBS slate with
+  // `groups=80`). A bunch of real, already-finished picks were silently
+  // ungraded ("still pending") because their games just weren't in the
+  // fetched list at all. NFL has no such grouping concept (one group,
+  // always the full slate), so this is CFB-only.
+  const groupsParam = sport === "cfb" ? "&groups=80" : "";
+
   const perWeekResults = await Promise.all(
     requests.map(async ({ seasonType, week }) => {
-      const url = `${base}?seasontype=${seasonType}&week=${week}&year=${year}`;
+      const url = `${base}?seasontype=${seasonType}&week=${week}&year=${year}${groupsParam}`;
       try {
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return [];
