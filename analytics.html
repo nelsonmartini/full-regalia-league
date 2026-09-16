@@ -207,6 +207,15 @@
     };
   }
 
+  // Same stroke-icon language as the bottom nav (viewBox 24x24, stroke
+  // currentColor, round caps) instead of emoji — Neil wanted these to match
+  // the site's own icon set rather than stand out as emoji. Home reuses the
+  // EXACT path the bottom nav's own Home icon already uses; Away is a
+  // map-pin (the natural "somewhere else" pair to a house), drawn in the
+  // same style rather than introduced as a new visual language.
+  const HOME_ICON_SVG = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>`;
+  const AWAY_ICON_SVG = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
+
   /** Neil: "further detail on road vs home." Reuses the same statRowHtml
    * bar component as the season-total rows, just fed a home-only and an
    * away-only aggregate (computeTeamGameLog + aggregateTeamGameLog,
@@ -217,8 +226,8 @@
     const away = aggregateTeamGameLog(gameLog.filter((e) => !e.isHome));
     return `
       <div class="section-label" style="margin-top:14px;font-size:11.5px">ATS: Home vs Away</div>
-      ${statRowHtml("🏠 Home", combineSpreadBuckets(home))}
-      ${statRowHtml("✈️ Away", combineSpreadBuckets(away))}`;
+      ${statRowHtml(`${HOME_ICON_SVG}Home`, combineSpreadBuckets(home))}
+      ${statRowHtml(`${AWAY_ICON_SVG}Away`, combineSpreadBuckets(away))}`;
   }
 
   /** One row per finished game, newest first — the actual trail behind the
@@ -507,14 +516,19 @@
       if (record.gamesCounted === 0) {
         return `<div class="empty-state">${logoHtml}No finished games yet for ${abbr} this season — check back once they've played.</div>`;
       }
+      // Week-by-week ranks above the season-aggregate Minus/Plus/O-U rows —
+      // Neil: "the week by week info is more important than the minus,
+      // plus spread and the over/under." The real per-game trail is the
+      // thing worth seeing first; the blended season percentages are the
+      // summary of it, not the other way around.
       return `
         <div class="section-label" style="margin-top:0">${logoHtml}${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
         ${pointsSummaryHtml(record)}
+        ${teamGameLogHtml(abbr, gameLog)}
         ${statRowHtml("Minus Spread", record.minus)}
         ${statRowHtml("Plus Spread", record.plus)}
         ${teamOuSplitHtml(record)}
         ${homeAwaySplitHtml(gameLog)}
-        ${teamGameLogHtml(abbr, gameLog)}
         ${teamPickHistoryHtml(abbr)}`;
     }
 
