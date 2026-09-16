@@ -50,54 +50,89 @@ function emptyTeamRecord() {
   };
 }
 
-/** One team's ATS/O-U record, plus points scored/allowed, across its
- * finished games this season. minus/plus buckets are the team's cover
- * record while favored/underdog (mirrors a player's Minus/Plus Spread
- * pick); over/under are simple counts of how many of the team's games went
- * each way (there's no "hit" from a team's perspective on a total —
- * over/under is about the game, not one side — so it's reported as a
- * split, not a win rate).
- *
- * Points scored/allowed are tallied from EVERY finished game regardless of
- * whether a line was posted — unlike the ATS/O-U categories below, that
- * data doesn't depend on odds existing at all. */
-function computeTeamRecord(games, teamAbbr) {
-  const record = emptyTeamRecord();
+/** Every finished, real-season game for one team, each enriched with its
+ * own cover result and O/U result — the shared raw material behind the
+ * season-aggregate record, the home/away split, and the week-by-week game
+ * log (all in this file / analytics.html), so the three always agree with
+ * each other instead of three separate hand-rolled loops drifting apart.
+ * Sorted chronologically (oldest first) — callers reverse for a
+ * newest-first display where that reads better. */
+function computeTeamGameLog(games, teamAbbr) {
+  const entries = [];
   for (const g of games) {
     if (g.status?.state !== "post" || !g.status?.completed) continue;
     if (g.sport === "nfl" && g.seasonType === 1) continue;
     const isHome = g.home?.abbr === teamAbbr;
     const isAway = g.away?.abbr === teamAbbr;
     if (!isHome && !isAway) continue;
-    record.gamesCounted++;
 
-    const ownScore = Number(isHome ? g.home?.score : g.away?.score);
-    const oppScore = Number(isHome ? g.away?.score : g.home?.score);
-    if (!Number.isNaN(ownScore) && !Number.isNaN(oppScore)) {
-      record.pointsFor += ownScore;
-      record.pointsAgainst += oppScore;
-      record.scoringGamesCounted++;
-    }
+    const rawOwnScore = Number(isHome ? g.home?.score : g.away?.score);
+    const rawOppScore = Number(isHome ? g.away?.score : g.home?.score);
+    const ownScore = Number.isNaN(rawOwnScore) ? null : rawOwnScore;
+    const oppScore = Number.isNaN(rawOppScore) ? null : rawOppScore;
+    const opponent = isHome ? g.away : g.home;
 
     const line = isHome ? g.odds?.homeSpread : g.odds?.awaySpread;
-    if (line != null) {
-      const cat = line < 0 ? "minus" : "plus";
-      const result = gradeSpread({ team: teamAbbr, line }, g);
-      if (result) record[cat][result]++;
+    const category = line != null ? (line < 0 ? "minus" : "plus") : null;
+    const spreadResult = line != null ? gradeSpread({ team: teamAbbr, line }, g) : null;
+
+    let ouResult = null;
+    if (g.odds?.overUnder != null && ownScore != null && oppScore != null) {
+      const total = ownScore + oppScore;
+      ouResult = total === g.odds.overUnder ? "push" : total > g.odds.overUnder ? "over" : "under";
     }
 
-    if (g.odds?.overUnder != null) {
-      const home = Number(g.home?.score);
-      const away = Number(g.away?.score);
-      if (!Number.isNaN(home) && !Number.isNaN(away)) {
-        const total = home + away;
-        if (total === g.odds.overUnder) record.ouPush++;
-        else if (total > g.odds.overUnder) record.over++;
-        else record.under++;
-      }
+    entries.push({
+      game: g,
+      date: g.date,
+      week: g.week,
+      seasonType: g.seasonType,
+      sport: g.sport,
+      isHome,
+      opponent,
+      ownScore,
+      oppScore,
+      line,
+      category,
+      spreadResult,
+      overUnderLine: g.odds?.overUnder ?? null,
+      ouResult,
+    });
+  }
+  return entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+/** Rolls a computeTeamGameLog() entry list up into the same shape
+ * computeTeamRecord() has always returned — used both for the real season
+ * total AND for a home-only/away-only subset (see homeAwaySplitHtml,
+ * analytics.html), so both read the exact same way. minus/plus buckets are
+ * the team's cover record while favored/underdog (mirrors a player's
+ * Minus/Plus Spread pick); over/under are simple counts of how many games
+ * went each way (there's no "hit" from a team's perspective on a total —
+ * it's about the game, not one side — so it's a split, not a win rate). */
+function aggregateTeamGameLog(entries) {
+  const record = emptyTeamRecord();
+  for (const e of entries) {
+    record.gamesCounted++;
+    if (e.ownScore != null && e.oppScore != null) {
+      record.pointsFor += e.ownScore;
+      record.pointsAgainst += e.oppScore;
+      record.scoringGamesCounted++;
     }
+    if (e.category && e.spreadResult) record[e.category][e.spreadResult]++;
+    if (e.ouResult === "push") record.ouPush++;
+    else if (e.ouResult === "over") record.over++;
+    else if (e.ouResult === "under") record.under++;
   }
   return record;
+}
+
+/** One team's ATS/O-U record, plus points scored/allowed, across its
+ * finished games this season. Points scored/allowed are tallied from
+ * EVERY finished game regardless of whether a line was posted — unlike the
+ * ATS/O-U categories, that data doesn't depend on odds existing at all. */
+function computeTeamRecord(games, teamAbbr) {
+  return aggregateTeamGameLog(computeTeamGameLog(games, teamAbbr));
 }
 
 /** Cover % for a minus/plus bucket, or null if there's nothing graded yet

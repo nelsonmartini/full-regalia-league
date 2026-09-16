@@ -193,6 +193,77 @@
   // computePlayerCategoryRecord() now lives in js/pick-utils.js (shared with
   // player.html's own per-player category breakdown).
 
+  /** Minus + Plus Spread combined into one overall ATS bucket — used for the
+   * home/away split below, where "were they at home" is orthogonal to
+   * "were they favored," so splitting by BOTH at once (4 categories x 2
+   * locations = 8 rows) would be more than anyone actually wants to read.
+   * The season-total rows above already show the minus/plus breakdown on
+   * its own; this is deliberately the simpler, blended number. */
+  function combineSpreadBuckets(record) {
+    return {
+      hit: record.minus.hit + record.plus.hit,
+      miss: record.minus.miss + record.plus.miss,
+      push: record.minus.push + record.plus.push,
+    };
+  }
+
+  /** Neil: "further detail on road vs home." Reuses the same statRowHtml
+   * bar component as the season-total rows, just fed a home-only and an
+   * away-only aggregate (computeTeamGameLog + aggregateTeamGameLog,
+   * js/team-stats.js) instead of the full-season one. */
+  function homeAwaySplitHtml(gameLog) {
+    if (gameLog.length === 0) return "";
+    const home = aggregateTeamGameLog(gameLog.filter((e) => e.isHome));
+    const away = aggregateTeamGameLog(gameLog.filter((e) => !e.isHome));
+    return `
+      <div class="section-label" style="margin-top:14px;font-size:11.5px">ATS: Home vs Away</div>
+      ${statRowHtml("🏠 Home", combineSpreadBuckets(home))}
+      ${statRowHtml("✈️ Away", combineSpreadBuckets(away))}`;
+  }
+
+  /** One row per finished game, newest first — the actual trail behind the
+   * season-total percentages above, so "68% ATS" is inspectable instead of
+   * just a number to trust. Reuses statusBadge() (js/pick-utils.js) for the
+   * spread result so it matches the Hit/Miss/Push language used everywhere
+   * else a pick's result shows up. */
+  function teamGameLogRowHtml(entry) {
+    const oppAbbr = entry.opponent?.abbr || "?";
+    const wl = entry.ownScore != null && entry.oppScore != null ? (entry.ownScore > entry.oppScore ? "W" : entry.ownScore < entry.oppScore ? "L" : "T") : "";
+    const scoreText = entry.ownScore != null && entry.oppScore != null ? `${wl} ${entry.ownScore}-${entry.oppScore}` : "–";
+    const prefix = SEASON_PHASE_PREFIX[entry.seasonType] ?? "";
+    const weekLabel = entry.week != null ? `${prefix}Week ${entry.week}` : fmtShortDate(new Date(entry.date));
+    const detailParts = [entry.line != null ? fmtLine(entry.line) : null, entry.overUnderLine != null ? `O/U ${entry.overUnderLine}` : null].filter(Boolean).join(" · ");
+    const resultParts = [];
+    if (entry.spreadResult) resultParts.push(`ATS ${statusBadge(entry.spreadResult)}`);
+    if (entry.ouResult) resultParts.push(entry.ouResult === "push" ? "O/U Push" : entry.ouResult === "over" ? "Over" : "Under");
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;font-size:12px;border-bottom:1px solid var(--border)">
+        <div style="min-width:0">
+          <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${weekLabel} · ${entry.isHome ? "vs" : "@"} ${oppAbbr}</div>
+          <div style="color:var(--text-faint);font-size:10.5px">${detailParts || "No line posted"}</div>
+        </div>
+        <div style="flex:none;text-align:right">
+          <div style="font-weight:800">${scoreText}</div>
+          <div style="font-size:10.5px;white-space:nowrap">${resultParts.join(" · ")}</div>
+        </div>
+      </div>`;
+  }
+
+  /** Collapsed by default, same tap-to-expand pattern (and CSS classes) as
+   * "Who's picked X" below it — a team deep into the season can have a lot
+   * of games, and this shouldn't be the thing pushing that list further
+   * down the page by default. */
+  function teamGameLogHtml(abbr, gameLog) {
+    if (gameLog.length === 0) return "";
+    const rows = [...gameLog].reverse().map(teamGameLogRowHtml).join("");
+    return `
+      <div class="team-history-toggle" data-game-log-toggle="${abbr}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-top:14px;background:var(--bg-elev-2);border-radius:var(--radius-sm);font-size:12px;cursor:pointer">
+        <span style="font-weight:800">Week-by-week (${gameLog.length} game${gameLog.length === 1 ? "" : "s"})</span>
+        <span class="team-history-chevron">▼</span>
+      </div>
+      <div class="team-history-list" id="team-game-log-${abbr}" style="display:none;max-height:280px;overflow-y:auto">${rows}</div>`;
+  }
+
   // Both sections start collapsed — Player Comparison and Team Trends can
   // each get long (a full roster of players, or a matchup card with two
   // teams' stat rows), so landing on the page with everything already
@@ -323,11 +394,16 @@
 
     // Delegated once on the stable container (teamDetail.innerHTML gets
     // replaced wholesale on every team switch, see renderTeamDetail below)
-    // so the "Who's picked" toggle keeps working across re-renders.
+    // so the "Who's picked" AND "Week-by-week" toggles both keep working
+    // across re-renders — same tap-to-expand mechanics, just two different
+    // trigger attributes pointing at two different list ids.
     teamDetail.addEventListener("click", (e) => {
-      const toggle = e.target.closest("[data-team-history-toggle]");
+      const historyToggle = e.target.closest("[data-team-history-toggle]");
+      const gameLogToggle = e.target.closest("[data-game-log-toggle]");
+      const toggle = historyToggle || gameLogToggle;
       if (!toggle) return;
-      const list = document.getElementById(`team-history-list-${toggle.getAttribute("data-team-history-toggle")}`);
+      const listId = historyToggle ? `team-history-list-${historyToggle.getAttribute("data-team-history-toggle")}` : `team-game-log-${gameLogToggle.getAttribute("data-game-log-toggle")}`;
+      const list = document.getElementById(listId);
       if (!list) return;
       const opening = list.style.display === "none";
       list.style.display = opening ? "block" : "none";
@@ -424,7 +500,8 @@
     }
 
     function teamBlockHtml(abbr) {
-      const record = computeTeamRecord(games, abbr);
+      const gameLog = computeTeamGameLog(games, abbr);
+      const record = aggregateTeamGameLog(gameLog);
       const logo = findTeamLogo(abbr);
       const logoHtml = logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px" />` : "";
       if (record.gamesCounted === 0) {
@@ -436,6 +513,8 @@
         ${statRowHtml("Minus Spread", record.minus)}
         ${statRowHtml("Plus Spread", record.plus)}
         ${teamOuSplitHtml(record)}
+        ${homeAwaySplitHtml(gameLog)}
+        ${teamGameLogHtml(abbr, gameLog)}
         ${teamPickHistoryHtml(abbr)}`;
     }
 
