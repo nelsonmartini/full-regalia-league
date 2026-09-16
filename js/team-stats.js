@@ -135,6 +135,23 @@ function computeTeamRecord(games, teamAbbr) {
   return aggregateTeamGameLog(computeTeamGameLog(games, teamAbbr));
 }
 
+/** Current ATS cover/miss streak, most-recent-game-backward. A push is a
+ * neutral no-decision — it's skipped rather than breaking or extending a
+ * streak, same reasoning teamOuSplitHtml uses for why a total isn't a
+ * hit/miss. A game with no posted line is skipped too (nothing to have
+ * covered or missed). Returns null if there's no decided game yet. */
+function computeTeamStreak(gameLog) {
+  const decided = [...gameLog].reverse().map((e) => e.spreadResult).filter((r) => r === "hit" || r === "miss");
+  if (decided.length === 0) return null;
+  const type = decided[0];
+  let count = 0;
+  for (const r of decided) {
+    if (r !== type) break;
+    count++;
+  }
+  return { type, count };
+}
+
 /** Cover % for a minus/plus bucket, or null if there's nothing graded yet
  * (distinct from 0% — "no data" shouldn't render as "always misses"). */
 function coverPct(bucket) {

@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-09-16): Team pages get a "Recent form (ATS)" indicator — a dot per game plus the current cover/miss streak.** First pick from a brainstorm on further Analytics improvements (recent form/streak, cover margin, conference splits, league-wide trend chart, player head-to-head — the rest stay on the list for later).
+  - `computeTeamStreak(gameLog)` (`js/team-stats.js`): walks the game log backward from most recent, counting a run of the same cover/miss result. A push is treated as a neutral no-decision (doesn't break or extend a streak, same reasoning `teamOuSplitHtml` already uses for why a total isn't a hit/miss); a game with no posted line is skipped the same way.
+  - `recentFormHtml(gameLog)` (`analytics.html`): last 5 games as small colored dots (green = covered, red = missed, gray = push, hollow = no line), plus a 🔥/❄️ streak line once there are 2+ in a row. Placed at the very top of a team's card, above even the points tiles — the same "the trail matters more than the summary number" reasoning that put Week-by-week ahead of Minus/Plus Spread.
+  - Verified via Playwright: a real 3-game cover streak renders "🔥 Covered 3 straight" with 3 correctly-colored dots, positioned before the points summary; full existing team-detail regression suite unaffected.
+  - Bumped service worker cache to `full-regalia-shell-v123`.
+
 - **SHIPPED (2026-09-16): Home/Away icons swapped from emoji to the site's own stroke-icon style; Week-by-week promoted above the season-aggregate rows.** Neil: "lets get rid of the emoji for home away and make them site format icons -- but i think the week by week info is more important than the minus, plus spread and the over/under." Both quick follow-ups to the same-day Team Trends additions.
   - 🏠/✈️ replaced with inline SVGs in the exact same stroke style as the bottom nav (viewBox 24x24, `stroke="currentColor"`, round caps) — Home reuses the bottom nav's own house path verbatim; Away is a map-pin, drawn in the same style rather than introducing a new visual language.
   - Reordered `teamBlockHtml()` (`analytics.html`): Week-by-week now renders directly after the points-scored/allowed tiles, ahead of Minus Spread/Plus Spread/Over-Under and the Home/Away split — the real per-game trail leads, the blended season percentages follow as its summary rather than the other way around. Still collapsed by default (unchanged — a team deep into the season can have a lot of games).

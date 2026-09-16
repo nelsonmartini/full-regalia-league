@@ -273,6 +273,39 @@
       <div class="team-history-list" id="team-game-log-${abbr}" style="display:none;max-height:280px;overflow-y:auto">${rows}</div>`;
   }
 
+  /** "Recent form" — a dot per game (last 5, oldest to newest) plus the
+   * current cover/miss streak, if any. The single most glanceable thing on
+   * the whole card, so it sits right under the header, above even the
+   * points tiles — same "the trail matters more than the blended season
+   * number" reasoning that put Week-by-week ahead of Minus/Plus Spread. */
+  function recentFormHtml(gameLog) {
+    if (gameLog.length === 0) return "";
+    const last5 = gameLog.slice(-5);
+    const dots = last5
+      .map((e) => {
+        if (!e.spreadResult) return `<span title="No line posted" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--border-strong)"></span>`;
+        const color = e.spreadResult === "hit" ? "var(--positive)" : e.spreadResult === "miss" ? "var(--negative)" : "var(--text-faint)";
+        const title = e.spreadResult === "hit" ? "Covered" : e.spreadResult === "miss" ? "Missed" : "Push";
+        return `<span title="${title}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color}"></span>`;
+      })
+      .join("");
+    const streak = computeTeamStreak(gameLog);
+    const streakHtml =
+      streak && streak.count >= 2
+        ? streak.type === "hit"
+          ? `<span style="font-weight:800;color:var(--positive)">🔥 Covered ${streak.count} straight</span>`
+          : `<span style="font-weight:800;color:var(--negative)">❄️ Missed ${streak.count} straight</span>`
+        : "";
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;font-size:11.5px">
+        <span style="color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:10px">Recent form (ATS)</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;gap:4px">${dots}</div>
+          ${streakHtml}
+        </div>
+      </div>`;
+  }
+
   // Both sections start collapsed — Player Comparison and Team Trends can
   // each get long (a full roster of players, or a matchup card with two
   // teams' stat rows), so landing on the page with everything already
@@ -523,6 +556,7 @@
       // summary of it, not the other way around.
       return `
         <div class="section-label" style="margin-top:0">${logoHtml}${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
+        ${recentFormHtml(gameLog)}
         ${pointsSummaryHtml(record)}
         ${teamGameLogHtml(abbr, gameLog)}
         ${statRowHtml("Minus Spread", record.minus)}
