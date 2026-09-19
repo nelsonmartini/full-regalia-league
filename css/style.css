@@ -1317,6 +1317,16 @@ a.game-card-team:active {
   vertical-align: middle;
 }
 
+/* Current Dumbass/Ice Cold icons — deliberately small/quiet, same reasoning
+ * as the streak-badge sizing fix above: a glyph next to a name shouldn't
+ * compete with the actual data (points, rank) it's sitting beside. */
+.standings-award-icons {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 10px;
+  vertical-align: middle;
+}
+
 .standings-points {
   font-weight: 800;
   font-size: 15px;
@@ -1397,6 +1407,16 @@ a.game-card-team:active {
 .standings-row-split .standings-points {
   font-size: 11.5px;
   min-width: auto;
+}
+
+/* The 🔥 glyph renders visually large/bold at any font-size, so at the
+ * streak-badge's normal 11px (css above) it was reading as big as — or
+ * bigger than — the actual Points number next to it in this tight Home
+ * preview (Neil: "the number by the fire icon... is as big as the Points
+ * number"). Scoped to just this compact context — the full Standings page
+ * has more room and wasn't the reported problem. */
+.standings-row-split .streak-badge {
+  font-size: 8.5px;
 }
 
 .standings-row-split .standings-rank-cursive {
@@ -1564,6 +1584,52 @@ a.game-card-team:active {
   min-height: 4px;
   border-radius: 5px 5px 2px 2px;
   background: linear-gradient(180deg, var(--accent-2), var(--accent));
+}
+
+/* Stacked 2-color variant (player.html's Points-by-week, split NFL/NCAA) —
+ * column-reverse so the first child in DOM order (NFL) sits at the visual
+ * BOTTOM of the stack, matching a normal stacked bar reading bottom-up.
+ * The 2px gap is the "surface gap separates touching segments" spacer
+ * (dataviz skill) instead of a border, so the split reads as two distinct
+ * marks without adding non-data ink. Flat, fixed categorical colors (never
+ * cycled) — --accent for NFL, --accent-2 for NCAA — same pair as the rest
+ * of the app's two-tone brand look. */
+.week-chart-bar-track-stacked {
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.week-chart-bar-fill-nfl,
+.week-chart-bar-fill-cfb {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 4px 4px 2px 2px;
+}
+
+.week-chart-bar-fill-nfl {
+  background: var(--accent);
+}
+
+.week-chart-bar-fill-cfb {
+  background: var(--accent-2);
+}
+
+.week-chart-legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 8px;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+.week-chart-legend-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
 .week-chart-bar-label {

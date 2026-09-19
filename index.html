@@ -61,8 +61,8 @@
   <div class="home-split-row">
     <div class="card">
       <div class="card-title">
-        <span>Standings</span>
-        <span class="standings-header-label">PTS</span>
+        <span>Season Standings</span>
+        <span class="standings-header-label">Points</span>
       </div>
       <div id="top-standings"><div class="empty-state">Loading…</div></div>
       <div class="standings-preview-footer"><a class="link" href="standings.html">Full Standings →</a></div>
@@ -167,6 +167,10 @@
     // instead of a fixed count that leaves a gap on a heavy-awards week or
     // runs short on a light one (Neil).
     const allAwards = computeAllWeeklyAwards(graded, games);
+    // Whoever's currently holding Dumbass/Ice Cold — the icon next to their
+    // name in Standings below, rotating only once a week is actually final
+    // (see reigningAwardWinners, js/awards.js).
+    const reigning = reigningAwardWinners(allAwards);
     document.getElementById("weekly-awards").innerHTML = renderWeeklyAwards(allAwards, { compact: true });
     const currentWeek = allAwards[allAwards.length - 1];
     const currentWeekFinal = currentWeek && isRegaliaWeekFinal(currentWeek);
@@ -181,6 +185,10 @@
     // (still reads as a "top of the board" teaser), never more than the
     // roster, and never so many that Standings ends up TALLER than Awards.
     const fullStandings = computeStandings(graded, LEAGUE_PLAYERS);
+    for (const p of fullStandings) {
+      p.isDumbass = reigning.dumbass.has(p.name);
+      p.isIceCold = reigning.iceCold.has(p.name);
+    }
     const standingsListEl = document.getElementById("top-standings");
     const renderRows = (list) =>
       list.length

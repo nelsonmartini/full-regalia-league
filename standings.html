@@ -78,6 +78,7 @@
 <script src="js/live-scores.js"></script>
 <script src="js/grading.js"></script>
 <script src="js/season-data.js"></script>
+<script src="js/awards.js"></script>
 <script>
   (async function () {
     await Promise.all([loadPlayers(), loadScoringConfig()]);
@@ -104,6 +105,14 @@
 
       const graded = gradeSeasonPicks(picksRows, games);
       const standings = computeStandings(graded, LEAGUE_PLAYERS);
+      // Whoever's currently holding Dumbass/Ice Cold — same reigning-winner
+      // logic (and "only rotates once a week is final" rule) as Home's
+      // Awards card (js/awards.js's reigningAwardWinners).
+      const reigning = reigningAwardWinners(computeAllWeeklyAwards(graded, games));
+      for (const p of standings) {
+        p.isDumbass = reigning.dumbass.has(p.name);
+        p.isIceCold = reigning.iceCold.has(p.name);
+      }
       document.getElementById("standings-list").innerHTML = standings.length
         ? standings.map((p) => renderStandingsRow(p)).join("")
         : '<div class="empty-state">No graded picks yet this season — check back once games finish.</div>';

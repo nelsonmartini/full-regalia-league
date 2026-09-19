@@ -18,6 +18,17 @@ function streakBadgeHtml(streak) {
   return streak >= 3 ? `<span class="streak-badge" title="${streak} hits in a row">🔥${streak}</span>` : "";
 }
 
+/** The current Dumbass/Ice Cold icons next to a name — `player.isDumbass`/
+ * `.isIceCold` are attached by the calling page (index.html/standings.html)
+ * from reigningAwardWinners() (js/awards.js) before render, same pattern
+ * `.rank`/`.tied`/`.streak` already use. Same emoji Awards itself uses for
+ * these two, so it reads as the same award rather than a new symbol. */
+function awardIconsHtml(player) {
+  const dumbass = player.isDumbass ? `<span title="Current Dumbass of the Week">🤡</span>` : "";
+  const iceCold = player.isIceCold ? `<span title="Currently Ice Cold">🥶</span>` : "";
+  return dumbass || iceCold ? `<span class="standings-award-icons">${dumbass}${iceCold}</span>` : "";
+}
+
 /** Medals only make sense for a SOLE 1st/2nd/3rd — a tie shows explicit
  * "T-N" text instead (Neil: show ties honestly rather than letting the
  * medal imply one clear leader when there isn't one). `player.rank`/
@@ -30,7 +41,7 @@ function renderStandingsRow(player) {
     <a class="standings-row${rankClass}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank${player.tied ? " standings-rank-tied" : ""}">${rankDisplay}</div>
       ${avatarHtml(player.name, 32)}
-      <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
+      <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}${awardIconsHtml(player)}</div>
       <div class="standings-points">${player.points}</div>
       <div class="standings-winpct">${player.winPct.toFixed(1)}%</div>
     </a>`;
@@ -56,7 +67,7 @@ function renderStandingsRowCompact(player, { extraClass = "", avatarSize = 24 } 
     <a class="standings-row standings-row-compact${rankClass}${extraClass ? " " + extraClass : ""}" href="player.html?name=${encodeURIComponent(player.name)}" style="cursor:pointer">
       <div class="standings-rank standings-rank-cursive${player.tied ? " standings-rank-tied" : ""}">${rankDisplay}</div>
       ${avatarHtml(player.name, avatarSize)}
-      <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}</div>
+      <div class="standings-name">${titleCase(player.name)}${streakBadgeHtml(player.streak)}${awardIconsHtml(player)}</div>
       <div class="standings-points">${player.points}</div>
     </a>`;
 }

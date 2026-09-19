@@ -70,6 +70,10 @@
 
     <div class="card">
       <div class="card-title">Points by week</div>
+      <div class="week-chart-legend">
+        <span><span class="week-chart-legend-swatch" style="background:var(--accent)"></span>NFL</span>
+        <span><span class="week-chart-legend-swatch" style="background:var(--accent-2)"></span>NCAA</span>
+      </div>
       <div id="trend" class="week-chart"></div>
     </div>
 
@@ -215,6 +219,56 @@
       toggle.textContent = opening ? "Show less ▴" : toggle.dataset.moreLabel;
     });
 
+    // ---------- Picks by Full Regalia Week (NFL + NCAA together) ----------
+    // Neil: the old weeks-list showed one full card per (sport, native
+    // week) — NFL Week 3 and NCAA Week 3 as two separate, disconnected
+    // cards. Regrouped by the same unified Regalia Week every other part of
+    // the app already uses (Picks/Standings/Awards/Analytics), so a real
+    // week's NFL and NCAA picks sit together in one card. Scoped to
+    // player.html only — history.html still serves every player at once
+    // via the original computeHistoryEntries()/renderHistoryEntry()
+    // (js/season-data.js), unchanged.
+    function computeRegaliaWeekEntries(gradedPicks, allGames) {
+      const withWeek = attachRegaliaWeeks(gradedPicks, allGames).filter((gp) => gp.regaliaWeek);
+      const groups = new Map();
+      for (const gp of withWeek) {
+        const num = gp.regaliaWeek.regaliaWeekNumber;
+        if (!groups.has(num)) groups.set(num, { regaliaWeek: gp.regaliaWeek, nfl: [], cfb: [] });
+        groups.get(num)[gp.snapshot?.sport === "nfl" ? "nfl" : "cfb"].push(gp);
+      }
+      return [...groups.values()].sort((a, b) => a.regaliaWeek.regaliaWeekNumber - b.regaliaWeek.regaliaWeekNumber);
+    }
+
+    // One sport's picks within a Regalia Week card — skipped entirely (not
+    // even an empty heading) when this player didn't pick that sport that
+    // week, since a "no picks" line for a sport that's simply not in season
+    // yet (e.g. NCAA before its odds post) would read as a gap, not a fact.
+    function sportBucketHtml(label, emoji, picks) {
+      if (picks.length === 0) return "";
+      const hits = picks.filter((p) => p.result === "hit").length;
+      const points = picks.reduce((s, p) => s + (p.result ? p.points : 0), 0);
+      const graded = picks.some((p) => p.result != null);
+      const rows = picks.map(historyEntryRow).join("");
+      return `
+        <div style="margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;color:var(--text-dim);margin-bottom:4px">
+            <span>${emoji} ${label}</span>
+            ${graded ? `<span style="color:var(--text-faint);font-weight:700">${hits}/${picks.length} · ${points} pts</span>` : ""}
+          </div>
+          ${rows}
+        </div>`;
+    }
+
+    function renderRegaliaWeekEntry(entry) {
+      const week = entry.regaliaWeek;
+      return `
+        <div class="card">
+          <div class="card-title">${regaliaWeekTitle(week)} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">${regaliaWeekDateRange(week)}</span></div>
+          ${sportBucketHtml("NFL", "🏈", entry.nfl)}
+          ${sportBucketHtml("NCAA", "🎓", entry.cfb)}
+        </div>`;
+    }
+
     // Polled every 30s (same cadence as the Games page) so a game finishing
     // while this tab is open updates the totals/trend without a manual reload.
     async function load() {
@@ -250,35 +304,41 @@
       // ("NCAA · Week 12") and was crowding a tile meant to read at a glance.
       document.getElementById("stat-best-label").textContent = graded_.length ? best.label : "";
 
-      // Vertical bar chart, one bar per (sport, week) — a "build of the
-      // season" you can scan left to right, instead of a stacked list of
-      // horizontal progress bars (which read oddly once every bar's just
-      // showing off against the same single number anyway).
-      const maxPts = Math.max(1, ...graded_.map((r) => r.points));
-      // Sport emoji + week number ("🏈 W1") instead of a bare letter+number
-      // ("N1") — the letter abbreviation read as unexplained shorthand with
-      // no legend anywhere on the page (confirmed confusing, Neil).
-      const shortLabel = (label) =>
-        label
-          .replace("NFL · Week ", "🏈 W")
-          .replace("NCAA · Week ", "🎓 W")
-          .replace("Preseason ", "Pre ")
-          .replace("Postseason ", "Post ");
-      document.getElementById("trend").innerHTML = graded_
-        .map((r) => {
-          const pct = Math.max(6, Math.round((r.points / maxPts) * 100));
+      // Stacked bar chart, one bar per REGALIA WEEK (not per sport-week) —
+      // a "build of the season" you can scan left to right, split into
+      // NFL/NCAA colors within the same bar so the total height still
+      // reads as "points that week" while showing where they came from
+      // (Neil: "maybe a bar graph by regalia week with 2 colors splitting
+      // NFL and NCAA"). Same computeRegaliaWeekEntries() grouping the new
+      // weeks-list below uses, so the chart and the list always agree.
+      const regaliaEntries = computeRegaliaWeekEntries(graded, games);
+      const weeklyTotals = regaliaEntries
+        .map((entry) => {
+          const nflPoints = entry.nfl.reduce((s, p) => s + (p.result ? p.points : 0), 0);
+          const cfbPoints = entry.cfb.reduce((s, p) => s + (p.result ? p.points : 0), 0);
+          const isGraded = [...entry.nfl, ...entry.cfb].some((p) => p.result != null);
+          return { week: entry.regaliaWeek, nflPoints, cfbPoints, total: nflPoints + cfbPoints, graded: isGraded };
+        })
+        .filter((w) => w.graded);
+      const TRACK_HEIGHT_PX = 90; // matches .week-chart-bar-track's fixed height
+      const maxWeekTotal = Math.max(1, ...weeklyTotals.map((w) => w.total));
+      document.getElementById("trend").innerHTML = weeklyTotals
+        .map((w) => {
+          const nflPx = w.nflPoints > 0 ? Math.max(4, Math.round((w.nflPoints / maxWeekTotal) * TRACK_HEIGHT_PX)) : 0;
+          const cfbPx = w.cfbPoints > 0 ? Math.max(4, Math.round((w.cfbPoints / maxWeekTotal) * TRACK_HEIGHT_PX)) : 0;
           return `
-            <div class="week-chart-bar" title="${r.label}: ${r.points} pts">
-              <div class="week-chart-bar-value">${r.points}</div>
-              <div class="week-chart-bar-track">
-                <div class="week-chart-bar-fill" style="height:${pct}%"></div>
+            <div class="week-chart-bar" title="👑 Week ${w.week.regaliaWeekNumber}: ${w.total} pts (🏈 ${w.nflPoints} · 🎓 ${w.cfbPoints})">
+              <div class="week-chart-bar-value">${w.total}</div>
+              <div class="week-chart-bar-track week-chart-bar-track-stacked">
+                ${nflPx ? `<div class="week-chart-bar-fill-nfl" style="height:${nflPx}px"></div>` : ""}
+                ${cfbPx ? `<div class="week-chart-bar-fill-cfb" style="height:${cfbPx}px"></div>` : ""}
               </div>
-              <div class="week-chart-bar-label">${shortLabel(r.label)}</div>
+              <div class="week-chart-bar-label">👑 W${w.week.regaliaWeekNumber}</div>
             </div>`;
         })
         .join("");
 
-      document.getElementById("weeks-list").innerHTML = [...rows].reverse().map(renderHistoryEntry).join("");
+      document.getElementById("weeks-list").innerHTML = [...regaliaEntries].reverse().map(renderRegaliaWeekEntry).join("");
 
       document.getElementById("category-breakdown").innerHTML = categoryKpiHtml(computePlayerCategoryRecord(name, graded, null));
       document.getElementById("conference-breakdown").innerHTML = conferenceBreakdownHtml(graded);

@@ -137,6 +137,24 @@ function computeAllWeeklyAwards(gradedPicks, games) {
   });
 }
 
+/** Whoever's currently "holding" Dumbass/Ice Cold, for the small icon next
+ * to a name in Standings (Home + standings.html) — Neil: these "rotate one
+ * each week is final." Deliberately the most recent FINAL week, not
+ * whatever computeAllWeeklyAwards considers "current" — a week still in
+ * progress could still flip who's winning, so the badge only moves once a
+ * week is actually locked in (isRegaliaWeekFinal, js/pick-utils.js), same
+ * reasoning the Home Awards card's own "Final" badge already uses. Returns
+ * empty sets (not null) so callers never need a null-check. */
+function reigningAwardWinners(allAwards) {
+  const finalWeeks = allAwards.filter((w) => isRegaliaWeekFinal(w));
+  const latest = finalWeeks[finalWeeks.length - 1];
+  if (!latest) return { dumbass: new Set(), iceCold: new Set() };
+  return {
+    dumbass: new Set(latest.dumbass.map((w) => w.name)),
+    iceCold: new Set(latest.iceCold.map((w) => w.name)),
+  };
+}
+
 const AWARD_CATEGORIES = ["dumbass", "nostradamus", "bigDawg", "buzzerBeater", "iceCold"];
 
 /** How many times has each player won each award, across every week in
