@@ -50,11 +50,6 @@
 
   <div id="player-content" style="display:none">
     <div class="card">
-      <div class="card-title">Snapshot</div>
-      <div id="player-snapshot"></div>
-    </div>
-
-    <div class="card">
       <div class="card-title">Season summary</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
         <div>
@@ -83,8 +78,8 @@
     </div>
 
     <div class="card">
-      <div class="card-title">By category</div>
-      <div id="category-breakdown"></div>
+      <div class="card-title">Snapshot</div>
+      <div id="player-snapshot"></div>
     </div>
 
     <div class="card">
@@ -137,14 +132,13 @@
     document.getElementById("player-sub").textContent = "Season history";
     document.getElementById("player-avatar").innerHTML = avatarHtml(name, 56);
 
-    // ---------- By category / by conference / by team ----------
-    // Category breakdown covers all 4 pick types (spread + total) via
-    // categoryKpiHtml/computeCategoryRecord (js/pick-utils.js), shared with
-    // the Analytics league-wide snapshot. Conference/team breakdowns below
-    // are scoped to SPREAD picks only — a total (Over/Under) pick belongs to
-    // the game, not one team, so there's no single team/conference to
-    // attribute it to (same reasoning js/team-stats.js uses for why a team's
-    // own O/U is a split, not a per-team stat).
+    // ---------- By matchup (conference / team) ----------
+    // Scoped to SPREAD picks only — a total (Over/Under) pick belongs to the
+    // game, not one team, so there's no single team/conference to attribute
+    // it to (same reasoning js/team-stats.js uses for why a team's own O/U
+    // is a split, not a per-team stat). The Snapshot card above already
+    // covers all 4 pick types (spread + total) via snapshotCardHtml()
+    // (js/pick-utils.js), shared with the Analytics league-wide snapshot.
 
     // Groups this player's graded SPREAD picks by whatever key keyFn
     // resolves (a conference name, or a team abbr), tallying hit/miss/push
@@ -455,7 +449,9 @@
 
       document.getElementById("weeks-list").innerHTML = [...regaliaEntries].reverse().map(renderRegaliaWeekEntry).join("");
 
-      document.getElementById("category-breakdown").innerHTML = categoryKpiHtml(computePlayerCategoryRecord(name, graded, null));
+      // By category's own card was removed (2026-09-20) -- the Snapshot
+      // card's category tile row (snapshotCardHtml, js/pick-utils.js) shows
+      // the exact same 4-category breakdown, so this was duplicative.
       latestGraded = graded;
       renderMatchup();
     }

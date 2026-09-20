@@ -4,6 +4,10 @@
 
 ## Status
 
+- **SHIPPED (2026-09-20): Player page card order fixed, "By category" removed as duplicative.** Neil: "season summary should be first, then points by week, then the snapshot, remove the by category -- its duplicative now." Card order is now Season summary → Points by week → Snapshot → By matchup; the standalone "By category" card (and its now-dead `#category-breakdown` render call) is gone — the Snapshot card's own category tile row already shows the same 4-category breakdown.
+  - Verified via Playwright: updated the snapshot-card test to assert the exact new card order and that "By category" no longer appears (9/9); re-ran the By Matchup suite unaffected (12/12).
+  - Bumped service worker cache to `full-regalia-shell-v129`.
+
 - **SHIPPED (2026-09-20): Player page gets the same "Snapshot" card as Analytics' league-wide landing dashboard, scoped to that one player, placed ahead of everything else on the page.** Neil: "update each players page with the exact same table/format that is the first table on the analytics tab (except respectively filtered to each player) -- showing total bets placed, hit %, NFL and NCAA compare and then the % across the 4 categories. Add the most bet team as well. move this new table ahead of what was created yesterday."
   - Extracted `accuracyBucket()`, `statRowHtml()`, `mostBetTeam()`, and a new `snapshotCardHtml(scoped)` (the actual card markup: bets placed + overall accuracy, NFL/NCAA rows, the 4-category tile row, most-bet team) out of `analytics.html`'s league-snapshot code into shared `js/pick-utils.js` — `analytics.html`'s `renderLeagueSnapshot()` now just computes its (all-players, week-filterable) `scoped` array and calls the shared function; `player.html` calls the exact same function with just that player's own `graded` picks.
   - New "Snapshot" card in `player.html` is the first card in `#player-content`, ahead of Season summary/Points-by-week/By category/By matchup (all from the last two days' work).
