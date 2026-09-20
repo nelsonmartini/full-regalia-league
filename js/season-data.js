@@ -19,13 +19,16 @@ function streakBadgeHtml(streak) {
 }
 
 /** The current Dumbass/Ice Cold icons next to a name — `player.isDumbass`/
- * `.isIceCold` are attached by the calling page (index.html/standings.html)
- * from reigningAwardWinners() (js/awards.js) before render, same pattern
- * `.rank`/`.tied`/`.streak` already use. Same emoji Awards itself uses for
- * these two, so it reads as the same award rather than a new symbol. */
+ * `.isIceCold`/`.iceColdStreak` are attached by the calling page
+ * (index.html/standings.html) from reigningAwardWinners() (js/awards.js)
+ * before render, same pattern `.rank`/`.tied`/`.streak` already use. Same
+ * emoji Awards itself uses for these two, so it reads as the same award
+ * rather than a new symbol. Ice Cold shows its miss-streak count (mirrors
+ * the 🔥 streak badge); Dumbass doesn't — it's a single-week award with
+ * nothing to count. */
 function awardIconsHtml(player) {
   const dumbass = player.isDumbass ? `<span title="Current Dumbass of the Week">🤡</span>` : "";
-  const iceCold = player.isIceCold ? `<span title="Currently Ice Cold">🥶</span>` : "";
+  const iceCold = player.isIceCold ? `<span title="${player.iceColdStreak} misses in a row">🥶${player.iceColdStreak}</span>` : "";
   return dumbass || iceCold ? `<span class="standings-award-icons">${dumbass}${iceCold}</span>` : "";
 }
 

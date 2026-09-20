@@ -112,6 +112,7 @@
       for (const p of standings) {
         p.isDumbass = reigning.dumbass.has(p.name);
         p.isIceCold = reigning.iceCold.has(p.name);
+        p.iceColdStreak = reigning.iceCold.get(p.name);
       }
       document.getElementById("standings-list").innerHTML = standings.length
         ? standings.map((p) => renderStandingsRow(p)).join("")

@@ -83,13 +83,13 @@
     </div>
 
     <div class="card">
-      <div class="card-title">By conference</div>
-      <div id="conference-breakdown"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">By team</div>
-      <div id="team-breakdown"></div>
+      <div class="card-title">By matchup</div>
+      <div class="chip-row" id="matchup-sport-toggle" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+        <div class="chip selected" data-sport="nfl">🏈 NFL</div>
+        <div class="chip" data-sport="cfb">🎓 NCAA</div>
+      </div>
+      <div id="matchup-insights"></div>
+      <div id="matchup-breakdown"></div>
     </div>
 
     <div id="weeks-list"></div>
@@ -114,6 +114,7 @@
 <script src="js/players.js"></script>
 <script src="js/live-scores.js"></script>
 <script src="js/grading.js"></script>
+<script src="js/team-stats.js"></script>
 <script src="js/season-data.js"></script>
 <script>
   (async function () {
@@ -182,41 +183,145 @@
         </div>`;
     }
 
-    function conferenceBreakdownHtml(gradedPicks) {
-      const groups = groupSpreadPicks(gradedPicks, (gp) => teamGroupLabel(gp.game.sport, gp.pick.team, nflDivisions));
-      if (groups.length === 0) return `<div class="empty-state">No spread picks yet.</div>`;
-      return groups.map((g) => hbarRowHtml(g.key, g)).join("");
+    // ---------- By matchup: NFL/NCAA toggle + conference -> team drill-down ----------
+    // Neil: "as the season goes on the list of teams (within 'By Team') will
+    // be very long" — replaces the old flat "By conference" + capped "By
+    // team" cards with one sport-scoped view: conference rows (tap to
+    // expand into that conference's teams) plus an Insights strip of the
+    // most notable patterns, so the interesting stuff surfaces before
+    // anyone has to drill in at all.
+    const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+    function computeMatchupSection(gradedPicks, sport) {
+      const sportPicks = gradedPicks.filter((gp) => gp.snapshot?.sport === sport);
+      const confGroups = groupSpreadPicks(sportPicks, (gp) => teamGroupLabel(sport, gp.pick.team, nflDivisions));
+      for (const cg of confGroups) {
+        const confPicks = sportPicks.filter((gp) => teamGroupLabel(sport, gp.pick.team, nflDivisions) === cg.key);
+        cg.teams = groupSpreadPicks(confPicks, (gp) => gp.pick.team).map((g) => ({ ...g, ...findTeamMeta(confPicks, g.key) }));
+      }
+      return { sportPicks, confGroups };
     }
 
-    // Full list can grow long over a season — starts capped at 8 (most-bet
-    // teams first, so the meaningful sample sizes surface before a
-    // one-off pick), with the rest behind a tap-to-expand toggle, same
-    // pattern used for Awards history / team-pick lists elsewhere in the app.
-    const TEAM_BREAKDOWN_VISIBLE = 8;
-    function teamBreakdownHtml(gradedPicks) {
-      const groups = groupSpreadPicks(gradedPicks, (gp) => gp.pick.team).map((g) => ({ ...g, ...findTeamMeta(gradedPicks, g.key) }));
-      if (groups.length === 0) return `<div class="empty-state">No spread picks yet.</div>`;
-      const visible = groups.slice(0, TEAM_BREAKDOWN_VISIBLE);
-      const hidden = groups.slice(TEAM_BREAKDOWN_VISIBLE);
-      const visibleHtml = visible.map((g) => hbarRowHtml(g.key, g, g.logo)).join("");
-      if (hidden.length === 0) return visibleHtml;
-      const hiddenHtml = hidden.map((g) => hbarRowHtml(g.key, g, g.logo)).join("");
-      const moreLabel = `Show ${hidden.length} more team${hidden.length === 1 ? "" : "s"} ▾`;
-      return `${visibleHtml}<div id="team-breakdown-hidden" style="display:none">${hiddenHtml}</div><span class="hbar-show-more" id="team-breakdown-toggle" data-more-label="${moreLabel}">${moreLabel}</span>`;
+    // A player's own pick sequence on one team, oldest -> newest, for the
+    // recentFormHtml() dot trail (js/pick-utils.js) under "Most-bet team".
+    function playerTeamPickLog(sportPicks, teamAbbr) {
+      return sportPicks
+        .filter((gp) => gp.pick?.type === "spread" && gp.pick.team === teamAbbr && gp.result)
+        .sort((a, b) => new Date(a.snapshot?.date) - new Date(b.snapshot?.date))
+        .map((gp) => gp.result);
     }
 
-    // Delegated once on the stable container — team-breakdown's innerHTML
-    // gets replaced wholesale on every 30s poll, same reason every other
-    // tap-to-expand toggle in this app binds on a stable parent instead of
-    // the element itself.
-    document.getElementById("team-breakdown").addEventListener("click", (e) => {
-      const toggle = e.target.closest("#team-breakdown-toggle");
+    // Six small, computed-not-stored callouts — every field here (pick.team,
+    // pick.line, result, the conference/team groups above) already exists
+    // on the graded pick objects, nothing new to fetch. Min sample of 3 on
+    // "Best team bet on" keeps a single lucky 1-for-1 from winning it.
+    const MIN_SAMPLE = 3;
+    function computeMatchupInsights(sportPicks, confGroups) {
+      const teamGroups = confGroups.flatMap((cg) => cg.teams.map((t) => ({ ...t, conference: cg.key })));
+      if (teamGroups.length === 0) return null;
+      const hitPct = (t) => { const total = t.hit + t.miss + t.push; return total ? t.hit / total : 0; };
+
+      const mostBet = teamGroups.reduce((m, t) => (t.count > m.count ? t : m));
+      const bestPool = teamGroups.filter((t) => t.count >= MIN_SAMPLE);
+      const best = (bestPool.length ? bestPool : teamGroups).reduce((m, t) => (hitPct(t) > hitPct(m) ? t : m));
+      const mostLossesTeamRaw = teamGroups.reduce((m, t) => (t.miss > m.miss ? t : m));
+      const mostLossesTeam = mostLossesTeamRaw.miss > 0 ? mostLossesTeamRaw : null;
+      const mostLossesConfRaw = confGroups.reduce((m, c) => (c.miss > m.miss ? c : m));
+      const mostLossesConf = mostLossesConfRaw.miss > 0 ? mostLossesConfRaw : null;
+      const loyaltyPool = teamGroups.filter((t) => t.miss > t.hit);
+      const blindLoyalty = loyaltyPool.length ? loyaltyPool.reduce((m, t) => (t.count > m.count ? t : m)) : null;
+      const underdogHits = sportPicks.filter((gp) => gp.result === "hit" && gp.pick?.type === "spread" && gp.pick.line > 0);
+      const bestUnderdog = underdogHits.length ? underdogHits.reduce((m, gp) => (gp.pick.line > m.pick.line ? gp : m)) : null;
+
+      return { mostBet, best, mostLossesTeam, mostLossesConf, blindLoyalty, bestUnderdog };
+    }
+
+    function insightTileHtml(icon, headline, sub, label) {
+      return `
+        <div class="player-kpi-tile">
+          <div class="player-kpi-pct">${icon} ${headline}</div>
+          <div class="player-kpi-record">${sub}</div>
+          <div class="player-kpi-label">${label}</div>
+        </div>`;
+    }
+
+    function bestTeamTileHtml(entry) {
+      const total = entry.hit + entry.miss + entry.push;
+      const pct = total ? Math.round((entry.hit / total) * 100) : null;
+      return `
+        <div class="player-kpi-tile" style="display:flex;flex-direction:column;align-items:center">
+          ${ringMeterHtml(pct, "Best team")}
+          <div style="font-size:11px;font-weight:700;margin-top:2px">${entry.key}</div>
+          <div class="player-kpi-record">${entry.hit}-${entry.miss}${entry.push ? `-${entry.push}` : ""}</div>
+        </div>`;
+    }
+
+    function insightsStripHtml(insights, sportPicks) {
+      if (!insights) return `<div class="empty-state">No spread picks yet.</div>`;
+      const { mostBet, best, mostLossesTeam, mostLossesConf, blindLoyalty, bestUnderdog } = insights;
+      const tiles = [
+        insightTileHtml("🎯", mostBet.key, `${mostBet.count} pick${mostBet.count === 1 ? "" : "s"} · ${mostBet.hit}-${mostBet.miss}${mostBet.push ? `-${mostBet.push}` : ""}`, "Most-bet team"),
+        bestTeamTileHtml(best),
+        mostLossesTeam ? insightTileHtml("💀", mostLossesTeam.key, `${mostLossesTeam.miss} loss${mostLossesTeam.miss === 1 ? "" : "es"}`, "Most losses") : "",
+        mostLossesConf ? insightTileHtml("📉", mostLossesConf.key, `${mostLossesConf.miss} loss${mostLossesConf.miss === 1 ? "" : "es"}`, "Toughest conference") : "",
+        blindLoyalty ? insightTileHtml("🙈", blindLoyalty.key, `${blindLoyalty.count} picks · ${blindLoyalty.hit}-${blindLoyalty.miss}`, "Blind loyalty") : "",
+        bestUnderdog ? insightTileHtml("🐶", `${bestUnderdog.pick.team} ${fmtLine(bestUnderdog.pick.line)}`, "Hit", "Best underdog call") : "",
+      ].join("");
+
+      const formLog = playerTeamPickLog(sportPicks, mostBet.key);
+      const formHtml = formLog.length >= 2
+        ? `<div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:4px">${mostBet.key} — recent form</div>${recentFormHtml(formLog)}</div>`
+        : "";
+
+      return `<div class="insight-strip">${tiles}</div>${formHtml}`;
+    }
+
+    function matchupBreakdownHtml(sport, confGroups) {
+      if (confGroups.length === 0) return `<div class="empty-state">No spread picks yet.</div>`;
+      return confGroups
+        .map((cg) => {
+          const id = `${sport}-${slug(cg.key)}`;
+          const teamsHtml = cg.teams.map((t) => hbarRowHtml(t.key, t, t.logo)).join("");
+          return `
+            <div class="team-history-toggle" data-conf-toggle="${id}" style="cursor:pointer">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="flex:1">${hbarRowHtml(cg.key, cg)}</div>
+                <span class="team-history-chevron" style="flex-shrink:0">▼</span>
+              </div>
+            </div>
+            <div class="team-history-list" id="conf-teams-${id}" style="display:none;padding-left:14px;margin:2px 0 6px">${teamsHtml}</div>`;
+        })
+        .join("");
+    }
+
+    let currentMatchupSport = "nfl";
+    let latestGraded = [];
+    function renderMatchup() {
+      const { sportPicks, confGroups } = computeMatchupSection(latestGraded, currentMatchupSport);
+      document.getElementById("matchup-insights").innerHTML = insightsStripHtml(computeMatchupInsights(sportPicks, confGroups), sportPicks);
+      document.getElementById("matchup-breakdown").innerHTML = matchupBreakdownHtml(currentMatchupSport, confGroups);
+    }
+
+    document.getElementById("matchup-sport-toggle").addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-sport]");
+      if (!chip) return;
+      currentMatchupSport = chip.dataset.sport;
+      document.querySelectorAll("#matchup-sport-toggle .chip").forEach((c) => c.classList.toggle("selected", c === chip));
+      renderMatchup();
+    });
+
+    // Delegated once on the stable container — matchup-breakdown's innerHTML
+    // gets replaced wholesale on every 30s poll and every sport-toggle
+    // switch, same reason every other tap-to-expand toggle in this app
+    // binds on a stable parent instead of the element itself.
+    document.getElementById("matchup-breakdown").addEventListener("click", (e) => {
+      const toggle = e.target.closest("[data-conf-toggle]");
       if (!toggle) return;
-      const hiddenEl = document.getElementById("team-breakdown-hidden");
-      if (!hiddenEl) return;
-      const opening = hiddenEl.style.display === "none";
-      hiddenEl.style.display = opening ? "block" : "none";
-      toggle.textContent = opening ? "Show less ▴" : toggle.dataset.moreLabel;
+      const list = document.getElementById(`conf-teams-${toggle.getAttribute("data-conf-toggle")}`);
+      if (!list) return;
+      const opening = list.style.display === "none";
+      list.style.display = opening ? "block" : "none";
+      toggle.querySelector(".team-history-chevron")?.classList.toggle("expanded", opening);
     });
 
     // ---------- Picks by Full Regalia Week (NFL + NCAA together) ----------
@@ -341,8 +446,8 @@
       document.getElementById("weeks-list").innerHTML = [...regaliaEntries].reverse().map(renderRegaliaWeekEntry).join("");
 
       document.getElementById("category-breakdown").innerHTML = categoryKpiHtml(computePlayerCategoryRecord(name, graded, null));
-      document.getElementById("conference-breakdown").innerHTML = conferenceBreakdownHtml(graded);
-      document.getElementById("team-breakdown").innerHTML = teamBreakdownHtml(graded);
+      latestGraded = graded;
+      renderMatchup();
     }
 
     await load();

@@ -1153,6 +1153,21 @@ a.game-card-team:active {
   margin-top: 3px;
 }
 
+/* Player page's "By matchup" insights — unlike .player-kpi-row's fixed
+   4-column grid, this can hold anywhere from 2 to 6 tiles depending on what
+   qualifies that week, so it wraps instead of squeezing into fixed columns. */
+.insight-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  text-align: center;
+}
+
+.insight-strip .player-kpi-tile {
+  flex: 1 1 120px;
+  min-width: 110px;
+}
+
 .hbar-row {
   display: flex;
   align-items: center;

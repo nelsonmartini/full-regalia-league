@@ -111,6 +111,65 @@ function categoryKpiHtml(record) {
   return `<div class="player-kpi-row">${CATEGORIES.map(tile).join("")}</div>`;
 }
 
+/** A single-ratio "meter" (per the dataviz skill: one ratio → a meter, not a
+ * rainbow pie) — same hit% magnitude coloring that renders everywhere else
+ * in this app (compare-pct, player-kpi-pct), just drawn as a ring instead
+ * of a pill. Direct-labeled (the % sits in the center) rather than relying
+ * on the ring alone, so the value is never color-only. Shared by
+ * analytics.html's Team Trends cards and player.html's Insights strip. */
+function ringMeterHtml(pct, label) {
+  const r = 16;
+  const circumference = 2 * Math.PI * r;
+  const color = pct == null ? "var(--text-faint)" : `color-mix(in srgb, var(--positive) ${pct}%, var(--negative))`;
+  const arc =
+    pct != null
+      ? `<circle cx="20" cy="20" r="${r}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"
+           stroke-dasharray="${circumference}" stroke-dashoffset="${circumference * (1 - pct / 100)}" transform="rotate(-90 20 20)" />`
+      : "";
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <svg viewBox="0 0 40 40" width="52" height="52">
+        <circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--border)" stroke-width="5" />
+        ${arc}
+        <text x="20" y="21" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="800" fill="var(--text)">${pct == null ? "–" : pct + "%"}</text>
+      </svg>
+      <span style="font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;font-weight:700">${label}</span>
+    </div>`;
+}
+
+/** "Recent form" — a dot per result (last 5, oldest to newest) plus the
+ * current streak, if any. Takes a plain ordered array of "hit"/"miss"/
+ * "push"/null instead of a team-game-log shape, so it works for any
+ * per-pick result sequence — a team's own game log (analytics.html) or one
+ * player's picks on a single team (player.html). */
+function recentFormHtml(results) {
+  if (results.length === 0) return "";
+  const last5 = results.slice(-5);
+  const dots = last5
+    .map((r) => {
+      if (!r) return `<span title="No line posted" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--border-strong)"></span>`;
+      const color = r === "hit" ? "var(--positive)" : r === "miss" ? "var(--negative)" : "var(--text-faint)";
+      const title = r === "hit" ? "Covered" : r === "miss" ? "Missed" : "Push";
+      return `<span title="${title}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color}"></span>`;
+    })
+    .join("");
+  const streak = computeTeamStreak(results.map((r) => ({ spreadResult: r })));
+  const streakHtml =
+    streak && streak.count >= 2
+      ? streak.type === "hit"
+        ? `<span style="font-weight:800;color:var(--positive)">🔥 Covered ${streak.count} straight</span>`
+        : `<span style="font-weight:800;color:var(--negative)">❄️ Missed ${streak.count} straight</span>`
+      : "";
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px">
+      <span style="color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:10px">Recent form (ATS)</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;gap:4px">${dots}</div>
+        ${streakHtml}
+      </div>
+    </div>`;
+}
+
 function pickLabel(pick) {
   if (pick.type === "total") return `${pick.direction === "over" ? "Over" : "Under"} ${pick.line}`;
   return `${pick.team}${pick.line != null ? " " + fmtLine(pick.line) : " ML"}`;

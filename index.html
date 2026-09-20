@@ -188,6 +188,7 @@
     for (const p of fullStandings) {
       p.isDumbass = reigning.dumbass.has(p.name);
       p.isIceCold = reigning.iceCold.has(p.name);
+      p.iceColdStreak = reigning.iceCold.get(p.name);
     }
     const standingsListEl = document.getElementById("top-standings");
     const renderRows = (list) =>

@@ -144,14 +144,17 @@ function computeAllWeeklyAwards(gradedPicks, games) {
  * progress could still flip who's winning, so the badge only moves once a
  * week is actually locked in (isRegaliaWeekFinal, js/pick-utils.js), same
  * reasoning the Home Awards card's own "Final" badge already uses. Returns
- * empty sets (not null) so callers never need a null-check. */
+ * an empty set/map (not null) so callers never need a null-check.
+ * `iceCold` is a Map of name -> longestMissStreak (shown as a count next to
+ * the icon, like the fire streak badge); `dumbass` stays a plain Set since
+ * it's a single-week award with no count to show. */
 function reigningAwardWinners(allAwards) {
   const finalWeeks = allAwards.filter((w) => isRegaliaWeekFinal(w));
   const latest = finalWeeks[finalWeeks.length - 1];
-  if (!latest) return { dumbass: new Set(), iceCold: new Set() };
+  if (!latest) return { dumbass: new Set(), iceCold: new Map() };
   return {
     dumbass: new Set(latest.dumbass.map((w) => w.name)),
-    iceCold: new Set(latest.iceCold.map((w) => w.name)),
+    iceCold: new Map(latest.iceCold.map((w) => [w.name, w.longestMissStreak])),
   };
 }
 
