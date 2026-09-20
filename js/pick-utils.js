@@ -111,6 +111,98 @@ function categoryKpiHtml(record) {
   return `<div class="player-kpi-row">${CATEGORIES.map(tile).join("")}</div>`;
 }
 
+function accuracyBucket(picks) {
+  return {
+    hit: picks.filter((gp) => gp.result === "hit").length,
+    miss: picks.filter((gp) => gp.result === "miss").length,
+    push: picks.filter((gp) => gp.result === "push").length,
+  };
+}
+
+/** One category's hit/miss/push as a labeled bar — shared by team
+ * Minus/Plus Spread rows (analytics.html) and the NFL/NCAA rows in
+ * snapshotCardHtml() below (all the same shape). */
+function statRowHtml(label, bucket) {
+  const pct = coverPct(bucket);
+  const total = bucket.hit + bucket.miss + bucket.push;
+  const valueText = total ? `${bucket.hit}-${bucket.miss}-${bucket.push} · ${pct}%` : "No data yet";
+  return `
+    <div class="stat-row">
+      <div class="stat-row-label">${label}</div>
+      <div class="stat-row-bar"><div class="stat-row-bar-fill" style="width:${pct ?? 0}%"></div></div>
+      <div class="stat-row-value">${valueText}</div>
+    </div>`;
+}
+
+/** Groups every pick's GAME (not just a spread pick's named team) by each
+ * side it touches — a total/O-U pick counts toward both teams in that
+ * game, same "who's picked X" convention analytics.html's team-detail view
+ * uses. Counts pending (ungraded) picks too, same as the overall
+ * bets-placed total — this is about betting volume, not correctness. */
+function mostBetTeam(picks) {
+  const info = new Map(); // abbr -> {count, name, logo}
+  for (const gp of picks) {
+    for (const side of [gp.game?.home, gp.game?.away]) {
+      if (!side?.abbr) continue;
+      const entry = info.get(side.abbr) || { count: 0, name: side.name, logo: side.logo };
+      entry.count++;
+      info.set(side.abbr, entry);
+    }
+  }
+  let best = null;
+  for (const [abbr, entry] of info) {
+    if (!best || entry.count > best.count) best = { abbr, ...entry };
+  }
+  return best;
+}
+
+/** The "snapshot" card — bets placed, overall accuracy, NFL vs NCAA split,
+ * the 4-category breakdown, and the single most-bet-on team. Originally
+ * analytics.html's league-wide landing dashboard; also used, scoped to one
+ * player's own graded picks, as player.html's own snapshot card (Neil:
+ * "the exact same table/format ... respectively filtered to each player"). */
+function snapshotCardHtml(scoped) {
+  const rated = scoped.filter((gp) => gp.result);
+  const overall = accuracyBucket(rated);
+  const overallPct = coverPct(overall);
+  const overallTotal = overall.hit + overall.miss + overall.push;
+
+  const nflBucket = accuracyBucket(rated.filter((gp) => gp.snapshot?.sport === "nfl"));
+  const cfbBucket = accuracyBucket(rated.filter((gp) => gp.snapshot?.sport === "cfb"));
+
+  const categoryRecord = computeCategoryRecord(scoped, null);
+  const best = mostBetTeam(scoped);
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:22px;font-weight:800">${scoped.length}</div>
+        <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em">Bets Placed</div>
+      </div>
+      <div>
+        <div style="font-size:22px;font-weight:800">${overallPct == null ? "–" : overallPct + "%"}</div>
+        <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em">Overall Accuracy${overallTotal ? ` · ${overall.hit}-${overall.miss}${overall.push ? `-${overall.push}` : ""}` : ""}</div>
+      </div>
+    </div>
+    <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border)">
+      ${statRowHtml("🏈 NFL", nflBucket)}
+      ${statRowHtml("🎓 NCAA", cfbBucket)}
+    </div>
+    <div${best ? ` style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border)"` : ""}>
+      ${categoryKpiHtml(categoryRecord)}
+    </div>
+    ${
+      best
+        ? `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px">
+      <span style="font-weight:800;color:var(--text-faint)">🏆 Most bet</span>
+      ${best.logo ? `<img src="${best.logo}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:18px;height:18px;object-fit:contain" />` : ""}
+      <span style="font-weight:800">${best.name || best.abbr}</span>
+      <span style="color:var(--text-faint)">— ${best.count} bet${best.count === 1 ? "" : "s"}</span>
+    </div>`
+        : ""
+    }`;
+}
+
 /** A single-ratio "meter" (per the dataviz skill: one ratio → a meter, not a
  * rainbow pie) — same hit% magnitude coloring that renders everywhere else
  * in this app (compare-pct, player-kpi-pct), just drawn as a ring instead

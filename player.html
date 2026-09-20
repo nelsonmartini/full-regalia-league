@@ -50,6 +50,11 @@
 
   <div id="player-content" style="display:none">
     <div class="card">
+      <div class="card-title">Snapshot</div>
+      <div id="player-snapshot"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Season summary</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
         <div>
@@ -392,6 +397,11 @@
       document.getElementById("no-player").style.display = "none";
       document.getElementById("player-content").style.display = "block";
       document.getElementById("player-streak").innerHTML = streakBadgeHtml(computeCurrentStreak(graded));
+
+      // Same card analytics.html's league-wide landing dashboard uses
+      // (snapshotCardHtml, js/pick-utils.js), just scoped to this player's
+      // own graded picks instead of the whole league's.
+      document.getElementById("player-snapshot").innerHTML = snapshotCardHtml(graded);
 
       // Only graded (finished) weeks count toward the averages — an in-progress
       // week sitting at 0 pts because games haven't finished yet would otherwise
