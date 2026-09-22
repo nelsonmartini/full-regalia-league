@@ -4,6 +4,10 @@
 
 ## Status
 
+- **SHIPPED (2026-09-22): DON is now permanently ineligible for every weekly award.** Neil: "would it be possible to hard code in that the player 'Don' can not win the weekly awards?" Excluded at the single source every award winner is derived from — `computeAwardsForWeek()`'s `byPlayer` grouping (`js/awards.js`) now skips DON's picks entirely via a new `AWARDS_INELIGIBLE` set, so DON is removed from Dumbass/Nostradamus/Big Dawg/Buzzer Beater/Ice Cold contention for free everywhere downstream: `computeAllWeeklyAwards`, career counts (`computeAwardCareerCounts`), and the reigning-winner icons (`reigningAwardWinners`, the 🤡/🥶 badges on Home/Standings). DON's own picks are otherwise untouched — still grade normally for Standings, points, the Snapshot card, and By matchup.
+  - Verified via Playwright: a scenario where DON's stats would otherwise sweep every single award category (most hits, biggest underdog hit, longest miss streak, closest buzzer save) confirms DON never appears in the Awards card at all — the other player only picks up the one award she independently qualifies for, with the rest correctly showing no winner rather than falling back to DON (5/5 checks).
+  - Bumped service worker cache to `full-regalia-shell-v130`.
+
 - **SHIPPED (2026-09-20): Player page card order fixed, "By category" removed as duplicative.** Neil: "season summary should be first, then points by week, then the snapshot, remove the by category -- its duplicative now." Card order is now Season summary → Points by week → Snapshot → By matchup; the standalone "By category" card (and its now-dead `#category-breakdown` render call) is gone — the Snapshot card's own category tile row already shows the same 4-category breakdown.
   - Verified via Playwright: updated the snapshot-card test to assert the exact new card order and that "By category" no longer appears (9/9); re-ran the By Matchup suite unaffected (12/12).
   - Bumped service worker cache to `full-regalia-shell-v129`.

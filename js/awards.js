@@ -23,12 +23,22 @@
  * would know it's their fourth time."
  */
 
+// Hardcoded, Neil's own request (2026-09-22): DON is permanently ineligible
+// for every weekly award (Dumbass/Nostradamus/Big Dawg/Buzzer Beater/Ice
+// Cold) — excluded here, the single place every award winner is derived
+// from, so it also removes DON from career counts (computeAwardCareerCounts)
+// and the reigning-winner icons (reigningAwardWinners) for free. DON's own
+// picks still grade normally everywhere else (Standings, points, Snapshot,
+// By matchup) — this only removes them from award CONTENTION.
+const AWARDS_INELIGIBLE = new Set(["DON"]);
+
 /** Award results for ONE already-filtered set of a single week's graded
  * picks. Pulled out of computeAllWeeklyAwards so it can run once per week
  * instead of duplicating this logic for "just the latest." */
 function computeAwardsForWeek(weekPicks, regaliaWeek) {
   const byPlayer = new Map();
   for (const gp of weekPicks) {
+    if (AWARDS_INELIGIBLE.has(gp.player_name)) continue;
     if (!byPlayer.has(gp.player_name)) byPlayer.set(gp.player_name, []);
     byPlayer.get(gp.player_name).push(gp);
   }
