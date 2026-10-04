@@ -390,8 +390,11 @@
     // Finds a team's logo by scanning already-fetched games for either side
     // matching this abbr — no separate lookup/roster needed, the same
     // "logo" field normalizeEvent() already carries on every home/away team.
-    function findTeamLogo(abbr) {
+    // Sport-scoped — see computeTeamGameLog's header for why abbr alone
+    // (e.g. "CIN" = both the NFL Bengals and NCAA Bearcats) isn't unique.
+    function findTeamLogo(abbr, sport) {
       for (const g of games) {
+        if (g.sport !== sport) continue;
         if (g.home?.abbr === abbr && g.home.logo) return g.home.logo;
         if (g.away?.abbr === abbr && g.away.logo) return g.away.logo;
       }
@@ -404,8 +407,11 @@
     // and "how has the league done betting on them." Matches on the
     // GAME (either side), not just picks that literally named this team —
     // an Over/Under pick on one of this team's games is just as relevant.
-    function teamPickHistoryHtml(abbr) {
-      const relevant = graded.filter((gp) => gp.result && (gp.game?.home?.abbr === abbr || gp.game?.away?.abbr === abbr));
+    // Sport-scoped (see computeTeamGameLog's header) — without it, bets on
+    // the OTHER school sharing this abbreviation (e.g. NCAA's Cincinnati
+    // Bearcats showing up under the NFL Bengals) would count here too.
+    function teamPickHistoryHtml(abbr, sport) {
+      const relevant = graded.filter((gp) => gp.result && gp.game?.sport === sport && (gp.game?.home?.abbr === abbr || gp.game?.away?.abbr === abbr));
       if (relevant.length === 0) return "";
 
       // Quick-glance rollup (Neil: "how many times, did they win, what
@@ -455,10 +461,10 @@
         <div class="team-history-list" id="team-history-list-${abbr}" style="display:none;max-height:260px;overflow-y:auto">${rows}</div>`;
     }
 
-    function teamBlockHtml(abbr) {
-      const gameLog = computeTeamGameLog(games, abbr);
+    function teamBlockHtml(abbr, sport) {
+      const gameLog = computeTeamGameLog(games, abbr, sport);
       const record = aggregateTeamGameLog(gameLog);
-      const logo = findTeamLogo(abbr);
+      const logo = findTeamLogo(abbr, sport);
       const logoHtml = logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.style.display='none'" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px" />` : "";
       if (record.gamesCounted === 0) {
         return `<div class="empty-state">${logoHtml}No finished games yet for ${abbr} this season — check back once they've played.</div>`;
@@ -482,7 +488,7 @@
         `${atsGlanceHtml(gameLog)}${teamGameLogHtml(abbr, gameLog)}`,
         `${statRowHtml("Minus Spread", record.minus)}${statRowHtml("Plus Spread", record.plus)}${teamOuSplitHtml(record)}`,
         homeAwaySplitHtml(gameLog),
-        teamPickHistoryHtml(abbr),
+        teamPickHistoryHtml(abbr, sport),
       ].filter(Boolean);
       return `
         <div class="section-label" style="margin-top:0">${logoHtml}${abbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-faint)">— ${record.gamesCounted} game${record.gamesCounted === 1 ? "" : "s"} graded</span></div>
@@ -501,33 +507,37 @@
     // opponent's) finished games before computing anything. Scoped per-team
     // rather than the whole season up front, so switching teams only ever
     // fetches what that specific view actually needs.
-    async function renderTeamDetail(abbr, oppAbbr) {
+    async function renderTeamDetail(abbr, oppAbbr, sport) {
       if (!abbr) {
         teamDetail.innerHTML = "";
         return;
       }
       teamDetail.innerHTML = '<div class="empty-state">Loading…</div>';
       const abbrs = oppAbbr ? [abbr, oppAbbr] : [abbr];
-      const relevantGames = games.filter((g) => abbrs.includes(g.home?.abbr) || abbrs.includes(g.away?.abbr));
+      // Sport-scoped — a matchup's two teams always share a sport (they
+      // played each other), and without this filter, a DIFFERENT sport's
+      // team sharing one of these abbreviations (e.g. "CIN") would get its
+      // games backfilled/merged in too (see computeTeamGameLog's header).
+      const relevantGames = games.filter((g) => g.sport === sport && (abbrs.includes(g.home?.abbr) || abbrs.includes(g.away?.abbr)));
       await backfillMissingOdds(relevantGames);
 
       if (oppAbbr) {
         teamDetail.innerHTML = `
           <div class="card">
             <div class="card-title">${abbr} vs ${oppAbbr} <span style="text-transform:none;letter-spacing:0;font-weight:600;font-size:11.5px;color:var(--text-faint)">This season</span></div>
-            ${teamBlockHtml(abbr)}
+            ${teamBlockHtml(abbr, sport)}
             <div style="height:16px"></div>
-            ${teamBlockHtml(oppAbbr)}
+            ${teamBlockHtml(oppAbbr, sport)}
           </div>`;
         return;
       }
-      teamDetail.innerHTML = `<div class="card">${teamBlockHtml(abbr)}</div>`;
+      teamDetail.innerHTML = `<div class="card">${teamBlockHtml(abbr, sport)}</div>`;
     }
 
     if (allTeams.length > 0) {
       teamTrendsPicker.style.display = "block";
       renderTeamOptions();
-      teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value));
+      teamSelect.addEventListener("change", () => renderTeamDetail(teamSelect.value, null, pageSport));
     }
 
     // Single toggle for the whole page — updates Player Comparison's cover
@@ -555,7 +565,7 @@
     // works even before any team anywhere has a finished game.
     if (deepLinkTeam) {
       if (allTeams.length > 0) teamSelect.value = deepLinkTeam;
-      renderTeamDetail(deepLinkTeam, deepLinkOpp || null);
+      renderTeamDetail(deepLinkTeam, deepLinkOpp || null, deepLinkSport || pageSport);
       // A team link is the whole reason someone landed here — expand Team
       // Trends even though it starts collapsed by default, or the
       // scrollIntoView below would scroll to a section that's still hidden.

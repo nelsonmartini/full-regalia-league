@@ -23,14 +23,24 @@
  * odds-having games. Requiring odds here meant a team whose only finished
  * game had no posted line (confirmed real, 2026-08-30: Hawaii @ Stanford —
  * ESPN returned a final score with no `odds` at all) was invisible in the
- * picker entirely, even though its final score was perfectly good data. */
+ * picker entirely, even though its final score was perfectly good data.
+ *
+ * Deduped by `${sport}:${abbr}`, NOT abbr alone — ESPN reuses the same
+ * abbreviation across sports for different schools/franchises (confirmed
+ * real, 2026-10-04, Neil: "we have connected Cincinnati Bengals (NFL) and
+ * University of Cincinnati (NCAA)'s data" — both really are "CIN" in
+ * ESPN's own feeds). Deduping by abbr alone meant only whichever sport's
+ * game happened to come first in `games` ever made it into the list, and
+ * the other school was invisible in its own sport's picker. */
 function teamsWithFinishedGames(games) {
   const seen = new Map();
   for (const g of games) {
     if (g.status?.state !== "post" || !g.status?.completed) continue;
     if (g.sport === "nfl" && g.seasonType === 1) continue;
     for (const side of [g.home, g.away]) {
-      if (side?.abbr && !seen.has(side.abbr)) seen.set(side.abbr, { abbr: side.abbr, name: side.name, sport: g.sport });
+      if (!side?.abbr) continue;
+      const key = `${g.sport}:${side.abbr}`;
+      if (!seen.has(key)) seen.set(key, { abbr: side.abbr, name: side.name, sport: g.sport });
     }
   }
   return [...seen.values()].sort((a, b) => a.abbr.localeCompare(b.abbr));
@@ -56,12 +66,18 @@ function emptyTeamRecord() {
  * log (all in this file / analytics.html), so the three always agree with
  * each other instead of three separate hand-rolled loops drifting apart.
  * Sorted chronologically (oldest first) — callers reverse for a
- * newest-first display where that reads better. */
-function computeTeamGameLog(games, teamAbbr) {
+ * newest-first display where that reads better.
+ *
+ * `sport` is REQUIRED, not inferred from teamAbbr — ESPN reuses the same
+ * abbreviation across sports (e.g. "CIN" is both the NFL Bengals and the
+ * NCAA Bearcats; confirmed real, 2026-10-04). Matching by abbr alone used
+ * to silently merge both schools' games into one combined log. */
+function computeTeamGameLog(games, teamAbbr, sport) {
   const entries = [];
   for (const g of games) {
     if (g.status?.state !== "post" || !g.status?.completed) continue;
     if (g.sport === "nfl" && g.seasonType === 1) continue;
+    if (g.sport !== sport) continue;
     const isHome = g.home?.abbr === teamAbbr;
     const isAway = g.away?.abbr === teamAbbr;
     if (!isHome && !isAway) continue;
@@ -131,8 +147,8 @@ function aggregateTeamGameLog(entries) {
  * finished games this season. Points scored/allowed are tallied from
  * EVERY finished game regardless of whether a line was posted — unlike the
  * ATS/O-U categories, that data doesn't depend on odds existing at all. */
-function computeTeamRecord(games, teamAbbr) {
-  return aggregateTeamGameLog(computeTeamGameLog(games, teamAbbr));
+function computeTeamRecord(games, teamAbbr, sport) {
+  return aggregateTeamGameLog(computeTeamGameLog(games, teamAbbr, sport));
 }
 
 /** Current ATS cover/miss streak, most-recent-game-backward. A push is a

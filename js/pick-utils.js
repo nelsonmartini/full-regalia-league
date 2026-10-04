@@ -138,20 +138,28 @@ function statRowHtml(label, bucket) {
  * side it touches — a total/O-U pick counts toward both teams in that
  * game, same "who's picked X" convention analytics.html's team-detail view
  * uses. Counts pending (ungraded) picks too, same as the overall
- * bets-placed total — this is about betting volume, not correctness. */
+ * bets-placed total — this is about betting volume, not correctness.
+ *
+ * Keyed by `${sport}:${abbr}`, NOT abbr alone — ESPN reuses the same
+ * abbreviation across sports for different schools/franchises (e.g. "CIN"
+ * is both the NFL Bengals and the NCAA Bearcats; confirmed real,
+ * 2026-10-04). Grouping by abbr alone silently merged bets on two
+ * different teams into one combined "most bet" count. */
 function mostBetTeam(picks) {
-  const info = new Map(); // abbr -> {count, name, logo}
+  const info = new Map(); // "sport:abbr" -> {count, name, logo, sport}
   for (const gp of picks) {
+    const sport = gp.game?.sport;
     for (const side of [gp.game?.home, gp.game?.away]) {
       if (!side?.abbr) continue;
-      const entry = info.get(side.abbr) || { count: 0, name: side.name, logo: side.logo };
+      const key = `${sport}:${side.abbr}`;
+      const entry = info.get(key) || { count: 0, name: side.name, logo: side.logo, sport, abbr: side.abbr };
       entry.count++;
-      info.set(side.abbr, entry);
+      info.set(key, entry);
     }
   }
   let best = null;
-  for (const [abbr, entry] of info) {
-    if (!best || entry.count > best.count) best = { abbr, ...entry };
+  for (const entry of info.values()) {
+    if (!best || entry.count > best.count) best = entry;
   }
   return best;
 }
