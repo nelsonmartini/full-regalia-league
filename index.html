@@ -187,7 +187,15 @@
     const fullStandings = computeStandings(graded, LEAGUE_PLAYERS);
     for (const p of fullStandings) {
       p.isDumbass = reigning.dumbass.has(p.name);
-      p.isIceCold = reigning.iceCold.has(p.name);
+      // A stale "won Ice Cold last week" badge next to an active "on fire
+      // right now" streak read as a contradiction (Neil, 2026-10-04: "how
+      // can jack be fire (3) and ice (5) at the same time?") — real cause:
+      // Fire (p.streak) is live, Ice Cold is a trophy from the last FINAL
+      // week, so they can legitimately disagree. Suppressing Ice Cold once
+      // a player is visibly hot again (same >=3 threshold streakBadgeHtml
+      // itself uses) keeps Ice Cold as "won last week" without ever
+      // contradicting what's showing live right next to it.
+      p.isIceCold = reigning.iceCold.has(p.name) && p.streak < 3;
       p.iceColdStreak = reigning.iceCold.get(p.name);
     }
     const standingsListEl = document.getElementById("top-standings");

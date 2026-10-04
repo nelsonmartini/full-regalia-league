@@ -111,7 +111,11 @@
       const reigning = reigningAwardWinners(computeAllWeeklyAwards(graded, games));
       for (const p of standings) {
         p.isDumbass = reigning.dumbass.has(p.name);
-        p.isIceCold = reigning.iceCold.has(p.name);
+        // Suppress a stale "won Ice Cold last week" badge once a player is
+        // visibly on a hot streak again (same rule/threshold as index.html —
+        // see the comment there for why Fire and Ice Cold could otherwise
+        // show at once).
+        p.isIceCold = reigning.iceCold.has(p.name) && p.streak < 3;
         p.iceColdStreak = reigning.iceCold.get(p.name);
       }
       document.getElementById("standings-list").innerHTML = standings.length
