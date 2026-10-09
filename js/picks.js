@@ -29,6 +29,26 @@
 const PLAYER_KEY = "fr_selected_player";
 const CATEGORY_ICON = { minus: "−", plus: "+", over: "▲", under: "▼" };
 
+// Same bar-chart glyph as the bottom-nav's Analytics icon, reused here so
+// the "jump to this team's trends" affordance on a chip (see
+// chipAnalyticsLinkHtml below) reads as the same destination.
+const CHIP_ANALYTICS_ICON_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="12" width="3" height="6" fill="currentColor" stroke="none"/><rect x="12" y="8" width="3" height="10" fill="currentColor" stroke="none"/><rect x="17" y="4" width="3" height="14" fill="currentColor" stroke="none"/></svg>';
+
+/** A corner link on a spread chip to jump straight into that team's
+ * Analytics trends, WITHOUT selecting the pick (Neil, 2026-10-09: "from the
+ * picks selection, the ability to click into team analytics instead of
+ * having to click from the games tab"). Only spread chips get one — an
+ * Over/Under pick has no single team to attribute it to (same reasoning
+ * teamPickHistoryHtml/groupSpreadPicks use elsewhere). The container's own
+ * delegated click handler (below) checks for this link FIRST and returns
+ * before reaching the chip-selection logic, so the click doesn't also
+ * register a pick. */
+function chipAnalyticsLinkHtml(o, sport) {
+  if (o.value?.type !== "spread") return "";
+  return `<a class="chip-analytics-link" href="analytics.html?team=${encodeURIComponent(o.value.team)}&sport=${sport}" title="${o.value.team} trends" aria-label="${o.value.team} trends">${CHIP_ANALYTICS_ICON_SVG}</a>`;
+}
+
 /** groupId is "<gameId>_spread" | "<gameId>_ml" | "<gameId>_total" — the DB
  * stores game_id and bet_type as separate columns, so convert both ways.
  * ("_ml"/"moneyline" kept only so any legacy rows from before this redesign
@@ -436,7 +456,7 @@ function categoriesHtmlForSport(sport, games, slots, nflDivisions, categoryExpan
             .map(
               (o) => `
             <div class="chip${o.gameId === currentGameId ? " selected" : ""}"
-                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${o.logo ? `<img class="chip-team-logo" src="${o.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ""}${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}${o.when ? `<div style="font-size:9.5px;font-weight:600;opacity:0.55;margin-top:1px">${o.when}</div>` : ""}</div>
+                 data-game-id="${o.gameId}" data-value='${JSON.stringify(o.value)}'>${chipAnalyticsLinkHtml(o, sport)}${o.logo ? `<img class="chip-team-logo" src="${o.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ""}${o.display}${o.sub ? `<div style="font-size:10px;font-weight:600;opacity:0.7;margin-top:2px">${o.sub}</div>` : ""}${o.when ? `<div style="font-size:9.5px;font-weight:600;opacity:0.55;margin-top:1px">${o.when}</div>` : ""}</div>
           `
             )
             .join("")}
@@ -800,6 +820,13 @@ async function initPicksPage() {
   });
 
   container.addEventListener("click", async (e) => {
+    // A chip's analytics-icon corner link (chipAnalyticsLinkHtml above) sits
+    // INSIDE a .chip, so e.target.closest(".chip") below would also match —
+    // checked first so the anchor's own navigation proceeds (not
+    // preventDefault'd) while the chip-selection logic further down never
+    // runs for this same bubbled click.
+    if (e.target.closest(".chip-analytics-link")) return;
+
     // Sport section headers (🏈 NFL / 🎓 NCAA) toggle collapse/expand for
     // that whole sport. Checked before category headers since a sport
     // header click could otherwise also match a category selector if they

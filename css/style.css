@@ -18,6 +18,14 @@
   --accent-2: #9cc4ec;
   --positive: #4ade80;
   --negative: #f87171;
+  /* Player page's ambient Fire/Ice Cold header effect (.player-hero) —
+   * deliberately NOT --positive/--negative (those mean hit/miss elsewhere)
+   * or --accent/--accent-2 (the NFL/NCAA brand blue) so neither mood is
+   * visually confused with an existing meaning. */
+  --fire-1: #ffb347;
+  --fire-2: #ff5533;
+  --ice-1: #bae6fd;
+  --ice-2: #38bdf8;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -536,6 +544,64 @@ a { color: inherit; text-decoration: none; }
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+/* Player page's header: a soft ambient glow reflecting current Fire/Ice
+ * Cold status (Neil, 2026-10-09: "if someone is 'on fire' their page has
+ * animation... if ice cold it looks frozen"). Scoped to just this header
+ * card (not the whole page) to stay subtle and keep every data card below
+ * fully legible. The glow is a blurred, oversized radial gradient sitting
+ * behind the real content via ::before, same cheap opacity-animation
+ * approach as .badge.live .dot's pulse above — no canvas, no particle JS.
+ * .player-hero--fire/--ice are mutually exclusive by construction (see
+ * player.html's load() — Ice Cold is suppressed whenever Fire is active). */
+.player-hero {
+  position: relative;
+  border-radius: var(--radius);
+  padding: 10px;
+  margin-left: -10px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.player-hero::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  opacity: 0;
+  border-radius: 50%;
+  filter: blur(28px);
+  transition: opacity 0.4s ease;
+}
+
+.player-hero--fire::before {
+  opacity: 0.5;
+  background: radial-gradient(circle, var(--fire-1), var(--fire-2) 60%, transparent 75%);
+  animation: ember-flicker 2.6s ease-in-out infinite;
+}
+
+.player-hero--ice::before {
+  opacity: 0.45;
+  background: radial-gradient(circle, var(--ice-1), var(--ice-2) 60%, transparent 75%);
+  animation: frost-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes ember-flicker {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.06); }
+}
+
+@keyframes frost-shimmer {
+  0%, 100% { opacity: 0.35; transform: translateY(0); }
+  50% { opacity: 0.55; transform: translateY(-3%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-hero--fire::before,
+  .player-hero--ice::before {
+    animation: none;
+  }
 }
 
 .badge.next {
@@ -1854,6 +1920,7 @@ a.game-card-team:active {
 }
 
 .chip {
+  position: relative;
   border: 1px solid var(--border-strong);
   background: var(--bg-elev-2);
   color: var(--text);
@@ -1875,6 +1942,30 @@ a.game-card-team:active {
 }
 
 .chip:active { transform: scale(0.97); }
+
+/* Corner link on a spread chip to jump into that team's Analytics trends
+ * without selecting the pick (chipAnalyticsLinkHtml, js/picks.js) — a real
+ * but deliberately secondary tap target, muted until touched so it doesn't
+ * compete with the chip's own team name/line for attention. */
+.chip-analytics-link {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  color: var(--text-faint);
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.chip-analytics-link:active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg));
+}
 
 .chip.selected {
   border-color: var(--accent);

@@ -36,7 +36,7 @@
 
 <main class="app">
   <p class="page-sub" style="margin-bottom:0"><a class="link" href="standings.html">← Back to Standings</a></p>
-  <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+  <div class="player-hero" id="player-hero" style="display:flex;align-items:center;gap:12px;margin-top:20px">
     <span id="player-avatar"></span>
     <div>
       <h1 class="page-title" id="player-title" style="margin:0;display:inline-block">Player</h1><span id="player-streak"></span>
@@ -116,6 +116,7 @@
 <script src="js/grading.js"></script>
 <script src="js/team-stats.js"></script>
 <script src="js/season-data.js"></script>
+<script src="js/awards.js"></script>
 <script>
   (async function () {
     const params = new URLSearchParams(location.search);
@@ -390,7 +391,22 @@
 
       document.getElementById("no-player").style.display = "none";
       document.getElementById("player-content").style.display = "block";
-      document.getElementById("player-streak").innerHTML = streakBadgeHtml(computeCurrentStreak(graded));
+      const fireStreak = computeCurrentStreak(graded);
+      document.getElementById("player-streak").innerHTML = streakBadgeHtml(fireStreak);
+
+      // Ambient Fire/Ice Cold header glow (Neil, 2026-10-09). Award winners
+      // are relative to the WHOLE league that week, so this needs every
+      // player's graded picks, not just this page's own player-scoped
+      // `graded` — same reigningAwardWinners() pattern index.html/
+      // standings.html already use, and the same "suppress Ice Cold while
+      // visibly on a live streak" rule just shipped there, so this page
+      // never shows both moods — or a stale one — at once.
+      const gradedAll = gradeSeasonPicks(picksRows, games);
+      const reigning = reigningAwardWinners(computeAllWeeklyAwards(gradedAll, games));
+      const isFire = fireStreak >= 3;
+      const isIceCold = reigning.iceCold.has(name) && !isFire;
+      document.getElementById("player-hero").classList.toggle("player-hero--fire", isFire);
+      document.getElementById("player-hero").classList.toggle("player-hero--ice", isIceCold);
 
       // Same card analytics.html's league-wide landing dashboard uses
       // (snapshotCardHtml, js/pick-utils.js), just scoped to this player's

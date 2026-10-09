@@ -4,6 +4,12 @@
 
 ## Status
 
+- **SHIPPED (2026-10-09): Player page gets an ambient Fire/Ice Cold header effect; Picks chips get a direct link into team Analytics.** Neil asked to align before building, so both were scoped via `AskUserQuestion` first — recommended defaults picked for all three: Fire+Ice Cold only (not Dumbass), a subtle ambient glow (not particles/emoji, not just a static color), and a small corner icon on the chip (not a logo-tap or a separate link line). A third idea (funny pick-confirmation pop-ups) was explicitly deferred — see "Next 7 days" below.
+  1. **`.player-hero` ambient glow** (`player.html`): the avatar/title header is now wrapped in `#player-hero`, toggling `.player-hero--fire`/`.player-hero--ice` based on the same two signals already used elsewhere — the live hit streak (`computeCurrentStreak`, already shown as the 🔥 badge) and `reigningAwardWinners()` (`js/awards.js`, now loaded on this page for the first time), with the EXACT same "suppress Ice Cold while visibly hot" rule just shipped for Standings, so the two moods are mutually exclusive by construction. The glow itself (`css/style.css`) is a blurred, animated radial gradient behind the header via `::before` — new `--fire-1`/`--fire-2`/`--ice-1`/`--ice-2` tokens (deliberately distinct from `--positive`/`--negative` and the brand blue `--accent`/`--accent-2`, so neither mood is confused with an existing meaning), same cheap-opacity-animation cost profile as the existing `@keyframes pulse` live-dot. First use of `prefers-reduced-motion` in the codebase — disables the animation entirely when requested.
+  2. **Chip analytics link** (`js/picks.js`): a small bar-chart icon (same glyph as the bottom-nav's Analytics icon) now sits in the corner of every **spread** chip in the not-yet-locked picking UI, linking straight to `analytics.html?team=X&sport=Y` — Over/Under chips don't get one (no single team to attribute a total to, same reasoning used elsewhere). Confirmed while scoping that a LOCKED pick already got this for free (it renders via the shared `renderGameCard()`/`gameCardTeamRow()` from `js/live-scores.js`, which already links team names out to Analytics) — this was specifically the gap in the pre-lock chip grid, where the chip itself is also the "select this pick" tap target. The container's existing delegated click handler gets one new early check (`closest(".chip-analytics-link")` → return) so the icon's own navigation fires without also registering a pick, same pattern as its existing header-toggle checks.
+  - Verified via Playwright: a live-streak player shows `.player-hero--fire` and not `--ice`; a player holding last-week's Ice Cold (not currently hot) shows `--ice`; a player with neither shows neither; `prefers-reduced-motion: reduce` disables the animation (5/5). A dedicated Picks test confirms the icon appears only on spread chips, its href is correct, clicking it navigates without selecting the pick, and clicking the rest of the same chip still selects normally (6/6). Existing By Matchup suite re-run clean (12/12) to confirm player.html's `load()` changes didn't regress anything else.
+  - Bumped service worker cache to `full-regalia-shell-v133`.
+
 - **SHIPPED (2026-10-04): Fixed a real data-correctness bug — NFL and NCAA teams sharing the same abbreviation were being merged together.** Neil: "i also think we have connected Cincinnati Bengals (NFL) and University of Cincinati (NCAA)'s data?" Confirmed against real production data: ESPN uses "CIN" for both the NFL Bengals and the NCAA Bearcats, and this app's team lookups were keyed by abbreviation alone everywhere — never paired with sport — so the two schools' games, records, and bets were silently combining into one. This had already visibly corrupted real data: the league Snapshot's "Most bet" line, Team Trends' NFL picker (the NCAA Bearcats were invisible there — only whichever sport's game loaded first ever made it into the deduped team list), and the team detail page's ATS/O-U record and "Who's picked" list for CIN.
   - `js/team-stats.js`: `teamsWithFinishedGames()` now dedupes by `${sport}:${abbr}`, not abbr alone; `computeTeamGameLog()`/`computeTeamRecord()` now take a required `sport` parameter and filter games to it.
   - `js/pick-utils.js`: `mostBetTeam()` (used by both the league-wide and per-player Snapshot cards) now keys its tally by `${sport}:${abbr}` instead of abbr alone.
@@ -2042,6 +2048,16 @@
    candidates when this gets picked up: higher win %, more total hits, or
    longest current streak — needs Neil's input on which, then applied as a
    secondary sort key before the "T-N" display logic.
+9. **Funny confirmation pop-ups on certain picks (2026-10-09, Neil), not
+   built yet.** Idea raised alongside the Fire/Ice hero + Picks-analytics-link
+   work above, explicitly deferred to next up rather than built this round.
+   Example given: picking a team from the "Other" conference prompts
+   something like "Are you sure about that, dumb dumb?" Needs scoping before
+   building: which pick patterns trigger a joke prompt (Other-conference
+   pick; a big underdog; picking against a team you've lost on all season;
+   others?), whether it's a one-time confirm (must tap through) or just a
+   toast/aside that doesn't block saving, and where the joke-text list lives
+   (hardcoded array vs. something Neil can edit without a code change).
 
 ## Living checklist
 
