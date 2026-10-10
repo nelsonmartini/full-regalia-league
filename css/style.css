@@ -1967,6 +1967,39 @@ a.game-card-team:active {
   background: color-mix(in srgb, var(--accent) 20%, var(--bg));
 }
 
+/* Over/Under chips get BOTH teams' logos instead of the single bar-chart
+ * icon (a total isn't about one team) — the group itself takes over the
+ * corner positioning, and each logo link inside becomes a small static
+ * flex item instead of its own absolutely-positioned badge. */
+.chip-analytics-link-group {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  gap: 2px;
+}
+
+.chip-analytics-link-group .chip-analytics-link.chip-analytics-logo-link {
+  position: static;
+  width: 16px;
+  height: 16px;
+  padding: 1px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  /* Falls back to the team abbreviation (plain text) if ESPN has no logo
+   * for this team yet — sized down from the chip's own 13px bold so 2-3
+   * letters actually fit this 16px box instead of overflowing it. */
+  font-size: 7px;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.chip-analytics-logo-link img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .chip.selected {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev-2));

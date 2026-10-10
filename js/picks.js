@@ -35,18 +35,32 @@ const CATEGORY_ICON = { minus: "−", plus: "+", over: "▲", under: "▼" };
 const CHIP_ANALYTICS_ICON_SVG =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="12" width="3" height="6" fill="currentColor" stroke="none"/><rect x="12" y="8" width="3" height="10" fill="currentColor" stroke="none"/><rect x="17" y="4" width="3" height="14" fill="currentColor" stroke="none"/></svg>';
 
-/** A corner link on a spread chip to jump straight into that team's
- * Analytics trends, WITHOUT selecting the pick (Neil, 2026-10-09: "from the
- * picks selection, the ability to click into team analytics instead of
- * having to click from the games tab"). Only spread chips get one — an
- * Over/Under pick has no single team to attribute it to (same reasoning
- * teamPickHistoryHtml/groupSpreadPicks use elsewhere). The container's own
- * delegated click handler (below) checks for this link FIRST and returns
- * before reaching the chip-selection logic, so the click doesn't also
- * register a pick. */
+/** A corner link (or pair of links) on a chip to jump straight into a
+ * team's Analytics trends, WITHOUT selecting the pick (Neil, 2026-10-09:
+ * "from the picks selection, the ability to click into team analytics
+ * instead of having to click from the games tab" — then a follow-up the
+ * same day: "not showing for multiple team matchups (over/under) — how
+ * could we get this? while including the team logos?").
+ *
+ * A spread chip is about ONE team, so it gets the single bar-chart icon.
+ * A total (Over/Under) chip is about the whole GAME, not one team, so it
+ * gets both teams' logos instead — each its own small link, using the
+ * `sides` data buildCategoryPools() now attaches to total pool entries.
+ * Every link shares the `chip-analytics-link` class so the container's one
+ * delegated click handler (which checks for it FIRST, before the
+ * chip-selection logic) catches all of them the same way. */
 function chipAnalyticsLinkHtml(o, sport) {
-  if (o.value?.type !== "spread") return "";
-  return `<a class="chip-analytics-link" href="analytics.html?team=${encodeURIComponent(o.value.team)}&sport=${sport}" title="${o.value.team} trends" aria-label="${o.value.team} trends">${CHIP_ANALYTICS_ICON_SVG}</a>`;
+  if (o.value?.type === "spread") {
+    return `<a class="chip-analytics-link" href="analytics.html?team=${encodeURIComponent(o.value.team)}&sport=${sport}" title="${o.value.team} trends" aria-label="${o.value.team} trends">${CHIP_ANALYTICS_ICON_SVG}</a>`;
+  }
+  if (o.value?.type === "total" && o.sides) {
+    const logoLink = (team) =>
+      `<a class="chip-analytics-link chip-analytics-logo-link" href="analytics.html?team=${encodeURIComponent(team.abbr)}&sport=${sport}" title="${team.abbr} trends" aria-label="${team.abbr} trends">${
+        team.logo ? `<img src="${team.logo}" alt="" loading="lazy" onerror="this.style.display='none'" />` : team.abbr
+      }</a>`;
+    return `<span class="chip-analytics-link-group">${logoLink(o.sides.away)}${logoLink(o.sides.home)}</span>`;
+  }
+  return "";
 }
 
 /** groupId is "<gameId>_spread" | "<gameId>_ml" | "<gameId>_total" — the DB
@@ -203,11 +217,15 @@ function buildCategoryPools(sport, games, slots, nflDivisions) {
 
     if (game.odds?.overUnder != null) {
       const totalSearch = searchText(away, home);
+      // A total isn't about one team, so there's no single `logo` the way a
+      // spread option has — instead carry BOTH sides (abbr + logo) so the
+      // chip can offer a Trends link for each (chipAnalyticsLinkHtml below).
+      const sides = { away: { abbr: away.abbr, logo: away.logo }, home: { abbr: home.abbr, logo: home.logo } };
       if (game.id !== underGameId) {
-        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, search: totalSearch, value: { type: "total", direction: "over", line: game.odds.overUnder } });
+        pools.over.push({ gameId: game.id, display: `Over ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, search: totalSearch, sides, value: { type: "total", direction: "over", line: game.odds.overUnder } });
       }
       if (game.id !== overGameId) {
-        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, search: totalSearch, value: { type: "total", direction: "under", line: game.odds.overUnder } });
+        pools.under.push({ gameId: game.id, display: `Under ${game.odds.overUnder}`, sub: matchup, when, group: homeGroup, search: totalSearch, sides, value: { type: "total", direction: "under", line: game.odds.overUnder } });
       }
     }
   }
