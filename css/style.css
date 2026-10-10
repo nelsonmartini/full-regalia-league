@@ -546,60 +546,53 @@ a { color: inherit; text-decoration: none; }
   50% { opacity: 0.35; }
 }
 
-/* Player page's header: a soft ambient glow reflecting current Fire/Ice
- * Cold status (Neil, 2026-10-09: "if someone is 'on fire' their page has
- * animation... if ice cold it looks frozen"). Scoped to just this header
- * card (not the whole page) to stay subtle and keep every data card below
- * fully legible. The glow is a blurred, oversized radial gradient sitting
- * behind the real content via ::before, same cheap opacity-animation
- * approach as .badge.live .dot's pulse above — no canvas, no particle JS.
- * .player-hero--fire/--ice are mutually exclusive by construction (see
- * player.html's load() — Ice Cold is suppressed whenever Fire is active). */
-.player-hero {
-  position: relative;
-  border-radius: var(--radius);
-  padding: 10px;
-  margin-left: -10px;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.player-hero::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: -1;
+/* Player page's screen-edge vignette reflecting current Fire/Ice Cold
+ * status (Neil, 2026-10-09: "if someone is 'on fire' their page has
+ * animation... if ice cold it looks frozen" — then, same day, redesigned
+ * from a header-card glow to this: "could we just make it look like the
+ * screen is frozen on the perimeter?"). `#mood-vignette` (player.html) is a
+ * single fixed, full-viewport, pointer-events:none layer sitting above the
+ * page chrome (topbar/bottom-nav, z-index 20/30) but below any modal/gate
+ * (300/9999) — stays put while the page scrolls, transparent in the
+ * middle so every card stays fully legible, colored only at the edges.
+ * Same cheap opacity-animation approach as .badge.live .dot's pulse above
+ * — no canvas, no particle JS. --fire/--ice are mutually exclusive by
+ * construction (see player.html's load() — Ice Cold is suppressed
+ * whenever Fire is active). */
+.mood-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
   opacity: 0;
-  border-radius: 50%;
-  filter: blur(28px);
   transition: opacity 0.4s ease;
 }
 
-.player-hero--fire::before {
-  opacity: 0.5;
-  background: radial-gradient(circle, var(--fire-1), var(--fire-2) 60%, transparent 75%);
+.mood-vignette--fire {
+  opacity: 1;
+  background: radial-gradient(ellipse at center, transparent 50%, color-mix(in srgb, var(--fire-2) 45%, transparent) 100%);
   animation: ember-flicker 2.6s ease-in-out infinite;
 }
 
-.player-hero--ice::before {
-  opacity: 0.45;
-  background: radial-gradient(circle, var(--ice-1), var(--ice-2) 60%, transparent 75%);
+.mood-vignette--ice {
+  opacity: 1;
+  background: radial-gradient(ellipse at center, transparent 50%, color-mix(in srgb, var(--ice-2) 45%, transparent) 100%);
   animation: frost-shimmer 4s ease-in-out infinite;
 }
 
 @keyframes ember-flicker {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.06); }
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 @keyframes frost-shimmer {
-  0%, 100% { opacity: 0.35; transform: translateY(0); }
-  50% { opacity: 0.55; transform: translateY(-3%); }
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .player-hero--fire::before,
-  .player-hero--ice::before {
+  .mood-vignette--fire,
+  .mood-vignette--ice {
     animation: none;
   }
 }

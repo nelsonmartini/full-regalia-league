@@ -28,6 +28,8 @@
 </div>
 <script src="js/gate.js"></script>
 
+<div class="mood-vignette" id="mood-vignette"></div>
+
 <header class="topbar">
   <div class="topbar-inner">
     <div class="wordmark"><span class="mark"><svg viewBox="0 0 24 24" width="60%" height="60%" xmlns="http://www.w3.org/2000/svg"><path d="M3 17 L5 8 L9 13 L12 5 L15 13 L19 8 L21 17 Z" fill="white"/><rect x="3" y="17" width="18" height="3" rx="1" fill="white"/><circle cx="5" cy="8" r="1.3" fill="white"/><circle cx="12" cy="5" r="1.3" fill="white"/><circle cx="19" cy="8" r="1.3" fill="white"/></svg></span> <span class="wordmark-name">Full Regalia</span> <span class="sub">League</span></div>
@@ -36,7 +38,7 @@
 
 <main class="app">
   <p class="page-sub" style="margin-bottom:0"><a class="link" href="standings.html">← Back to Standings</a></p>
-  <div class="player-hero" id="player-hero" style="display:flex;align-items:center;gap:12px;margin-top:20px">
+  <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
     <span id="player-avatar"></span>
     <div>
       <h1 class="page-title" id="player-title" style="margin:0;display:inline-block">Player</h1><span id="player-streak"></span>
@@ -394,8 +396,12 @@
       const fireStreak = computeCurrentStreak(graded);
       document.getElementById("player-streak").innerHTML = streakBadgeHtml(fireStreak);
 
-      // Ambient Fire/Ice Cold header glow (Neil, 2026-10-09). Award winners
-      // are relative to the WHOLE league that week, so this needs every
+      // Ambient Fire/Ice Cold screen-edge vignette (Neil, 2026-10-09, then
+      // redesigned same day: "could we just make it look like the screen is
+      // frozen on the perimeter?" — moved from a glow behind the header
+      // card to a full-viewport frost/ember vignette, `#mood-vignette`,
+      // fixed-position so it stays put while scrolling). Award winners are
+      // relative to the WHOLE league that week, so this needs every
       // player's graded picks, not just this page's own player-scoped
       // `graded` — same reigningAwardWinners() pattern index.html/
       // standings.html already use, and the same "suppress Ice Cold while
@@ -405,8 +411,8 @@
       const reigning = reigningAwardWinners(computeAllWeeklyAwards(gradedAll, games));
       const isFire = fireStreak >= 3;
       const isIceCold = reigning.iceCold.has(name) && !isFire;
-      document.getElementById("player-hero").classList.toggle("player-hero--fire", isFire);
-      document.getElementById("player-hero").classList.toggle("player-hero--ice", isIceCold);
+      document.getElementById("mood-vignette").classList.toggle("mood-vignette--fire", isFire);
+      document.getElementById("mood-vignette").classList.toggle("mood-vignette--ice", isIceCold);
 
       // Same card analytics.html's league-wide landing dashboard uses
       // (snapshotCardHtml, js/pick-utils.js), just scoped to this player's
