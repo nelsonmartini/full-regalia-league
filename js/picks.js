@@ -793,6 +793,28 @@ async function initPicksPage() {
     pickerBadgeAvatar.innerHTML = avatarHtml(name, 24);
     pickerBadgeName.textContent = titleCase(name);
     picksHeading.textContent = `${titleCase(name)}'s Picks`;
+    updateMoodVignette();
+  }
+
+  // Same Fire/Ice Cold screen-edge vignette as player.html (Neil,
+  // 2026-10-10: "that works on the player profile page... can that be
+  // done [here too], for when the respective player is selected to be
+  // picking?"), reflecting whoever's currently selected in the picker —
+  // recomputed on every player switch via updatePersonalization() above.
+  // `gradedAllForAwards`/`reigningAwards` are league-wide and don't depend
+  // on which player is selected, so they're only recomputed when
+  // loadAndRenderStatus() below refreshes allPicksRows, not on every switch.
+  let gradedAllForAwards = [];
+  let reigningAwards = { dumbass: new Set(), iceCold: new Map() };
+  function updateMoodVignette() {
+    const name = select.value;
+    const playerGraded = gradedAllForAwards.filter((gp) => gp.player_name === name && gp.result);
+    const fireStreak = computeCurrentStreak(playerGraded);
+    const isFire = fireStreak >= 3;
+    const isIceCold = reigningAwards.iceCold.has(name) && !isFire;
+    const vignette = document.getElementById("mood-vignette");
+    vignette.classList.toggle("mood-vignette--fire", isFire);
+    vignette.classList.toggle("mood-vignette--ice", isIceCold);
   }
 
   renderWeekPicker();
@@ -1021,6 +1043,9 @@ async function initPicksPage() {
   async function loadAndRenderStatus() {
     statusSummary.innerHTML = "<span>Loading who's picked…</span>";
     allPicksRows = await loadAllPicks();
+    gradedAllForAwards = gradeSeasonPicks(allPicksRows, allGames);
+    reigningAwards = reigningAwardWinners(computeAllWeeklyAwards(gradedAllForAwards, allGames));
+    updateMoodVignette();
     const statusList = computeWeekStatus(allPicksRows, sportWeeks);
     const submittedCount = statusList.filter((s) => s.total === expectedPickTotal(sportWeeks)).length;
     statusSummary.innerHTML = `<span>${submittedCount} of ${statusList.length} submitted this week</span><span style="color:var(--accent)">${statusExpanded ? "▲ Hide" : "▼ Who's in?"}</span>`;
